@@ -1,0 +1,8 @@
+version: "3"
+services:
+  aninsohbeti:
+    build: .
+    container_name: aninsohbeti
+    restart: always
+    ports:
+      - "6000:6000"
