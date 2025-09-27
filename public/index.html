@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Anın Sohbeti</title>
+  <title>Ekşi Anın Sohbeti</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
 <body>
   <div class="app-shell">
     <header class="app-header">
-      <h1 class="app-header__title">Anın Sohbeti</h1>
+      <h1 class="app-header__title">Ekşi Anın Sohbeti</h1>
       <p class="app-header__subtitle">Anonim olarak sohbet et, bağ kur ve bir sonraki hikâyeye geç.</p>
     </header>
 
@@ -23,8 +23,18 @@
       <form id="controls" class="controls" autocomplete="off">
         <label class="sr-only" for="msg">Mesaj yaz</label>
         <input id="msg" class="controls__input" placeholder="Mesaj yaz..." aria-label="Mesaj yaz" required>
-        <button id="send" class="button button--primary" type="submit">Gönder</button>
-        <button id="next" class="button button--secondary" type="button">Sonraki</button>
+        <button id="send" class="button button--primary" type="submit" aria-label="Gönder">
+          <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+            <path d="M3.4 20.6 21.5 12 3.4 3.4l.1 6.7 11.1 1.9-11.1 1.9z" fill="currentColor" />
+          </svg>
+          <span class="sr-only">Gönder</span>
+        </button>
+        <button id="next" class="button button--secondary" type="button" aria-label="Sonraki eşleşme">
+          <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+            <path d="M7 5.5a1 1 0 0 1 1.6-.8l6.9 6.5a1 1 0 0 1 0 1.6l-6.9 6.5A1 1 0 0 1 7 18.5l5.6-5.2L7 8.1a1 1 0 0 1-.3-.7z" fill="currentColor" />
+          </svg>
+          <span class="sr-only">Sonraki</span>
+        </button>
       </form>
     </section>
   </div>
