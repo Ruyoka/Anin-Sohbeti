@@ -3,30 +3,256 @@
 <head>
   <meta charset="utf-8">
   <title>Anın Sohbeti</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: "Arial", sans-serif; background: #f5f5f5; color: #222; margin: 0; }
-    header { background: #c8e6c9; padding: 15px; text-align: center; border-bottom: 2px solid #81c784; }
-    header h1 { margin: 0; font-size: 24px; color: #1b5e20; }
-    #chat { width: 500px; margin: 30px auto; text-align: left; background: #fff; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    #log { height: 350px; border-bottom: 1px solid #ddd; padding: 10px; overflow-y: auto; font-size: 14px; background: #fafafa; }
-    #controls { display: flex; padding: 10px; }
-    #msg { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-    button { margin-left: 8px; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
-    #send { background: #81c784; color: #fff; }
-    #next { background: #ffb74d; color: #fff; }
-    .system { color: #888; font-style: italic; }
-    .me { color: #1b5e20; }
-    .stranger { color: #b71c1c; }
+    :root {
+      --bg-gradient: linear-gradient(135deg, #f5f7fb 0%, #edf1ff 50%, #fef5f7 100%);
+      --surface: rgba(255, 255, 255, 0.85);
+      --border: rgba(117, 137, 181, 0.18);
+      --accent: #5c6ac4;
+      --accent-strong: #4653a7;
+      --accent-soft: rgba(92, 106, 196, 0.12);
+      --warning: #f59f00;
+      --text-primary: #1f2937;
+      --text-muted: #6b7280;
+      --system-bg: rgba(92, 106, 196, 0.08);
+      --shadow-lg: 0 24px 60px -35px rgba(76, 92, 135, 0.75);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --transition-fast: 180ms ease;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .app-shell {
+      width: min(920px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      background: transparent;
+      padding: 0 4px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 36px);
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+
+    #chat {
+      background: var(--surface);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      width: 100%;
+    }
+
+    #log {
+      height: clamp(320px, 50vh, 460px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px 18px;
+      overflow-y: auto;
+      font-size: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    #log::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #log::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #log::-webkit-scrollbar-thumb {
+      background: rgba(92, 106, 196, 0.25);
+      border-radius: 8px;
+    }
+
+    #log div {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      line-height: 1.5;
+      box-shadow: 0 8px 20px -15px rgba(31, 41, 55, 0.5);
+      max-width: 78ch;
+      word-break: break-word;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    #log div:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px -18px rgba(31, 41, 55, 0.58);
+    }
+
+    .system {
+      align-self: center;
+      background: var(--system-bg);
+      color: var(--text-muted);
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    .me {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .stranger {
+      align-self: flex-start;
+      background: #ffffff;
+      border: 1px solid rgba(92, 106, 196, 0.15);
+      color: var(--text-primary);
+    }
+
+    #controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+    }
+
+    #msg {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid rgba(92, 106, 196, 0.25);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--text-primary);
+      font-size: 15px;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    #msg:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    button {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 110px;
+    }
+
+    button:focus-visible {
+      outline: 3px solid var(--accent-soft);
+      outline-offset: 2px;
+    }
+
+    #send {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 18px 40px -20px rgba(92, 106, 196, 0.8);
+    }
+
+    #send:hover {
+      background: var(--accent-strong);
+      transform: translateY(-1px);
+      box-shadow: 0 20px 42px -20px rgba(70, 83, 167, 0.8);
+    }
+
+    #next {
+      background: rgba(245, 159, 0, 0.15);
+      color: var(--warning);
+      box-shadow: 0 18px 40px -22px rgba(245, 159, 0, 0.6);
+    }
+
+    #next:hover {
+      background: rgba(245, 159, 0, 0.24);
+      transform: translateY(-1px);
+      color: #d08700;
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 24px 12px;
+      }
+
+      #chat {
+        padding: 18px 16px;
+      }
+
+      #log {
+        height: clamp(280px, 55vh, 420px);
+        padding: 16px 14px;
+      }
+
+      #controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <header><h1>Anın Sohbeti</h1></header>
-  <div id="chat">
-    <div id="log"></div>
-    <div id="controls">
-      <input id="msg" placeholder="Mesaj yaz...">
-      <button id="send">Gönder</button>
-      <button id="next">Sonraki</button>
+  <div class="app-shell">
+    <header>
+      <h1>Anın Sohbeti</h1>
+      <p>Anlık eşleş, sohbet et ve yeni insanlarla tanış.</p>
+    </header>
+    <div id="chat">
+      <div id="log"></div>
+      <div id="controls">
+        <input id="msg" placeholder="Mesaj yaz...">
+        <button id="send">Gönder</button>
+        <button id="next">Sonraki</button>
+      </div>
     </div>
   </div>
 
