@@ -2,63 +2,135 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Anın Sohbeti</title>
-  <style>
-    body { font-family: "Arial", sans-serif; background: #f5f5f5; color: #222; margin: 0; }
-    header { background: #c8e6c9; padding: 15px; text-align: center; border-bottom: 2px solid #81c784; }
-    header h1 { margin: 0; font-size: 24px; color: #1b5e20; }
-    #chat { width: 500px; margin: 30px auto; text-align: left; background: #fff; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    #log { height: 350px; border-bottom: 1px solid #ddd; padding: 10px; overflow-y: auto; font-size: 14px; background: #fafafa; }
-    #controls { display: flex; padding: 10px; }
-    #msg { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-    button { margin-left: 8px; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
-    #send { background: #81c784; color: #fff; }
-    #next { background: #ffb74d; color: #fff; }
-    .system { color: #888; font-style: italic; }
-    .me { color: #1b5e20; }
-    .stranger { color: #b71c1c; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header><h1>Anın Sohbeti</h1></header>
-  <div id="chat">
-    <div id="log"></div>
-    <div id="controls">
-      <input id="msg" placeholder="Mesaj yaz...">
-      <button id="send">Gönder</button>
-      <button id="next">Sonraki</button>
-    </div>
+  <div class="app-shell">
+    <header class="app-header">
+      <h1 class="app-header__title">Anın Sohbeti</h1>
+      <p class="app-header__subtitle">Anonim olarak sohbet et, bağ kur ve bir sonraki hikâyeye geç.</p>
+    </header>
+
+    <div id="statusBadge" class="status-badge status-badge--idle">Eşleşme bekleniyor</div>
+
+    <section class="chat-panel" aria-live="polite">
+      <div id="log" class="message-feed" role="log"></div>
+      <form id="controls" class="controls" autocomplete="off">
+        <label class="sr-only" for="msg">Mesaj yaz</label>
+        <input id="msg" class="controls__input" placeholder="Mesaj yaz..." aria-label="Mesaj yaz" required>
+        <button id="send" class="button button--primary" type="submit">Gönder</button>
+        <button id="next" class="button button--secondary" type="button">Sonraki</button>
+      </form>
+    </section>
   </div>
 
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-CTSz1McYT9whm8+AVlC1OVQoWTnx57uFD7Y1nUmkxBp4IBQ658kQP+PrpA7/lf1k" crossorigin="anonymous"></script>
   <script>
     const socket = io();
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
+    const controls = document.getElementById("controls");
+    const statusBadge = document.getElementById("statusBadge");
+    const nextButton = document.getElementById("next");
 
-    function line(txt, cls="system") {
-      const p=document.createElement("div");
-      p.textContent=txt;
-      p.className=cls;
-      log.appendChild(p);
-      log.scrollTop=log.scrollHeight;
+    function setStatus(text, state = "idle") {
+      statusBadge.textContent = text;
+      statusBadge.className = `status-badge status-badge--${state}`;
     }
 
-    socket.on("connect", ()=>{ line("Eşleşme bekleniyor..."); socket.emit("join"); });
-    socket.on("matched", ()=>{ line("✓ Bir yabancı ile eşleştiniz!", "system"); });
-    socket.on("message", (txt)=>{ line("Yabancı: "+txt, "stranger"); });
-    socket.on("ended", ()=>{ line("— Bağlantı sonlandı.", "system"); socket.emit("join"); });
+    function formatTime(date) {
+      return date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+    }
 
-    document.getElementById("send").onclick = ()=>{
-      if(!msg.value) return;
+    function line(text, type = "system") {
+      const article = document.createElement("article");
+      article.className = `message message--${type}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = "message__bubble";
+      bubble.textContent = text;
+      article.appendChild(bubble);
+
+      const now = new Date();
+
+      if (type !== "system") {
+        const meta = document.createElement("div");
+        meta.className = "message__meta";
+
+        const author = document.createElement("span");
+        author.textContent = type === "me" ? "Sen" : "Yabancı";
+
+        const timestamp = document.createElement("span");
+        timestamp.textContent = formatTime(now);
+
+        meta.append(author, timestamp);
+        article.appendChild(meta);
+      } else {
+        const timestamp = document.createElement("div");
+        timestamp.className = "message__meta";
+        timestamp.style.justifyContent = "center";
+        timestamp.textContent = formatTime(now);
+        article.appendChild(timestamp);
+      }
+
+      log.appendChild(article);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    socket.on("connect", () => {
+      setStatus("Eşleşme bekleniyor", "idle");
+      line("Eşleşme bekleniyor...", "system");
+      socket.emit("join");
+    });
+
+    socket.on("matched", () => {
+      setStatus("Bir yabancıyla eşleştiniz", "active");
+      line("✓ Bir yabancı ile eşleştiniz!", "system");
+      msg.focus();
+    });
+
+    socket.on("message", (txt) => {
+      line(txt, "stranger");
+    });
+
+    socket.on("ended", () => {
+      setStatus("Bağlantı sonlandı", "ended");
+      line("— Bağlantı sonlandı.", "system");
+      socket.emit("join");
+    });
+
+    socket.on("disconnect", () => {
+      setStatus("Bağlantı koptu", "ended");
+      line("Bağlantı koptu. Yeniden bağlanmaya çalışılıyor...", "system");
+    });
+
+    controls.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!msg.value.trim()) {
+        return;
+      }
       socket.emit("message", msg.value);
-      line("Sen: "+msg.value, "me");
-      msg.value="";
-    };
-    document.getElementById("next").onclick = ()=>{
-      socket.emit("next"); line("Yeni eşleşme aranıyor...", "system");
-    };
-    msg.addEventListener("keydown", (e)=>{ if(e.key==="Enter") document.getElementById("send").click(); });
+      line(msg.value, "me");
+      msg.value = "";
+      msg.focus();
+    });
+
+    nextButton.addEventListener("click", () => {
+      socket.emit("next");
+      setStatus("Yeni eşleşme aranıyor", "idle");
+      line("Yeni eşleşme aranıyor...", "system");
+    });
+
+    msg.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        msg.blur();
+      }
+    });
   </script>
 </body>
 </html>
