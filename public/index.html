@@ -37,15 +37,18 @@
     const controls = document.getElementById("controls");
     const statusBadge = document.getElementById("statusBadge");
     const nextButton = document.getElementById("next");
+
     const sendButton = document.getElementById("send");
 
     let hasPartner = false;
     let isQueued = false;
 
+
     function setStatus(text, state = "idle") {
       statusBadge.textContent = text;
       statusBadge.className = `status-badge status-badge--${state}`;
     }
+
 
     function setControlsState(state) {
       if (state === "active") {
@@ -165,13 +168,16 @@
       hasPartner = false;
       isQueued = false;
       setControlsState("locked");
+
       setStatus("Bağlantı koptu", "ended");
       line("Bağlantı koptu. Yeniden bağlanmaya çalışılıyor...", "system");
     });
 
     controls.addEventListener("submit", (event) => {
       event.preventDefault();
+
       if (!hasPartner || !msg.value.trim()) {
+
         return;
       }
       socket.emit("message", msg.value);
@@ -181,6 +187,7 @@
     });
 
     nextButton.addEventListener("click", () => {
+
       if (hasPartner) {
         socket.emit("next");
       }
@@ -190,6 +197,7 @@
         message: "Yeni eşleşme aranıyor...",
         statusText: "Yeni eşleşme aranıyor",
       });
+
     });
 
     msg.addEventListener("keydown", (event) => {
