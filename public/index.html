@@ -38,10 +38,21 @@
     const statusBadge = document.getElementById("statusBadge");
     const nextButton = document.getElementById("next");
 
+    const sendButton = document.getElementById("send");
+
     function setStatus(text, state = "idle") {
       statusBadge.textContent = text;
       statusBadge.className = `status-badge status-badge--${state}`;
     }
+
+    function setControlsEnabled(isEnabled) {
+      msg.disabled = !isEnabled;
+      sendButton.disabled = !isEnabled;
+      nextButton.disabled = !isEnabled;
+      controls.classList.toggle("controls--disabled", !isEnabled);
+    }
+
+    setControlsEnabled(false);
 
     function formatTime(date) {
       return date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
@@ -83,28 +94,36 @@
     }
 
     socket.on("connect", () => {
+      setControlsEnabled(false);
       setStatus("Eşleşme bekleniyor", "idle");
       line("Eşleşme bekleniyor...", "system");
       socket.emit("join");
     });
 
     socket.on("matched", () => {
+      setControlsEnabled(true);
       setStatus("Bir yabancıyla eşleştiniz", "active");
       line("✓ Bir yabancı ile eşleştiniz!", "system");
       msg.focus();
     });
+
 
     socket.on("message", (txt) => {
       line(txt, "stranger");
     });
 
     socket.on("ended", () => {
+
+      setControlsEnabled(false);
       setStatus("Bağlantı sonlandı", "ended");
       line("— Bağlantı sonlandı.", "system");
       socket.emit("join");
+      setStatus("Yeni eşleşme aranıyor", "idle");
     });
 
     socket.on("disconnect", () => {
+      setControlsEnabled(false);
+
       setStatus("Bağlantı koptu", "ended");
       line("Bağlantı koptu. Yeniden bağlanmaya çalışılıyor...", "system");
     });
@@ -121,7 +140,11 @@
     });
 
     nextButton.addEventListener("click", () => {
+
+      setControlsEnabled(false);
       socket.emit("next");
+      socket.emit("join");
+
       setStatus("Yeni eşleşme aranıyor", "idle");
       line("Yeni eşleşme aranıyor...", "system");
     });
