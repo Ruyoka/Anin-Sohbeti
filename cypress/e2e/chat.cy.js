@@ -34,6 +34,8 @@ describe("Anın Sohbeti", () => {
       "contain.text",
       "Eşleşme bekleniyor..."
     );
+    cy.get("#send").should("be.disabled");
+    cy.get("#msg").should("be.disabled");
   });
 
   it("matches, relays messages, and handles next/disconnect flows", () => {
@@ -45,6 +47,20 @@ describe("Anın Sohbeti", () => {
       "contain.text",
       "✓ Bir yabancı ile eşleştiniz!"
     );
+    cy.get("#send").should("not.be.disabled");
+    cy.get("#msg").should("not.be.disabled");
+
+    cy.get("@partner1").then(({ socket }) => socket.emit("join"));
+    cy.get("#log div").last().should("have.text", "— Bağlantı sonlandı.");
+    cy.get("#send").should("be.disabled");
+    cy.get("#msg").should("be.disabled");
+
+    cy.get("#log", { timeout: 10000 }).should(
+      "contain.text",
+      "✓ Bir yabancı ile eşleştiniz!"
+    );
+    cy.get("#send").should("not.be.disabled");
+    cy.get("#msg").should("not.be.disabled");
 
     cy.get("#msg").type("Merhaba!");
     cy.get("#send").click();

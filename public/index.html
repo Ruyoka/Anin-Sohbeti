@@ -390,6 +390,19 @@
     const socket = io();
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
+    const sendBtn = document.getElementById("send");
+    const nextBtn = document.getElementById("next");
+    let isMatched = false;
+
+    function updateControls() {
+      msg.disabled = !isMatched;
+      sendBtn.disabled = !isMatched || !msg.value.trim();
+    }
+
+    function setMatchedState(state) {
+      isMatched = state;
+      updateControls();
+    }
 
     function line(txt, cls="system") {
       const p=document.createElement("div");
@@ -399,21 +412,27 @@
       log.scrollTop=log.scrollHeight;
     }
 
-    socket.on("connect", ()=>{ line("Eşleşme bekleniyor..."); socket.emit("join"); });
-    socket.on("matched", ()=>{ line("✓ Bir yabancı ile eşleştiniz!", "system"); });
-    socket.on("message", (txt)=>{ line("Yabancı: "+txt, "stranger"); });
-    socket.on("ended", ()=>{ line("— Bağlantı sonlandı.", "system"); socket.emit("join"); });
+    updateControls();
 
-    document.getElementById("send").onclick = ()=>{
-      if(!msg.value) return;
+    socket.on("connect", ()=>{ line("Eşleşme bekleniyor..."); setMatchedState(false); socket.emit("join"); });
+    socket.on("matched", ()=>{ setMatchedState(true); line("✓ Bir yabancı ile eşleştiniz!", "system"); msg.focus(); });
+    socket.on("message", (txt)=>{ line("Yabancı: "+txt, "stranger"); });
+    socket.on("ended", ()=>{ setMatchedState(false); line("— Bağlantı sonlandı.", "system"); socket.emit("join"); });
+    socket.on("disconnect", ()=>{ setMatchedState(false); });
+
+    sendBtn.onclick = ()=>{
+      if(!isMatched || !msg.value.trim()) return;
       socket.emit("message", msg.value);
       line("Sen: "+msg.value, "me");
       msg.value="";
+      updateControls();
     };
-    document.getElementById("next").onclick = ()=>{
+    nextBtn.onclick = ()=>{
+      setMatchedState(false);
       socket.emit("next"); line("Yeni eşleşme aranıyor...", "system");
     };
-    msg.addEventListener("keydown", (e)=>{ if(e.key==="Enter") document.getElementById("send").click(); });
+    msg.addEventListener("input", updateControls);
+    msg.addEventListener("keydown", (e)=>{ if(e.key==="Enter") sendBtn.click(); });
   </script>
 </body>
 </html>
