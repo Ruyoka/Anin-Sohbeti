@@ -2,33 +2,32 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ekşi Anın Sohbeti</title>
+  <title>Anın Sohbeti</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --wa-teal-dark: #054c44;
-      --wa-teal: #075e54;
-      --wa-teal-light: #128c7e;
-      --wa-lime: #25d366;
-      --wa-outgoing: #d9fdd3;
-      --wa-incoming: #ffffff;
-      --wa-system: rgba(4, 133, 113, 0.16);
-      --wa-text: #1d2825;
-      --wa-muted: #6a7c75;
-      --wa-border: rgba(7, 94, 84, 0.16);
-      --wa-border-strong: rgba(7, 94, 84, 0.35);
-      --wa-panel: rgba(255, 255, 255, 0.95);
-      --wa-panel-strong: rgba(255, 255, 255, 0.98);
-      --wa-bg: #efeae2;
-      --wa-shadow: 0 24px 60px -32px rgba(7, 94, 84, 0.45);
-      --radius-lg: 26px;
+      --bg-base: #f3f4ee;
+      --bg-gradient: linear-gradient(180deg, rgba(220, 232, 215, 0.6) 0%, rgba(243, 244, 238, 0.92) 40%, #fefefe 100%);
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-strong: #ffffff;
+      --border: rgba(46, 89, 63, 0.14);
+      --border-strong: rgba(46, 89, 63, 0.24);
+      --accent: #2f6f4e;
+      --accent-soft: rgba(47, 111, 78, 0.16);
+      --accent-strong: #24563c;
+      --secondary: #d7e388;
+      --secondary-strong: #c1cc70;
+      --text-primary: #1e2a1f;
+      --text-muted: #637063;
+      --system-bg: rgba(213, 228, 202, 0.65);
+      --shadow-soft: 0 20px 44px -28px rgba(36, 70, 52, 0.45);
+      --radius-lg: 24px;
       --radius-md: 18px;
       --radius-sm: 14px;
       --transition-fast: 180ms ease;
-      --transition-medium: 240ms ease;
+      --transition-slow: 260ms ease;
     }
 
     *, *::before, *::after {
@@ -39,168 +38,78 @@
       margin: 0;
       min-height: 100dvh;
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--wa-text);
-      background: linear-gradient(160deg, rgba(7, 94, 84, 0.16) 0%, rgba(7, 94, 84, 0.05) 26%, rgba(239, 234, 226, 1) 60%);
+      background: var(--bg-gradient), var(--bg-base);
+      color: var(--text-primary);
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 48px 20px;
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background: radial-gradient(1200px at 20% 10%, rgba(7, 94, 84, 0.15), transparent 58%),
-                  radial-gradient(800px at 80% 12%, rgba(18, 140, 126, 0.18), transparent 60%);
-      opacity: 0.85;
-      z-index: -1;
+      align-items: stretch;
+      justify-content: center;
+      padding: 48px 24px;
+      transition: background var(--transition-slow);
     }
 
     .app-shell {
-      width: min(1040px, 100%);
+      width: min(960px, 100%);
       display: flex;
       flex-direction: column;
-      gap: 28px;
-      flex: 1;
+      gap: 24px;
+      min-height: 100dvh;
     }
 
     header {
+      background: transparent;
       text-align: center;
-      color: var(--wa-text);
+      padding: 0 12px;
     }
 
     header h1 {
       margin: 0;
-      font-size: clamp(30px, 4vw, 46px);
+      font-size: clamp(28px, 3vw, 40px);
       font-weight: 600;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     }
 
     header p {
-      margin: 12px auto 0;
-      max-width: 560px;
-      color: var(--wa-muted);
-      font-size: clamp(16px, 2.2vw, 18px);
-      line-height: 1.6;
+      margin: 10px auto 0;
+      color: var(--text-muted);
+      font-size: clamp(15px, 1.6vw, 18px);
+      max-width: 480px;
+      line-height: 1.5;
     }
 
     #chat {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-    }
-
-    .chat-card {
-      width: min(420px, 100%);
-      background: var(--wa-panel);
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      border: 1px solid var(--wa-border);
-      box-shadow: var(--wa-shadow);
-      overflow: hidden;
+      box-shadow: var(--shadow-soft);
+      padding: 28px;
       display: flex;
       flex-direction: column;
-      min-height: clamp(540px, 75vh, 760px);
-      backdrop-filter: blur(16px);
-    }
-
-    .chat-header {
-      background: linear-gradient(135deg, var(--wa-teal) 0%, var(--wa-teal-light) 100%);
-      color: #f7fbf9;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 18px 22px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-      position: relative;
-      box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
-    }
-
-    .chat-avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
-      display: grid;
-      place-items: center;
-      font-size: 22px;
-    }
-
-    .chat-info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      gap: 24px;
+      min-height: 560px;
       flex: 1;
-    }
-
-    .chat-title {
-      font-weight: 600;
-      font-size: 18px;
-      letter-spacing: 0.01em;
-    }
-
-    .chat-status {
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.82);
-      transition: color var(--transition-medium);
-    }
-
-    .chat-status[data-state="active"] {
-      color: #d9fdd3;
-    }
-
-    .chat-status[data-state="offline"] {
-      color: rgba(255, 255, 255, 0.65);
-    }
-
-    .chat-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .chat-action {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.18);
-      display: grid;
-      place-items: center;
-      font-size: 15px;
-      color: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
     }
 
     .chat-window {
-      flex: 1;
-      background: var(--wa-panel-strong);
       position: relative;
+      flex: 1;
       overflow: hidden;
     }
 
-    .chat-window::before {
-      content: "";
+    #log {
       position: absolute;
       inset: 0;
-      background-image: radial-gradient(circle at 0 0, rgba(7, 94, 84, 0.08) 0, rgba(7, 94, 84, 0.08) 2px, transparent 2px),
-                        radial-gradient(circle at 35px 35px, rgba(7, 94, 84, 0.05) 0, rgba(7, 94, 84, 0.05) 1px, transparent 1px);
-      background-size: 70px 70px;
-      opacity: 0.35;
-      pointer-events: none;
-    }
-
-    #log {
-      position: relative;
-      inset: 0;
-      padding: 24px 20px 32px;
+      padding: 20px 18px 24px;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 14px;
-      overflow-y: auto;
-      height: 100%;
-      z-index: 1;
-      scroll-behavior: smooth;
-      scroll-padding-bottom: 140px;
+      font-size: 16px;
+      line-height: 1.55;
+      background: linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(250,253,247,0.65) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
     }
 
     #log::-webkit-scrollbar {
@@ -208,93 +117,85 @@
     }
 
     #log::-webkit-scrollbar-thumb {
-      background: rgba(7, 94, 84, 0.24);
+      background: rgba(47, 111, 78, 0.25);
       border-radius: 999px;
     }
 
     #log div {
-      max-width: min(82%, 320px);
-      padding: 12px 16px 16px;
-      border-radius: 18px 18px 18px 6px;
-      box-shadow: 0 18px 40px -28px rgba(7, 94, 84, 0.65);
-      font-size: 15px;
-      line-height: 1.6;
-      word-break: break-word;
-      position: relative;
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      max-width: min(78ch, 85%);
+      box-shadow: 0 12px 30px -24px rgba(29, 49, 37, 0.65);
+      word-wrap: break-word;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      backdrop-filter: blur(6px);
     }
 
-    #log .me {
-      align-self: flex-end;
-      background: var(--wa-outgoing);
-      border-radius: 18px 6px 18px 18px;
-      border: 1px solid rgba(37, 211, 102, 0.15);
+    #log div:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 36px -26px rgba(29, 49, 37, 0.7);
     }
 
-    #log .stranger {
-      align-self: flex-start;
-      background: var(--wa-incoming);
-      border: 1px solid var(--wa-border-strong);
-    }
-
-    #log .system {
+    .system {
       align-self: center;
-      background: var(--wa-system);
-      color: var(--wa-teal);
+      background: var(--system-bg);
+      color: var(--text-muted);
       font-weight: 500;
-      border-radius: 999px;
-      padding: 10px 18px;
-      border: 1px dashed rgba(7, 94, 84, 0.25);
-      box-shadow: none;
-      font-size: 14px;
-      letter-spacing: 0.01em;
+      border: 1px dashed rgba(47, 111, 78, 0.28);
+    }
+
+    .me {
+      align-self: flex-end;
+      background: rgba(53, 129, 86, 0.18);
+      color: var(--text-primary);
+      border: 1px solid rgba(47, 111, 78, 0.35);
+    }
+
+    .stranger {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid var(--border-strong);
     }
 
     #controls {
+      position: sticky;
+      bottom: 0;
       display: flex;
-      align-items: center;
       gap: 12px;
-      padding: 16px 20px;
-      background: #f0f2f5;
-      border-top: 1px solid rgba(7, 94, 84, 0.12);
-    }
-
-    .input-wrap {
-      flex: 1;
-      display: flex;
       align-items: center;
-      gap: 12px;
-      background: #ffffff;
-      border-radius: 999px;
-      padding: 10px 18px;
-      border: 1px solid rgba(7, 94, 84, 0.08);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    }
-
-    .input-wrap span {
-      font-size: 18px;
-      color: var(--wa-muted);
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius-md) + 6px);
+      padding: 12px;
+      box-shadow: 0 10px 30px -26px rgba(36, 70, 52, 0.55);
+      margin-top: auto;
     }
 
     #msg {
       flex: 1;
-      border: none;
-      font-size: 15px;
-      font-family: inherit;
-      background: transparent;
-      color: var(--wa-text);
+      padding: 12px 16px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--text-primary);
+      font-size: 16px;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
     }
 
     #msg:focus {
       outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+      background: #fff;
     }
 
     button {
+      padding: 12px 20px;
       border: none;
       border-radius: 999px;
-      padding: 12px 22px;
-      font-size: 15px;
       font-weight: 600;
-      letter-spacing: 0.01em;
+      font-size: 15px;
+      letter-spacing: 0.02em;
       cursor: pointer;
       transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
       display: inline-flex;
@@ -305,117 +206,159 @@
     }
 
     button:focus-visible {
-      outline: 3px solid rgba(37, 211, 102, 0.3);
+      outline: 3px solid var(--accent-soft);
       outline-offset: 2px;
     }
 
     #send {
-      background: var(--wa-teal-light);
-      color: #f4fffb;
-      box-shadow: 0 22px 44px -26px rgba(7, 94, 84, 0.6);
+      background: var(--accent);
+      color: #f8fbf8;
+      box-shadow: 0 18px 36px -24px rgba(36, 70, 52, 0.7);
     }
 
     #send:hover {
-      background: #0e7d6f;
+      background: var(--accent-strong);
       transform: translateY(-1px);
+      box-shadow: 0 22px 42px -26px rgba(26, 53, 39, 0.7);
     }
 
     #send:active {
       transform: translateY(1px);
-      box-shadow: 0 16px 32px -24px rgba(7, 94, 84, 0.55);
+      box-shadow: 0 12px 24px -18px rgba(26, 53, 39, 0.6);
     }
 
     #next {
-      background: #ffffff;
-      color: var(--wa-teal);
-      border: 1px solid rgba(7, 94, 84, 0.18);
-      box-shadow: 0 18px 32px -30px rgba(7, 94, 84, 0.45);
+      background: rgba(215, 227, 136, 0.3);
+      color: #4f551e;
+      border: 1px solid rgba(215, 227, 136, 0.6);
+      box-shadow: 0 18px 36px -30px rgba(69, 83, 31, 0.45);
     }
 
     #next:hover {
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(215, 227, 136, 0.45);
+      color: #3f4515;
       transform: translateY(-1px);
+
     }
 
     #next:active {
       transform: translateY(1px);
+      background: rgba(215, 227, 136, 0.35);
     }
+
 
     @media (max-width: 960px) {
       body {
-        padding: 36px 16px;
+        padding: 32px 18px;
       }
 
-      .app-shell {
-        gap: 22px;
+      #chat {
+        padding: 24px;
       }
     }
 
     @media (max-width: 768px) {
       body {
         padding: 0;
-        background: var(--wa-bg);
+        background: var(--bg-base);
+        justify-content: flex-start;
+        align-items: stretch;
       }
 
       .app-shell {
         width: 100%;
         min-height: 100dvh;
         gap: 0;
+        background: var(--surface-strong);
+        display: grid;
+        grid-template-rows: auto 1fr;
       }
 
       header {
-        padding: calc(22px + env(safe-area-inset-top)) calc(22px + env(safe-area-inset-right)) 18px calc(22px + env(safe-area-inset-left));
+        padding: calc(18px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) 12px calc(20px + env(safe-area-inset-left));
         text-align: left;
-        background: rgba(255, 255, 255, 0.96);
-        box-shadow: 0 6px 30px -24px rgba(0, 0, 0, 0.32);
-        border-bottom: 1px solid rgba(7, 94, 84, 0.08);
+        border-bottom: 1px solid rgba(46, 89, 63, 0.12);
+        box-shadow: 0 4px 20px -18px rgba(36, 70, 52, 0.28);
+        background: rgba(255, 255, 255, 0.9);
         position: sticky;
         top: 0;
-        z-index: 5;
+        z-index: 3;
+        backdrop-filter: blur(10px);
+      }
+
+      header h1 {
+        font-size: 24px;
+      }
+
+      header p {
+        font-size: 16px;
+        margin-top: 8px;
       }
 
       #chat {
         flex: 1;
-      }
-
-      .chat-card {
+        padding: 16px 16px calc(160px + env(safe-area-inset-bottom));
         border-radius: 0;
-        width: 100%;
-        min-height: calc(100dvh - 92px);
+        border: none;
         box-shadow: none;
-        border-left: none;
-        border-right: none;
+        min-height: 100%;
+        background: var(--surface-strong);
+        gap: 16px;
+        position: relative;
       }
 
-      .chat-header {
-        padding: 14px 18px;
+      .chat-window {
+        flex: 1;
+        min-height: 0;
       }
 
       #log {
-        padding: 20px 16px 120px;
-        font-size: 16px;
+        border-radius: 20px;
+        font-size: 17px;
+        padding: 20px 18px 32px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(243,247,238,0.9) 100%);
+        scroll-padding-bottom: 140px;
       }
 
       #log div {
-        max-width: 92%;
+        max-width: 100%;
       }
 
       #controls {
-        position: sticky;
+        position: fixed;
+        left: 0;
+        right: 0;
         bottom: 0;
-        padding: 14px calc(16px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+        border-radius: 18px 18px 0 0;
+        gap: 12px;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 18px;
+        padding-left: calc(18px + env(safe-area-inset-left));
+        padding-right: calc(18px + env(safe-area-inset-right));
+        padding-bottom: calc(18px + env(safe-area-inset-bottom));
+        margin: 0;
+        box-shadow: 0 -4px 30px -22px rgba(36, 70, 52, 0.6);
+        background: rgba(255, 255, 255, 0.96);
+        z-index: 4;
+      }
+
+      #msg {
+        font-size: 17px;
+        min-height: 52px;
       }
 
       button {
-        min-width: auto;
-        padding: 12px 18px;
+        width: 100%;
+        min-height: 52px;
         font-size: 16px;
+        padding: 14px 20px;
       }
     }
 
     @media (max-width: 480px) {
       header h1 {
-        font-size: 26px;
+        font-size: 22px;
       }
 
       header p {
@@ -427,102 +370,50 @@
 <body>
   <div class="app-shell">
     <header>
-      <h1>Ekşi Anın Sohbeti</h1>
-      <p>WhatsApp benzeri sohbet arayüzüyle anlık olarak yeni kişilerle bağlantı kurun.</p>
+      <h1>Anın Sohbeti</h1>
+      <p>Anlık eşleş, sohbet et ve yeni insanlarla tanış.</p>
     </header>
     <div id="chat">
-      <div class="chat-card">
-        <div class="chat-header">
-          <div class="chat-avatar" aria-hidden="true">💬</div>
-          <div class="chat-info">
-            <div class="chat-title">Yabancı</div>
-            <div class="chat-status" id="status" data-state="waiting">Bağlantı kuruluyor...</div>
-          </div>
-          <div class="chat-actions" aria-hidden="true">
-            <div class="chat-action">🔇</div>
-            <div class="chat-action">⋮</div>
-          </div>
-        </div>
-        <div class="chat-window">
-          <div id="log"></div>
-        </div>
-        <div id="controls">
-          <div class="input-wrap">
-            <span aria-hidden="true">😊</span>
-            <input id="msg" placeholder="Mesaj yazın..." autocomplete="off" maxlength="2000">
-          </div>
-          <button id="send" type="button">Gönder</button>
-          <button id="next" type="button">Sonraki</button>
-        </div>
+      <div class="chat-window">
+        <div id="log"></div>
+      </div>
+      <div id="controls">
+        <input id="msg" placeholder="Mesaj yaz...">
+        <button id="send">Gönder</button>
+        <button id="next">Sonraki</button>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-PTdLFzKuXzwhmABF7jAFGZgdOU5so6CPl0XGWxWZVCGtenMxVdZ8SwsRHaYlIY2z" crossorigin="anonymous"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     const socket = io();
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
-    const statusEl = document.getElementById("status");
 
-    function setStatus(text, state = "waiting") {
-      if (!statusEl) return;
-      statusEl.textContent = text;
-      statusEl.dataset.state = state;
-    }
-
-    function line(txt, cls = "system") {
-      const p = document.createElement("div");
-      p.textContent = txt;
-      p.className = cls;
-      if (cls === "system") {
-        p.setAttribute("role", "status");
-      }
+    function line(txt, cls="system") {
+      const p=document.createElement("div");
+      p.textContent=txt;
+      p.className=cls;
       log.appendChild(p);
-      log.scrollTop = log.scrollHeight;
+      log.scrollTop=log.scrollHeight;
     }
 
-    socket.on("connect", () => {
-      setStatus("Eşleşme bekleniyor...", "waiting");
-      line("Eşleşme bekleniyor...");
-      socket.emit("join");
-    });
+    socket.on("connect", ()=>{ line("Eşleşme bekleniyor..."); socket.emit("join"); });
+    socket.on("matched", ()=>{ line("✓ Bir yabancı ile eşleştiniz!", "system"); });
+    socket.on("message", (txt)=>{ line("Yabancı: "+txt, "stranger"); });
+    socket.on("ended", ()=>{ line("— Bağlantı sonlandı.", "system"); socket.emit("join"); });
 
-    socket.on("matched", () => {
-      setStatus("Sohbet aktif", "active");
-      line("✓ Bir yabancı ile eşleştiniz!", "system");
-    });
-
-    socket.on("message", (txt) => {
-      line("Yabancı: " + txt, "stranger");
-    });
-
-    socket.on("ended", () => {
-      setStatus("Yeni eşleşme aranıyor...", "waiting");
-      line("— Bağlantı sonlandı.", "system");
-      socket.emit("join");
-    });
-
-    document.getElementById("send").onclick = () => {
-      if (!msg.value.trim()) return;
+    document.getElementById("send").onclick = ()=>{
+      if(!msg.value) return;
       socket.emit("message", msg.value);
-      line("Sen: " + msg.value, "me");
-      msg.value = "";
-      msg.focus();
+      line("Sen: "+msg.value, "me");
+      msg.value="";
     };
-
-    document.getElementById("next").onclick = () => {
-      setStatus("Yeni eşleşme aranıyor...", "waiting");
-      socket.emit("next");
-      line("Yeni eşleşme aranıyor...", "system");
+    document.getElementById("next").onclick = ()=>{
+      socket.emit("next"); line("Yeni eşleşme aranıyor...", "system");
     };
-
-    msg.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        document.getElementById("send").click();
-      }
-    });
+    msg.addEventListener("keydown", (e)=>{ if(e.key==="Enter") document.getElementById("send").click(); });
   </script>
 </body>
 </html>

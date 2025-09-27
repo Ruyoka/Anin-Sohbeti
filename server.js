@@ -67,5 +67,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(PORT, "0.0.0.0", () =>
-  console.log(`Ekşi Anın Sohbeti ${PORT} portunda çalışıyor.`)
+  console.log(`Anın Sohbeti ${PORT} portunda çalışıyor.`)
 );
