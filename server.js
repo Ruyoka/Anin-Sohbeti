@@ -2,6 +2,8 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
+const PORT = process.env.PORT || 6000;
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -64,6 +66,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(6000, "0.0.0.0", () =>
-  console.log("Anın Sohbeti 6000 portunda çalışıyor.")
+server.listen(PORT, "0.0.0.0", () =>
+  console.log(`Anın Sohbeti ${PORT} portunda çalışıyor.`)
 );
