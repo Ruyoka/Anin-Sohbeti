@@ -1,6 +1,6 @@
-# Anın Sohbeti
+# Ekşi Anın Sohbeti
 
-Gerçek zamanlı, rastgele eşleştirmeli sohbet uygulaması.
+Gerçek zamanlı, rastgele eşleştirmeli sohbet uygulaması. WhatsApp tarzı arayüzle, yabancılarla kolayca bağlantı kurmanızı sağlar.
 
 ## Gereksinimler
 
@@ -37,6 +37,27 @@ Gerçek zamanlı, rastgele eşleştirmeli sohbet uygulaması.
    ```
 
 Testler; eşleşme, mesajlaşma, "Sonraki" akışı, bağlantı kopmaları ve 2000 karakter sınırı gibi temel sohbet işlevlerini doğrular.
+
+## Proje Geliştirme Önerileri
+
+### Genel
+- Kullanıcıların uygunsuz davranışları bildirebileceği bir raporlama akışı ekleyin.
+- Mobil uygulama deneyimini güçlendirmek için PWA (Progressive Web App) desteği planlayın.
+
+### Frontend
+- Bileşenleri yeniden kullanılabilir kılmak için React veya Svelte gibi bir ön yüz çatı sistemi ile yeniden yazmayı değerlendirin.
+- Mesajlar için gönderilme zamanı, okunma bilgisi ve yazıyor göstergesi ekleyin.
+- Karanlık mod desteği ve özelleştirilebilir tema seçenekleri sağlayarak erişilebilirliği artırın.
+
+### Backend
+- Eşleştirme sırasında kullanıcıların tercihlerini (ör. dil, ilgi alanları) kullanmak için bir eşleştirme algoritması geliştirin.
+- Oturum yönetimi ve oran sınırlama (rate limiting) ile kötüye kullanımı azaltın.
+- Ölçeklendirme senaryoları için Redis tabanlı bir kuyruk veya Socket.IO adapter yapılandırması ekleyin.
+
+### Test ve DevOps
+- Cypress test kapsamını, mobil görünüm doğrulamaları ve hata durumlarıyla genişletin.
+- Backend için Jest veya Vitest kullanarak ünite/integrasyon testleri ekleyin.
+- GitHub Actions gibi CI/CD hatları kurarak otomatik test ve dağıtım süreçleri oluşturun.
 
 ## Docker ile çalışma
 
