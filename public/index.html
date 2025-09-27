@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
+
       --bg-base: #f3f4ee;
       --bg-gradient: linear-gradient(180deg, rgba(220, 232, 215, 0.6) 0%, rgba(243, 244, 238, 0.92) 40%, #fefefe 100%);
       --surface: rgba(255, 255, 255, 0.88);
@@ -52,7 +53,9 @@
       display: flex;
       flex-direction: column;
       gap: 24px;
+
       min-height: 100dvh;
+
     }
 
     header {
@@ -86,8 +89,10 @@
       flex-direction: column;
       gap: 24px;
       min-height: 560px;
+
       flex: 1;
       backdrop-filter: blur(10px);
+
     }
 
     .chat-window {
@@ -106,10 +111,12 @@
       gap: 14px;
       font-size: 16px;
       line-height: 1.55;
+
       background: linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(250,253,247,0.65) 100%);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+
     }
 
     #log::-webkit-scrollbar {
@@ -117,7 +124,9 @@
     }
 
     #log::-webkit-scrollbar-thumb {
+
       background: rgba(47, 111, 78, 0.25);
+
       border-radius: 999px;
     }
 
@@ -125,7 +134,9 @@
       padding: 12px 18px;
       border-radius: var(--radius-sm);
       max-width: min(78ch, 85%);
+
       box-shadow: 0 12px 30px -24px rgba(29, 49, 37, 0.65);
+
       word-wrap: break-word;
       transition: transform var(--transition-fast), box-shadow var(--transition-fast);
       backdrop-filter: blur(6px);
@@ -133,7 +144,9 @@
 
     #log div:hover {
       transform: translateY(-1px);
+
       box-shadow: 0 18px 36px -26px rgba(29, 49, 37, 0.7);
+
     }
 
     .system {
@@ -141,19 +154,25 @@
       background: var(--system-bg);
       color: var(--text-muted);
       font-weight: 500;
+
       border: 1px dashed rgba(47, 111, 78, 0.28);
+
     }
 
     .me {
       align-self: flex-end;
+
       background: rgba(53, 129, 86, 0.18);
       color: var(--text-primary);
       border: 1px solid rgba(47, 111, 78, 0.35);
+
     }
 
     .stranger {
       align-self: flex-start;
+
       background: rgba(255, 255, 255, 0.95);
+
       border: 1px solid var(--border-strong);
     }
 
@@ -219,6 +238,7 @@
     #send:hover {
       background: var(--accent-strong);
       transform: translateY(-1px);
+
       box-shadow: 0 22px 42px -26px rgba(26, 53, 39, 0.7);
     }
 
