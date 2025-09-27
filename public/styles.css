@@ -196,6 +196,11 @@ body {
 }
 
 
+.controls--waiting {
+  opacity: 0.85;
+}
+
+
 .controls__input {
   flex: 1 1 240px;
   min-width: 0;
@@ -206,7 +211,6 @@ body {
   font-size: 1rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
 
 .controls__input:disabled {
   background: var(--bg-muted);
