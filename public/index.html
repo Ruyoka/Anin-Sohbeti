@@ -174,8 +174,9 @@
 
     #controls {
       display: flex;
-      gap: 12px;
       align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
       padding: 18px 24px calc(18px + env(safe-area-inset-bottom));
       background: rgba(255, 255, 255, 0.98);
       position: sticky;
@@ -188,7 +189,8 @@
     }
 
     #msg {
-      flex: 1;
+      flex: 1 1 220px;
+      min-width: 0;
       border: 1px solid var(--border-soft);
       border-radius: 999px;
       padding: 14px 20px;
@@ -214,11 +216,16 @@
       transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
 
+    #controls button {
+      flex: 0 1 132px;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
     #send {
       background: var(--accent);
       color: #ffffff;
       box-shadow: 0 16px 34px -26px rgba(34, 72, 41, 0.7);
-      flex: none;
     }
 
     #send:not(:disabled):hover,
@@ -276,9 +283,6 @@
         padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
       }
 
-      button {
-        flex: 1;
-      }
     }
 
     @media (max-width: 480px) {
@@ -292,6 +296,12 @@
 
       .message {
         max-width: 90%;
+      }
+    }
+
+    @media (max-width: 400px) {
+      #msg {
+        flex-basis: 100%;
       }
     }
   </style>
