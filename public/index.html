@@ -37,6 +37,7 @@
     const controls = document.getElementById("controls");
     const statusBadge = document.getElementById("statusBadge");
     const nextButton = document.getElementById("next");
+
     const sendButton = document.getElementById("send");
 
     function setStatus(text, state = "idle") {
@@ -106,11 +107,13 @@
       msg.focus();
     });
 
+
     socket.on("message", (txt) => {
       line(txt, "stranger");
     });
 
     socket.on("ended", () => {
+
       setControlsEnabled(false);
       setStatus("Bağlantı sonlandı", "ended");
       line("— Bağlantı sonlandı.", "system");
@@ -120,6 +123,7 @@
 
     socket.on("disconnect", () => {
       setControlsEnabled(false);
+
       setStatus("Bağlantı koptu", "ended");
       line("Bağlantı koptu. Yeniden bağlanmaya çalışılıyor...", "system");
     });
@@ -136,9 +140,11 @@
     });
 
     nextButton.addEventListener("click", () => {
+
       setControlsEnabled(false);
       socket.emit("next");
       socket.emit("join");
+
       setStatus("Yeni eşleşme aranıyor", "idle");
       line("Yeni eşleşme aranıyor...", "system");
     });
