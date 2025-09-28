@@ -55,6 +55,87 @@
       min-height: calc(100dvh - 64px);
       max-height: 100dvh;
       overflow: hidden;
+      position: relative;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    .nickname-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(244, 247, 241, 0.94);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      z-index: 3;
+      backdrop-filter: blur(6px);
+    }
+
+    .nickname-modal {
+      background: #ffffff;
+      border-radius: var(--radius-md);
+      box-shadow: 0 28px 60px -32px rgba(34, 72, 41, 0.45);
+      padding: 28px 26px;
+      width: min(360px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      text-align: center;
+    }
+
+    .nickname-modal h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .nickname-modal p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .nickname-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .nickname-form input {
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      padding: 14px 18px;
+      font-size: 16px;
+      background: #f7fbf6;
+    }
+
+    .nickname-form input:focus {
+      outline: none;
+      border-color: rgba(47, 123, 69, 0.45);
+      box-shadow: 0 0 0 3px rgba(47, 123, 69, 0.18);
+    }
+
+    .nickname-form button {
+      background: var(--accent);
+      color: #ffffff;
+      border-radius: 999px;
+      padding: 14px 20px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      box-shadow: 0 16px 34px -26px rgba(34, 72, 41, 0.7);
+    }
+
+    .nickname-form button:hover,
+    .nickname-form button:focus-visible {
+      background: var(--accent-strong);
+      transform: translateY(-1px);
     }
 
     header {
@@ -326,6 +407,16 @@
       <h1>Ekşi Anın Sohbeti</h1>
       <p>Anlık eşleş, sohbet et ve yeni insanlarla tanış.</p>
     </header>
+    <div class="nickname-overlay" id="nickname-overlay" role="dialog" aria-modal="true">
+      <div class="nickname-modal">
+        <h2>Rumuzunu seç</h2>
+        <p>Sohbete katılmadan önce seni tanıyabileceğimiz bir rumuz belirle.</p>
+        <div class="nickname-form">
+          <input id="nickname" type="text" maxlength="24" autocomplete="off" placeholder="Örn. Pesimist">
+          <button id="nickname-submit" type="button">Sohbete Başla</button>
+        </div>
+      </div>
+    </div>
     <div id="chat">
       <div class="chat-window">
         <div id="log"></div>
@@ -345,33 +436,74 @@
     const msg = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
     const nextBtn = document.getElementById("next");
+    const nicknameOverlay = document.getElementById("nickname-overlay");
+    const nicknameInput = document.getElementById("nickname");
+    const nicknameSubmit = document.getElementById("nickname-submit");
+
     let isMatched = false;
+    let nickname = "";
+    let isCoolingDown = false;
+    let cooldownTimer = null;
+
+    function sanitizeNickname(value) {
+      return value.replace(/\s+/g, " ").trim();
+    }
+
+    function showNicknameOverlay() {
+      nicknameOverlay.hidden = false;
+      nicknameOverlay.setAttribute("aria-hidden", "false");
+      requestAnimationFrame(() => nicknameInput.focus());
+    }
+
+    function hideNicknameOverlay() {
+      nicknameOverlay.hidden = true;
+      nicknameOverlay.setAttribute("aria-hidden", "true");
+    }
+
+    function clearCooldown() {
+      if (cooldownTimer) {
+        clearTimeout(cooldownTimer);
+        cooldownTimer = null;
+      }
+      isCoolingDown = false;
+    }
+
+    function startCooldown() {
+      clearCooldown();
+      isCoolingDown = true;
+      updateControls();
+      cooldownTimer = setTimeout(() => {
+        isCoolingDown = false;
+        cooldownTimer = null;
+        updateControls();
+      }, 2000);
+    }
 
     function updateControls() {
       msg.disabled = !isMatched;
-      sendBtn.disabled = !isMatched || !msg.value.trim();
+      sendBtn.disabled = !isMatched || !msg.value.trim() || isCoolingDown;
     }
 
     function setMatchedState(state) {
       isMatched = state;
+      if (!state) {
+        clearCooldown();
+      }
       updateControls();
     }
 
-    function createMessageElement(txt, type) {
+    function createMessageElement(txt, type, prefixText) {
       const bubble = document.createElement("div");
       bubble.classList.add("message", `message--${type}`);
 
-      if (type === "stranger") {
-        const prefix = document.createElement("span");
-        prefix.className = "message__prefix";
-        prefix.textContent = "Yabancı:";
-        bubble.appendChild(prefix);
+      if (type === "stranger" || type === "me") {
+        if (prefixText) {
+          const prefix = document.createElement("span");
+          prefix.className = "message__prefix";
+          prefix.textContent = `${prefixText}:`;
+          bubble.appendChild(prefix);
+        }
 
-        const content = document.createElement("span");
-        content.className = "message__text";
-        content.textContent = txt;
-        bubble.appendChild(content);
-      } else if (type === "me") {
         const content = document.createElement("span");
         content.className = "message__text";
         content.textContent = txt;
@@ -383,8 +515,8 @@
       return bubble;
     }
 
-    function appendMessage(txt, type = "system") {
-      const bubble = createMessageElement(txt, type);
+    function appendMessage(txt, type = "system", prefixText) {
+      const bubble = createMessageElement(txt, type, prefixText);
       log.appendChild(bubble);
       log.scrollTop = log.scrollHeight;
     }
@@ -392,34 +524,89 @@
     function resetChat(statusText) {
       log.replaceChildren();
       msg.value = "";
+      clearCooldown();
       updateControls();
       if (statusText) {
         appendMessage(statusText, "system");
       }
     }
 
+    function joinQueue() {
+      if (!nickname || !socket.connected) {
+        return;
+      }
+      resetChat("Eşleşme bekleniyor...");
+      socket.emit("join");
+    }
+
+    function handleNicknameSubmit() {
+      const cleaned = sanitizeNickname(nicknameInput.value).slice(0, 24);
+      if (!cleaned) {
+        nicknameInput.focus();
+        return;
+      }
+
+      nickname = cleaned;
+      nicknameInput.value = cleaned;
+      sessionStorage.setItem("nickname", nickname);
+      hideNicknameOverlay();
+      joinQueue();
+    }
+
+    const storedNickname = sessionStorage.getItem("nickname");
+    if (storedNickname) {
+      const cleanedStored = sanitizeNickname(storedNickname).slice(0, 24);
+      if (cleanedStored) {
+        nickname = cleanedStored;
+        sessionStorage.setItem("nickname", nickname);
+        hideNicknameOverlay();
+      } else {
+        sessionStorage.removeItem("nickname");
+        showNicknameOverlay();
+      }
+    } else {
+      showNicknameOverlay();
+    }
+
     updateControls();
 
     socket.on("connect", () => {
       setMatchedState(false);
-      resetChat("Eşleşme bekleniyor...");
-      socket.emit("join");
+      if (nickname) {
+        joinQueue();
+      } else {
+        resetChat("Sohbete katılmak için bir rumuz seç.");
+        showNicknameOverlay();
+      }
     });
 
     socket.on("matched", () => {
       resetChat("✓ Bir yabancı ile eşleştiniz!");
       setMatchedState(true);
-      msg.focus();
+      if (!isCoolingDown) {
+        msg.focus();
+      }
     });
 
-    socket.on("message", (txt) => {
-      appendMessage(txt, "stranger");
+    socket.on("message", (payload) => {
+      const data =
+        payload && typeof payload === "object"
+          ? {
+              text: (payload.text ?? "").toString(),
+              nickname: (payload.nickname ?? "").toString(),
+            }
+          : { text: (payload ?? "").toString(), nickname: "" };
+
+      const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "Yabancı";
+      appendMessage(data.text, "stranger", senderName);
     });
 
     socket.on("ended", () => {
       setMatchedState(false);
       resetChat("— Bağlantı sonlandı. Yeni eşleşme bekleniyor...");
-      socket.emit("join");
+      if (nickname) {
+        socket.emit("join");
+      }
     });
 
     socket.on("disconnect", () => {
@@ -427,11 +614,15 @@
     });
 
     sendBtn.onclick = () => {
-      if (!isMatched || !msg.value.trim()) return;
-      socket.emit("message", msg.value);
-      appendMessage(msg.value, "me");
+      if (!isMatched || !nickname || !msg.value.trim() || isCoolingDown) return;
+
+      const messageText = msg.value.trim().slice(0, 2000);
+      socket.emit("message", { text: messageText, nickname });
+      appendMessage(messageText, "me", nickname);
       msg.value = "";
+      startCooldown();
       updateControls();
+      msg.focus();
     };
 
     nextBtn.onclick = () => {
@@ -442,7 +633,20 @@
 
     msg.addEventListener("input", updateControls);
     msg.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") sendBtn.click();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!sendBtn.disabled) {
+          sendBtn.click();
+        }
+      }
+    });
+
+    nicknameSubmit.addEventListener("click", handleNicknameSubmit);
+    nicknameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleNicknameSubmit();
+      }
     });
   </script>
 </body>
