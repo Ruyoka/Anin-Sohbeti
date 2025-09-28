@@ -69,7 +69,23 @@ io.on("connection", (socket) => {
 
   socket.on("message", (msg) => {
     const partner = partners.get(socket.id);
-    if (partner) io.to(partner).emit("message", (msg||"").toString().slice(0,2000));
+    if (!partner) return;
+
+    const payload =
+      msg && typeof msg === "object"
+        ? {
+            text: (msg.text || "").toString(),
+            nickname: (msg.nickname || "").toString(),
+          }
+        : { text: (msg || "").toString(), nickname: "" };
+
+    const safeText = payload.text.slice(0, 2000);
+    const safeNickname = payload.nickname.slice(0, 50);
+
+    io.to(partner).emit("message", {
+      text: safeText,
+      nickname: safeNickname,
+    });
   });
 
   socket.on("next", () => {
