@@ -464,11 +464,50 @@
     const nicknameOverlay = document.getElementById("nickname-overlay");
     const nicknameInput = document.getElementById("nickname");
     const nicknameSubmit = document.getElementById("nickname-submit");
+    const WAITING_STATUS_TEXT =
+      "Şu anda eşleşecek kişi bulunmadı, birisi ile eşleştiğinizde size bildirim göndereceğiz. Tarayıcınızdan bildirimlere izin vermeyi unutmayınız :)";
 
     let isMatched = false;
     let nickname = "";
     let isCoolingDown = false;
     let cooldownTimer = null;
+    let waitingStatusBubble = null;
+    let audioContext = null;
+
+    function ensureAudioContext() {
+      if (audioContext) {
+        return audioContext;
+      }
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) {
+        return null;
+      }
+      audioContext = new Ctx();
+      return audioContext;
+    }
+
+    function playMatchSound() {
+      const ctx = ensureAudioContext();
+      if (!ctx) {
+        return;
+      }
+
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+
+      const duration = 0.2;
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      oscillator.connect(gain).connect(ctx.destination);
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + duration + 0.02);
+    }
 
     function sanitizeNickname(value) {
       return value.replace(/\s+/g, " ").trim();
@@ -513,6 +552,8 @@
       isMatched = state;
       if (!state) {
         clearCooldown();
+      } else {
+        hideWaitingStatus();
       }
       updateControls();
     }
@@ -544,16 +585,35 @@
       const bubble = createMessageElement(txt, type, prefixText);
       log.appendChild(bubble);
       log.scrollTop = log.scrollHeight;
+      return bubble;
     }
 
     function resetChat(statusText) {
       log.replaceChildren();
       msg.value = "";
       clearCooldown();
+      hideWaitingStatus();
       updateControls();
       if (statusText) {
         appendMessage(statusText, "system");
       }
+    }
+
+    function showWaitingStatus(text) {
+      if (waitingStatusBubble || !text) {
+        return;
+      }
+      waitingStatusBubble = appendMessage(text, "system");
+      if (waitingStatusBubble) {
+        waitingStatusBubble.dataset.waitingStatus = "true";
+      }
+    }
+
+    function hideWaitingStatus() {
+      if (waitingStatusBubble && waitingStatusBubble.parentNode) {
+        waitingStatusBubble.remove();
+      }
+      waitingStatusBubble = null;
     }
 
     function joinQueue() {
@@ -608,8 +668,21 @@
     socket.on("matched", () => {
       resetChat("✓ Bir yabancı ile eşleştiniz!");
       setMatchedState(true);
+      playMatchSound();
       if (!isCoolingDown) {
         msg.focus();
+      }
+    });
+
+    socket.on("waitingStatus", (payload) => {
+      const data =
+        payload && typeof payload === "object"
+          ? payload
+          : { active: Boolean(payload), message: WAITING_STATUS_TEXT };
+      if (data.active) {
+        showWaitingStatus((data.message || WAITING_STATUS_TEXT).toString());
+      } else {
+        hideWaitingStatus();
       }
     });
 
