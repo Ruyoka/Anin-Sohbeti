@@ -8,7 +8,9 @@
     "test:e2e": "cypress run"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^4.18.2",
+    "openai": "^5.23.2",
     "socket.io": "^4.7.2"
   },
   "devDependencies": {
