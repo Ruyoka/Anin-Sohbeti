@@ -52,6 +52,7 @@
 
     let hasPartner = false;
     let isQueued = false;
+    let partnerNickname = "Yabancı";
 
 
     function setStatus(text, state = "idle") {
@@ -124,7 +125,7 @@
         meta.className = "message__meta";
 
         const author = document.createElement("span");
-        author.textContent = type === "me" ? "Sen" : "Yabancı";
+        author.textContent = type === "me" ? "Sen" : partnerNickname;
 
         const timestamp = document.createElement("span");
         timestamp.textContent = formatTime(now);
@@ -149,12 +150,13 @@
       queueForMatch({ message: "Eşleşme bekleniyor..." });
     });
 
-    socket.on("matched", () => {
+    socket.on("matched", (payload = {}) => {
       hasPartner = true;
       isQueued = false;
+      partnerNickname = payload.nickname || "Yabancı";
       setControlsState("active");
-      setStatus("Bir yabancıyla eşleştiniz", "active");
-      line("✓ Bir yabancı ile eşleştiniz!", "system");
+      setStatus(`${partnerNickname} ile eşleştiniz`, "active");
+      line(`✓ ${partnerNickname} ile eşleştiniz!`, "system");
       msg.focus();
     });
 
@@ -165,6 +167,7 @@
     socket.on("ended", () => {
       hasPartner = false;
       isQueued = false;
+      partnerNickname = "Yabancı";
       setControlsState("waiting");
       setStatus("Bağlantı sonlandı", "ended");
       line("— Bağlantı sonlandı.", "system");
