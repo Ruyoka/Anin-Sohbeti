@@ -490,6 +490,7 @@ async function sendAiResponse(session) {
     } catch (error) {
       console.error("OpenAI isteği başarısız", error);
     }
+    messages.push({ role: "system", content: RESPONSE_REMINDER });
   }
 
   if (!text) {
@@ -528,6 +529,7 @@ function releaseAiSession(session, options = {}) {
     session.pendingDelay = null;
   }
 
+
   if (session.pendingDelayResolve) {
     const resolver = session.pendingDelayResolve;
     session.pendingDelayResolve = null;
@@ -537,6 +539,7 @@ function releaseAiSession(session, options = {}) {
   clearSilenceNudge(session);
   session.waitingForUser = false;
   session.silenceNudges = 0;
+
 
   aiSessions.delete(session.id);
   partners.delete(session.userId);
