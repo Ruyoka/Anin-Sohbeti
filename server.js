@@ -4,6 +4,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const OpenAI = require("openai");
+const { botResponse, FIRST_MESSAGE_POOL, EXIT_MESSAGES } = require("./botResponse");
 
 const PORT = process.env.PORT || 6000;
 
@@ -27,15 +28,7 @@ const AI_NICKNAMES = [
   "ARVAT",
 ];
 
-const AI_EXIT_MESSAGES = [
-  "uyumam lazım",
-  "film açıcam",
-  "arkadaşım arıyo",
-  "çıkmam gerek",
-  "telefonum şarj bitiyo",
-  "canım sıkkın kapatıcam",
-  "yarın erken kalkıcam",
-];
+const AI_EXIT_MESSAGES = EXIT_MESSAGES;
 
 const AI_PERSONALITIES = [
   {
@@ -82,18 +75,7 @@ const AI_PERSONALITIES = [
   },
 ];
 
-const AI_FIRST_MESSAGES = [
-  "selam",
-  "napıon",
-  "uyumadın mı",
-  "sıkıldım ya",
-  "buralar boş mu hep",
-  "gece oluyo işte",
-  "yaaa",
-  "offf",
-  "selamm",
-  "napıosun",
-];
+const AI_FIRST_MESSAGES = FIRST_MESSAGE_POOL;
 
 const AI_SILENCE_NUDGES = ["hey", "orda mısın", "alo", "napıon ya", "sessizlik"];
 
@@ -174,43 +156,13 @@ function sanitizeAiText(text) {
 }
 
 function fallbackAiResponse(session, options = {}) {
-  const { initial = false } = options;
+  const { initial = false, userMessage = "" } = options;
+  const count = session && typeof session.messageCount === "number" ? session.messageCount : 0;
+  const input = initial
+    ? ""
+    : userMessage || (session && typeof session.lastUserMessage === "string" ? session.lastUserMessage : "");
 
-  if (initial) {
-    return randomChoice(AI_FIRST_MESSAGES);
-  }
-
-  const coldish = ["hmm", "ya işte", "bilmem", "aynı", "ne diyim"];
-  const gentle = ["ya moralim bozuk", "içim sıkıyo", "ya yine kafa dolu", "uf", "off"];
-  const thoughts = AI_IDLE_THOUGHTS;
-
-  const name = session.personality.name.toLowerCase();
-
-  if (name.includes("cold")) {
-    return randomChoice([...coldish, "hıh", "ok"]);
-  }
-
-  if (name.includes("flirty")) {
-    return randomChoice(["haha", "belki :)", "ya sen?"]);
-  }
-
-  if (name.includes("big-sister")) {
-    return randomChoice(["bak sakin ol", "boşver ya", "aman diyim"]);
-  }
-
-  if (name.includes("heartbroken")) {
-    return randomChoice(["içim çok kırık", "zor ya", "biraz dağılıyom", ":("]);
-  }
-
-  if (name.includes("night")) {
-    return randomChoice(["uykum yok", "gece yine bitmiyo", "kafam dolu"]);
-  }
-
-  if (name.includes("sharing")) {
-    return randomChoice(["iş güç yoruyo", "okul kafamı yedi", "evde herkes suskun"]);
-  }
-
-  return randomChoice([...gentle, ...thoughts]);
+  return botResponse(input, count);
 }
 
 function clearSilenceNudge(session) {
@@ -255,7 +207,7 @@ async function deliverAiMessage(session, text) {
     finalText = "hmm";
   }
 
-  const delay = randomInt(2000, 15000);
+  const delay = randomInt(2000, 9000);
 
   await new Promise((resolve) => {
     session.pendingDelayResolve = resolve;
@@ -420,6 +372,7 @@ async function assignAiToUser(userId) {
     silenceNudges: 0,
     waitingForUser: false,
     messageCount: 0,
+    lastUserMessage: "",
   };
 
   aiSessions.set(sessionId, session);
@@ -443,6 +396,7 @@ function queueAiResponse(session, userMessage) {
   if (!session || !session.active) return;
 
   const text = typeof userMessage === "string" ? userMessage.trim() : "";
+  session.lastUserMessage = text;
   if (text) {
     session.history.push({ role: "user", content: text });
   }
