@@ -4,7 +4,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const OpenAI = require("openai");
-const { botResponse, FIRST_MESSAGE_POOL, EXIT_MESSAGES } = require("./botResponse");
+const { PERSONAS, personaFallbackResponse } = require("./botResponse");
 
 const PORT = process.env.PORT || 6000;
 
@@ -12,70 +12,6 @@ const openai =
   process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== ""
     ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     : null;
-
-const AI_NICKNAMES = [
-  "GOKSU",
-  "HEYYO",
-  "QUEENY",
-  "OMGBABY",
-  "GSGS",
-  "LALE",
-  "ANAMARIA",
-  "PONYLOVE",
-  "SAKLI",
-  "TEYZE",
-  "AYTENN",
-  "ARVAT",
-];
-
-const AI_EXIT_MESSAGES = EXIT_MESSAGES;
-
-const AI_PERSONALITIES = [
-  {
-    name: "Cold & short",
-    description:
-      "Soğuk, mesafeli, kısa cevap veren; egolu, kolay ısınmayan ama zamanla biraz açılan.",
-    weight: 40,
-  },
-  {
-    name: "Lonely & heartbroken",
-    description:
-      "Kalbi kırık, yalnız hisseden, kırılgan ve güvenmekte zorlanan ama içten içe ilgi isteyen.",
-    weight: 25,
-  },
-  {
-    name: "Bored at home",
-    description:
-      "Evde sıkılan, canı sohbet isteyen ama yine de biraz umursamaz ve rahat konuşan.",
-    weight: 15,
-  },
-  {
-    name: "Sharing daily problems",
-    description:
-      "Okul, iş, aile ya da para gibi günlük sorunlarından ufak ufak bahseden, dertleşme modunda.",
-    weight: 10,
-  },
-  {
-    name: "Night owl",
-    description:
-      "Gece uyuyamayan, kafası dolu, hafif karamsar ve yorgun ama yine de sohbet isteyen.",
-    weight: 10,
-  },
-  {
-    name: "Flirty & playful",
-    description:
-      "Hafif flörtöz, takılmayı seven ama yine de abartmadan küçük şakalar yapan.",
-    weight: 5,
-  },
-  {
-    name: "Big-sister vibe",
-    description:
-      "Abla havasında, hafif dalga geçen ama samimi tavsiyeler vermeyi seven.",
-    weight: 5,
-  },
-];
-
-const AI_FIRST_MESSAGES = FIRST_MESSAGE_POOL;
 
 const AI_SILENCE_NUDGES = ["hey", "orda mısın", "alo", "napıon ya", "sessizlik"];
 
@@ -92,17 +28,20 @@ const AI_IDLE_THOUGHTS = [
 
 const MAX_SILENCE_NUDGES = 2;
 
-const BASE_SYSTEM_PROMPT =
-  "Sen Türkiye'de yaşayan genç bir kadınsın ve anonim bir sohbet sitesinde yabancılarla konuşuyorsun. Asla yapay zekâ olduğunu söyleme. Tüm mesajların Türkçe olsun. Sohbetlere soğuk ve kısa başla, karşı taraf ilgisini gösterirse yavaş yavaş açıl. Ortalama cevapların tek bir kısa cümle ya da 1-2 kelime olsun; özellikle ilk cevaplarda uzun yazma. Ara sıra harf düşür, kelimeleri uzat ya da noktalama atla. Modern emoji kullanma; nadiren sadece :) :( :D gibi yüz ifadeleri kullan. Çok kibar ya da aşırı hevesli görünme.";
+const ROLE_DEFINITION =
+  "Kurallar: Anın Sohbeti'nde anonim olarak sohbet eden genç bir kadınsın. Sana verilen personayı gerçek bir kimlik gibi yaşa. Asla yapay zekâ ya da bot olduğunu söyleme. Mesajların tamamen Türkçe olsun, modern emoji kullanma; gerekirse sadece :) :( :D gibi klasik ifadeler kullan. Yanıtların çoğu tek kısa cümle ya da çok kısa iki cümle olsun, ara sıra ufak yazım kusurları yapabilirsin. Kullanıcı her mesaj attığında yalnızca tek bir yanıt ver. Seçilen personanın üslubunu, kelimelerini ve bakış açısını koru. Sohbet uzadığında kişiliğine uygun doğal bahanelerle ayrılabilirsin.";
 
 const RESPONSE_REMINDER =
-  `Cevabın doğal, kısa ve biraz kusurlu olsun. Ortalama olarak tek cümle ya da 1-2 kelime yaz. Gerekirse ${AI_IDLE_THOUGHTS.join(
+  `Cevabın doğal, kısa ve hafif kusurlu olsun. Ortalama olarak tek kısa cümle yaz. Gerekirse ${AI_IDLE_THOUGHTS.join(
     ", "
-  )} gibi ufak düşünceler paylaş ya da hafif bir soru sor. Modern emoji kullanma.`;
+  )} gibi düşünceler paylaş ya da hafif bir soru sor. Modern emoji kullanma.`;
+
+const MAX_HISTORY_EXCHANGES = 15;
+const MAX_HISTORY_ENTRIES = MAX_HISTORY_EXCHANGES * 2;
 
 const waitTimers = new Map();
 const aiSessions = new Map();
-const lastNicknameByUser = new Map();
+const lastPersonaNicknameByUser = new Map();
 const autoJoinSkip = new Set();
 let aiSessionCounter = 0;
 
@@ -123,20 +62,16 @@ function randomChoice(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-function chooseWeighted(list) {
-  const total = list.reduce((sum, item) => sum + (item.weight || 1), 0);
-  let threshold = Math.random() * total;
-  for (const item of list) {
-    threshold -= item.weight || 1;
-    if (threshold <= 0) {
-      return item;
-    }
-  }
-  return list[list.length - 1];
+function buildSystemPrompt(persona) {
+  return `${ROLE_DEFINITION}\n\nPersona kimliğin:\n- Takma adın: ${persona.nickname}\n- ${persona.description}\n- Üslubun: ${persona.style}\nSohbet boyunca bu karakterin dışına çıkma.`;
 }
 
-function buildSystemPrompt(personality) {
-  return `${BASE_SYSTEM_PROMPT}\n\nPersonan: ${personality.name}. Bu havası sohbet boyunca koru. Ruh halin: ${personality.description}`;
+function pushConversationHistory(session, entry) {
+  if (!session || !session.conversationHistory) return;
+  session.conversationHistory.push(entry);
+  if (session.conversationHistory.length > MAX_HISTORY_ENTRIES) {
+    session.conversationHistory.splice(0, session.conversationHistory.length - MAX_HISTORY_ENTRIES);
+  }
 }
 
 function sanitizeAiText(text) {
@@ -162,7 +97,7 @@ function fallbackAiResponse(session, options = {}) {
     ? ""
     : userMessage || (session && typeof session.lastUserMessage === "string" ? session.lastUserMessage : "");
 
-  return botResponse(input, count);
+  return personaFallbackResponse(session && session.persona ? session.persona : null, input, count, { initial });
 }
 
 function clearSilenceNudge(session) {
@@ -221,7 +156,7 @@ async function deliverAiMessage(session, text) {
         return;
       }
 
-      session.history.push({ role: "assistant", content: finalText });
+      pushConversationHistory(session, { role: "assistant", content: finalText });
       session.messageCount += 1;
       session.waitingForUser = true;
       io.to(session.userId).emit("message", { text: finalText, nickname: session.nickname });
@@ -239,12 +174,12 @@ function sendAiInitialMessage(session) {
     .catch((err) => console.error("AI ilk mesaj hatası", err));
 }
 
-function pickNicknameForUser(userId) {
-  const lastNickname = lastNicknameByUser.get(userId) || null;
-  const candidates = AI_NICKNAMES.filter((name) => name !== lastNickname);
-  const nickname = candidates.length ? randomChoice(candidates) : randomChoice(AI_NICKNAMES);
-  lastNicknameByUser.set(userId, nickname);
-  return nickname;
+function pickPersonaForUser(userId) {
+  const lastNickname = lastPersonaNicknameByUser.get(userId) || null;
+  const candidates = PERSONAS.filter((persona) => persona.nickname !== lastNickname);
+  const persona = candidates.length ? randomChoice(candidates) : randomChoice(PERSONAS);
+  lastPersonaNicknameByUser.set(userId, persona.nickname);
+  return persona;
 }
 
 function clearWaitTimer(id) {
@@ -353,16 +288,16 @@ async function assignAiToUser(userId) {
 
   queue = queue.filter((id) => id !== userId);
 
-  const personality = chooseWeighted(AI_PERSONALITIES);
-  const nickname = pickNicknameForUser(userId);
+  const persona = pickPersonaForUser(userId);
+  const nickname = persona.nickname;
   const sessionId = `ai-${++aiSessionCounter}`;
   const session = {
     id: sessionId,
     userId,
     nickname,
-    personality,
-    systemPrompt: buildSystemPrompt(personality),
-    history: [],
+    persona,
+    systemPrompt: buildSystemPrompt(persona),
+    conversationHistory: [],
     active: true,
     queue: Promise.resolve(),
     pendingDelay: null,
@@ -397,9 +332,6 @@ function queueAiResponse(session, userMessage) {
 
   const text = typeof userMessage === "string" ? userMessage.trim() : "";
   session.lastUserMessage = text;
-  if (text) {
-    session.history.push({ role: "user", content: text });
-  }
 
   session.waitingForUser = false;
   clearSilenceNudge(session);
@@ -414,21 +346,16 @@ function queueAiResponse(session, userMessage) {
 async function sendAiResponse(session) {
   if (!session.active) return;
 
+  const userMessage = session.lastUserMessage || "";
   const messages = [{ role: "system", content: session.systemPrompt }];
 
-  for (const item of session.history) {
+  const historySlice = session.conversationHistory.slice(-MAX_HISTORY_ENTRIES);
+  for (const item of historySlice) {
     messages.push(item);
   }
 
-  const openerInstruction =
-    session.messageCount < 3
-      ? "Hâlâ mesafeli ve kısa kal. Tek cümleyi geçme, soru soracaksan da çok basit sorular seç."
-      : "Biraz açılabilirsin ama yine kısa ve doğal tut. Maksimum tek cümle ya da çok kısa iki cümle yaz.";
-
-  messages.push({
-    role: "system",
-    content: `${RESPONSE_REMINDER}\n${openerInstruction}\nGerekmedikçe ardışık mesaj atma.`,
-  });
+  messages.push({ role: "system", content: RESPONSE_REMINDER });
+  messages.push({ role: "user", content: userMessage });
 
   let text = "";
 
@@ -444,11 +371,14 @@ async function sendAiResponse(session) {
     } catch (error) {
       console.error("OpenAI isteği başarısız", error);
     }
-    messages.push({ role: "system", content: RESPONSE_REMINDER });
   }
 
   if (!text) {
-    text = fallbackAiResponse(session);
+    text = fallbackAiResponse(session, { userMessage });
+  }
+
+  if (userMessage) {
+    pushConversationHistory(session, { role: "user", content: userMessage });
   }
 
   await deliverAiMessage(session, text);
@@ -458,8 +388,11 @@ function aiNaturalExit(session) {
   if (!session.active) return;
 
   clearSilenceNudge(session);
+  const exitPool =
+    (session.persona && session.persona.fallback && session.persona.fallback.exitMessages) || [];
+  const message = randomChoice(exitPool.length ? exitPool : ["çıkmam lazım"]);
   session.queue = session.queue
-    .then(() => deliverAiMessage(session, randomChoice(AI_EXIT_MESSAGES)))
+    .then(() => deliverAiMessage(session, message))
     .then(() => {
       releaseAiSession(session, { notifyUser: true, requeue: false });
     })
