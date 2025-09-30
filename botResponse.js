@@ -178,86 +178,49 @@ function pickFromPool(pool) {
   return pool[index];
 }
 
-function resolvePool(category, personaFallback) {
-  if (personaFallback && personaFallback.categoryPools) {
-    const customPool = personaFallback.categoryPools[category];
-    if (Array.isArray(customPool) && customPool.length) {
-      return customPool;
-    }
-  }
-  return CATEGORY_POOLS[category] || CATEGORY_POOLS.neutral;
-}
-
-function resolveCasualPool(category, personaFallback) {
-  if (personaFallback && personaFallback.casualSentences) {
-    const customPool = personaFallback.casualSentences[category];
-    if (Array.isArray(customPool) && customPool.length) {
-      return customPool;
-    }
-  }
-  return CASUAL_SENTENCES[category] || CASUAL_SENTENCES.neutral;
-}
-
-function resolveLongSentences(personaFallback) {
-  if (personaFallback && Array.isArray(personaFallback.longResponses) && personaFallback.longResponses.length) {
-    return personaFallback.longResponses;
-  }
-  return LONG_RESPONSES;
-}
-
-function chooseSentence(category, personaFallback) {
-  const pool = resolveCasualPool(category, personaFallback);
+function chooseSentence(category) {
+  const pool = CASUAL_SENTENCES[category] || CASUAL_SENTENCES.neutral;
   return pickFromPool(pool);
 }
 
-function chooseLongSentence(personaFallback) {
-  return pickFromPool(resolveLongSentences(personaFallback));
+function chooseLongSentence() {
+  return pickFromPool(LONG_RESPONSES);
 }
 
-function resolveFirstMessages(personaFallback) {
-  if (personaFallback && Array.isArray(personaFallback.firstMessages) && personaFallback.firstMessages.length) {
-    return personaFallback.firstMessages;
-  }
-  return FIRST_MESSAGE_POOL;
-}
-
-function botResponse(userMessage = "", messageCount = 0, personaFallback = null) {
+function botResponse(userMessage = "", messageCount = 0) {
   if (Number.isNaN(messageCount) || messageCount < 0) {
     messageCount = 0;
   }
 
   if (messageCount === 0) {
-    return pickFromPool(resolveFirstMessages(personaFallback));
+    return pickFromPool(FIRST_MESSAGE_POOL);
   }
 
   const category = categorizeMessage(userMessage);
 
   if (messageCount >= 12 && Math.random() < 0.08) {
-    const exitPool = personaFallback && Array.isArray(personaFallback.exitMessages) && personaFallback.exitMessages.length
-      ? personaFallback.exitMessages
-      : EXIT_MESSAGES;
-    return pickFromPool(exitPool);
+    return pickFromPool(EXIT_MESSAGES);
   }
 
   if (category === "aggressive") {
-    return pickFromPool(resolvePool("aggressive", personaFallback));
+    return pickFromPool(CATEGORY_POOLS.aggressive);
   }
 
   const roll = Math.random();
 
   if (roll < 0.7) {
-    return pickFromPool(resolvePool(category, personaFallback));
+    return pickFromPool(CATEGORY_POOLS[category] || CATEGORY_POOLS.neutral);
   }
 
   if (roll < 0.9) {
-    return chooseSentence(category, personaFallback);
+    return chooseSentence(category);
   }
 
   if (messageCount >= 3) {
-    return chooseLongSentence(personaFallback);
+    return chooseLongSentence();
   }
 
-  return pickFromPool(resolvePool(category, personaFallback));
+  return pickFromPool(CATEGORY_POOLS[category] || CATEGORY_POOLS.neutral);
 }
 
 module.exports = {
