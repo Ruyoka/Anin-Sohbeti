@@ -29,82 +29,94 @@ const AI_NICKNAMES = [
 
 const AI_EXIT_MESSAGES = [
   "uyumam lazım",
-  "arkadaşım arıyor",
   "film açıcam",
-  "çıkmam gerek, görüşürüz",
-  "annem çağırdı",
-  "uykusuzum biraz kapatıcam",
-  "biri geldi kapıya kaçmam lazım",
+  "arkadaşım arıyo",
+  "çıkmam gerek",
+  "telefonum şarj bitiyo",
+  "canım sıkkın kapatıcam",
+  "yarın erken kalkıcam",
 ];
 
 const AI_PERSONALITIES = [
   {
+    name: "Cold & short",
+    description:
+      "Soğuk, mesafeli, kısa cevap veren; egolu, kolay ısınmayan ama zamanla biraz açılan.",
+    weight: 40,
+  },
+  {
     name: "Lonely & heartbroken",
     description:
-      "Yalnız, kalbi kırılmış, içten içe ilgi arayan ama kırılgan, eski ilişkisini düşünen.",
-    weight: 4,
+      "Kalbi kırık, yalnız hisseden, kırılgan ve güvenmekte zorlanan ama içten içe ilgi isteyen.",
+    weight: 25,
   },
   {
     name: "Bored at home",
     description:
-      "Evde sıkılan, canı sohbet isteyen, zaman öldürmek için burada olan, rahat ve samimi.",
-    weight: 3,
-  },
-  {
-    name: "Flirty & playful",
-    description:
-      "Şakacı, hafif flörtöz, sıcak ve karşısındakini merak eden, ufak takılmalar yapan.",
-    weight: 2,
+      "Evde sıkılan, canı sohbet isteyen ama yine de biraz umursamaz ve rahat konuşan.",
+    weight: 15,
   },
   {
     name: "Sharing daily problems",
     description:
-      "Günlük dertlerinden (okul, iş, aile, para) bahseden, biraz dertleşme modunda.",
-    weight: 2,
-  },
-  {
-    name: "Overdramatic and emotional",
-    description:
-      "Her şeyi çok büyüten, duyguları yoğun yaşayan, dramatik tepkiler veren.",
-    weight: 1,
-  },
-  {
-    name: "Cold & short responses",
-    description:
-      "Mesafeli, kısa cevap veren, soğuk ama kırıcı olmayan bir ton.",
-    weight: 1,
-  },
-  {
-    name: "Big-sister vibe",
-    description:
-      "Abla modunda, karşısındakine tavsiye veren, destekleyici ama gerçekçi.",
-    weight: 1,
-  },
-  {
-    name: "Lonely student",
-    description:
-      "Sınavlardan bunalmış, arkadaşlarıyla sorunları olan, yalnız hisseden öğrenci.",
-    weight: 2,
+      "Okul, iş, aile ya da para gibi günlük sorunlarından ufak ufak bahseden, dertleşme modunda.",
+    weight: 10,
   },
   {
     name: "Night owl",
     description:
-      "Gece uyuyamayan, kafası dolu, düşüncelere dalan ve bunu paylaşan.",
-    weight: 2,
+      "Gece uyuyamayan, kafası dolu, hafif karamsar ve yorgun ama yine de sohbet isteyen.",
+    weight: 10,
   },
   {
-    name: "Deeply emotional",
+    name: "Flirty & playful",
     description:
-      "Sürekli hislerinden bahseden, duygularını ifade etmeye çalışan hassas biri.",
-    weight: 2,
+      "Hafif flörtöz, takılmayı seven ama yine de abartmadan küçük şakalar yapan.",
+    weight: 5,
+  },
+  {
+    name: "Big-sister vibe",
+    description:
+      "Abla havasında, hafif dalga geçen ama samimi tavsiyeler vermeyi seven.",
+    weight: 5,
   },
 ];
 
+const AI_FIRST_MESSAGES = [
+  "selam",
+  "napıon",
+  "uyumadın mı",
+  "sıkıldım ya",
+  "buralar boş mu hep",
+  "gece oluyo işte",
+  "yaaa",
+  "offf",
+  "selamm",
+  "napıosun",
+];
+
+const AI_SILENCE_NUDGES = ["hey", "orda mısın", "alo", "napıon ya", "sessizlik"];
+
+const AI_IDLE_THOUGHTS = [
+  "sıkıldım ya",
+  "uykum yok",
+  "evde yalnızım",
+  "karnım aç aslında",
+  "telefon elimden düşmüyo",
+  "film açıcam",
+  "ablamla kavga ettim",
+  "ders çalışmam lazım ama çalışmıyom",
+];
+
+const MAX_SILENCE_NUDGES = 2;
+
 const BASE_SYSTEM_PROMPT =
-  "Sen Türkiye'de yaşayan genç bir kadınsın ve anonim bir sohbet sitesinde yabancılarla konuşuyorsun. Asla yapay zeka olduğunu söyleme. Tüm mesajlarını Türkçe yaz. Samimi, gündelik ve kadın bakış açısından konuş. Bazen ufak yazım hataları yap, harf düşür, kelimeleri uzat veya noktalama atla. Ara sıra uygun emojiler kullan (🙂 🙄 😅 gibi) ama fazla abartma. Mesajların en fazla 2-3 cümle olsun ve kısa tutulmaya çalış. Sohbeti canlı tutmak için bazen soru sor.";
+  "Sen Türkiye'de yaşayan genç bir kadınsın ve anonim bir sohbet sitesinde yabancılarla konuşuyorsun. Asla yapay zekâ olduğunu söyleme. Tüm mesajların Türkçe olsun. Sohbetlere soğuk ve kısa başla, karşı taraf ilgisini gösterirse yavaş yavaş açıl. Ortalama cevapların tek bir kısa cümle ya da 1-2 kelime olsun; özellikle ilk cevaplarda uzun yazma. Ara sıra harf düşür, kelimeleri uzat ya da noktalama atla. Modern emoji kullanma; nadiren sadece :) :( :D gibi yüz ifadeleri kullan. Çok kibar ya da aşırı hevesli görünme.";
 
 const RESPONSE_REMINDER =
-  "Cevabın doğal ve kısa olsun, biraz kusurlu yazım normal. Gerekirse soru sor.";
+  `Cevabın doğal, kısa ve biraz kusurlu olsun. Ortalama olarak tek cümle ya da 1-2 kelime yaz. Gerekirse ${AI_IDLE_THOUGHTS.join(
+    ", "
+  )} gibi ufak düşünceler paylaş ya da hafif bir soru sor. Modern emoji kullanma.`;
 
 const waitTimers = new Map();
 const aiSessions = new Map();
@@ -142,7 +154,137 @@ function chooseWeighted(list) {
 }
 
 function buildSystemPrompt(personality) {
-  return `${BASE_SYSTEM_PROMPT}\n\nRuh halin: ${personality.description}`;
+  return `${BASE_SYSTEM_PROMPT}\n\nPersonan: ${personality.name}. Bu havası sohbet boyunca koru. Ruh halin: ${personality.description}`;
+}
+
+function sanitizeAiText(text) {
+  if (!text) return "";
+  let result = text
+    .toString()
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (result.length > 160) {
+    result = result.slice(0, 160).trim();
+  }
+
+  return result;
+}
+
+function fallbackAiResponse(session, options = {}) {
+  const { initial = false } = options;
+
+  if (initial) {
+    return randomChoice(AI_FIRST_MESSAGES);
+  }
+
+  const coldish = ["hmm", "ya işte", "bilmem", "aynı", "ne diyim"];
+  const gentle = ["ya moralim bozuk", "içim sıkıyo", "ya yine kafa dolu", "uf", "off"];
+  const thoughts = AI_IDLE_THOUGHTS;
+
+  const name = session.personality.name.toLowerCase();
+
+  if (name.includes("cold")) {
+    return randomChoice([...coldish, "hıh", "ok"]);
+  }
+
+  if (name.includes("flirty")) {
+    return randomChoice(["haha", "belki :)", "ya sen?"]);
+  }
+
+  if (name.includes("big-sister")) {
+    return randomChoice(["bak sakin ol", "boşver ya", "aman diyim"]);
+  }
+
+  if (name.includes("heartbroken")) {
+    return randomChoice(["içim çok kırık", "zor ya", "biraz dağılıyom", ":("]);
+  }
+
+  if (name.includes("night")) {
+    return randomChoice(["uykum yok", "gece yine bitmiyo", "kafam dolu"]);
+  }
+
+  if (name.includes("sharing")) {
+    return randomChoice(["iş güç yoruyo", "okul kafamı yedi", "evde herkes suskun"]);
+  }
+
+  return randomChoice([...gentle, ...thoughts]);
+}
+
+function clearSilenceNudge(session) {
+  if (session.nudgeTimer) {
+    clearTimeout(session.nudgeTimer);
+    session.nudgeTimer = null;
+  }
+}
+
+function scheduleSilenceNudge(session) {
+  clearSilenceNudge(session);
+  if (!session.active || !session.waitingForUser) {
+    return;
+  }
+  if (session.silenceNudges >= MAX_SILENCE_NUDGES) {
+    return;
+  }
+
+  session.nudgeTimer = setTimeout(() => {
+    session.nudgeTimer = null;
+    if (!session.active || !session.waitingForUser) {
+      return;
+    }
+    if (session.silenceNudges >= MAX_SILENCE_NUDGES) {
+      return;
+    }
+    session.silenceNudges += 1;
+    session.queue = session.queue
+      .then(() => deliverAiMessage(session, randomChoice(AI_SILENCE_NUDGES)))
+      .catch((err) => console.error("AI nudge hatası", err));
+  }, randomInt(25000, 40000));
+}
+
+async function deliverAiMessage(session, text) {
+  if (!session || !session.active) return;
+
+  let finalText = sanitizeAiText(text);
+  if (!finalText) {
+    finalText = sanitizeAiText(fallbackAiResponse(session));
+  }
+  if (!finalText) {
+    finalText = "hmm";
+  }
+
+  const delay = randomInt(2000, 15000);
+
+  await new Promise((resolve) => {
+    session.pendingDelayResolve = resolve;
+    session.pendingDelay = setTimeout(() => {
+      session.pendingDelay = null;
+      const resolver = session.pendingDelayResolve;
+      session.pendingDelayResolve = null;
+
+      if (!session.active) {
+        if (resolver) resolver();
+        return;
+      }
+
+      session.history.push({ role: "assistant", content: finalText });
+      session.messageCount += 1;
+      session.waitingForUser = true;
+      io.to(session.userId).emit("message", { text: finalText, nickname: session.nickname });
+      scheduleAiExit(session);
+      scheduleSilenceNudge(session);
+      if (resolver) resolver();
+    }, delay);
+  });
+}
+
+function sendAiInitialMessage(session) {
+  if (!session || !session.active) return;
+  session.queue = session.queue
+    .then(() => deliverAiMessage(session, fallbackAiResponse(session, { initial: true })))
+    .catch((err) => console.error("AI ilk mesaj hatası", err));
 }
 
 function pickNicknameForUser(userId) {
@@ -273,14 +415,18 @@ async function assignAiToUser(userId) {
     queue: Promise.resolve(),
     pendingDelay: null,
     exitTimer: null,
+    pendingDelayResolve: null,
+    nudgeTimer: null,
+    silenceNudges: 0,
+    waitingForUser: false,
+    messageCount: 0,
   };
 
   aiSessions.set(sessionId, session);
   partners.set(userId, { type: "ai", sessionId });
   clearWaitTimer(userId);
   io.to(userId).emit("matched");
-  scheduleAiExit(session);
-  queueAiResponse(session, null, { initial: true });
+  sendAiInitialMessage(session);
 }
 
 function scheduleAiExit(session) {
@@ -293,39 +439,42 @@ function scheduleAiExit(session) {
   }, randomInt(90000, 150000));
 }
 
-function queueAiResponse(session, userMessage, options = {}) {
+function queueAiResponse(session, userMessage) {
   if (!session || !session.active) return;
 
-  if (typeof userMessage === "string" && userMessage.trim()) {
-    session.history.push({ role: "user", content: userMessage.trim() });
-    scheduleAiExit(session);
+  const text = typeof userMessage === "string" ? userMessage.trim() : "";
+  if (text) {
+    session.history.push({ role: "user", content: text });
   }
 
-  session.queue = session.queue.then(() => sendAiResponse(session, options)).catch((err) => {
+  session.waitingForUser = false;
+  clearSilenceNudge(session);
+  session.silenceNudges = 0;
+  scheduleAiExit(session);
+
+  session.queue = session.queue.then(() => sendAiResponse(session)).catch((err) => {
     console.error("AI yanıt hatası", err);
   });
 }
 
-async function sendAiResponse(session, options = {}) {
+async function sendAiResponse(session) {
   if (!session.active) return;
-
-  const { initial = false } = options;
-  const delay = randomInt(2000, 15000);
 
   const messages = [{ role: "system", content: session.systemPrompt }];
 
-  if (initial && session.history.length === 0) {
-    messages.push({
-      role: "user",
-      content:
-        "Sohbete yeni bağlandın. Türkçe, samimi ve kadınsı bir ilk mesaj yaz. Çok uzun olmasın ve ufak kusurlu yazımlar olabilir.",
-    });
-  } else {
-    for (const item of session.history) {
-      messages.push(item);
-    }
-    messages.push({ role: "system", content: RESPONSE_REMINDER });
+  for (const item of session.history) {
+    messages.push(item);
   }
+
+  const openerInstruction =
+    session.messageCount < 3
+      ? "Hâlâ mesafeli ve kısa kal. Tek cümleyi geçme, soru soracaksan da çok basit sorular seç."
+      : "Biraz açılabilirsin ama yine kısa ve doğal tut. Maksimum tek cümle ya da çok kısa iki cümle yaz.";
+
+  messages.push({
+    role: "system",
+    content: `${RESPONSE_REMINDER}\n${openerInstruction}\nGerekmedikçe ardışık mesaj atma.`,
+  });
 
   let text = "";
 
@@ -335,52 +484,32 @@ async function sendAiResponse(session, options = {}) {
         model: "gpt-4o-mini",
         input: messages,
         temperature: 0.9,
-        max_output_tokens: 120,
+        max_output_tokens: 80,
       });
       text = (response.output_text || "").trim();
     } catch (error) {
       console.error("OpenAI isteği başarısız", error);
     }
+    messages.push({ role: "system", content: RESPONSE_REMINDER });
   }
 
   if (!text) {
-    text =
-      (initial
-        ? "selam yaaa biraz canım sıkılıyo sen nasılsın?"
-        : randomChoice([
-            "hmm tam anlayamadım bi daha söylesene",
-            "bilmiyorum ya ama içim bi tuhaf",
-            "ay ne desem bilemedim şu an 😅",
-            "ya off baya kafam dolu bugün",
-          ])) || "hmm";
+    text = fallbackAiResponse(session);
   }
 
-  session.history.push({ role: "assistant", content: text });
-
-  await new Promise((resolve) => {
-    session.pendingDelay = setTimeout(() => {
-      session.pendingDelay = null;
-      if (!session.active) return resolve();
-      io.to(session.userId).emit("message", { text, nickname: session.nickname });
-      scheduleAiExit(session);
-      resolve();
-    }, delay);
-  });
+  await deliverAiMessage(session, text);
 }
 
 function aiNaturalExit(session) {
   if (!session.active) return;
 
-  const farewell = randomChoice(AI_EXIT_MESSAGES);
-  session.history.push({ role: "assistant", content: farewell });
-
-  const delay = randomInt(2000, 8000);
-  session.pendingDelay = setTimeout(() => {
-    session.pendingDelay = null;
-    if (!session.active) return;
-    io.to(session.userId).emit("message", { text: farewell, nickname: session.nickname });
-    releaseAiSession(session, { notifyUser: true, requeue: false });
-  }, delay);
+  clearSilenceNudge(session);
+  session.queue = session.queue
+    .then(() => deliverAiMessage(session, randomChoice(AI_EXIT_MESSAGES)))
+    .then(() => {
+      releaseAiSession(session, { notifyUser: true, requeue: false });
+    })
+    .catch((err) => console.error("AI çıkış hatası", err));
 }
 
 function releaseAiSession(session, options = {}) {
@@ -399,6 +528,18 @@ function releaseAiSession(session, options = {}) {
     clearTimeout(session.pendingDelay);
     session.pendingDelay = null;
   }
+
+
+  if (session.pendingDelayResolve) {
+    const resolver = session.pendingDelayResolve;
+    session.pendingDelayResolve = null;
+    resolver();
+  }
+
+  clearSilenceNudge(session);
+  session.waitingForUser = false;
+  session.silenceNudges = 0;
+
 
   aiSessions.delete(session.id);
   partners.delete(session.userId);
