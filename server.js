@@ -6,7 +6,7 @@ const { Server } = require("socket.io");
 
 const PORT = process.env.PORT || 6000;
 const WAITING_STATUS_TEXT =
-  "Şu anda eşleşecek kişi bulunmadı, birisi ile eşleştiğinizde size bildirim göndereceğiz. Tarayıcınızdan bildirimlere izin vermeyi unutmayınız :)";
+  "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
 
 const app = express();
 const server = http.createServer(app);
@@ -155,8 +155,10 @@ io.on("connection", (socket) => {
 
   socket.on("next", () => {
     endCurrentChat(socket.id);
-    enqueueSocketId(socket.id);
-    tryMatch();
+    setTimeout(() => {
+      enqueueSocketId(socket.id);
+      tryMatch();
+    }, 3000);
   });
 
   socket.on("disconnect", () => {
