@@ -7,96 +7,12 @@ const { Server } = require("socket.io");
 const PORT = process.env.PORT || 6000;
 const WAITING_STATUS_TEXT =
   "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
-const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
-
-if (!TURNSTILE_SECRET_KEY) {
-  console.warn("TURNSTILE_SECRET_KEY ortam değişkeni ayarlanmadı. Turnstile doğrulaması çalışmayacak.");
-}
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-app.use(express.json());
 app.use(express.static("public"));
-
-app.post("/api/turnstile/verify", async (req, res) => {
-  const body = req.body && typeof req.body === "object" ? req.body : {};
-  const rawToken =
-    body.token || body.response || body["cf-turnstile-response"] || "";
-  const token =
-    typeof rawToken === "string"
-      ? rawToken.trim()
-      : String(rawToken || "").trim();
-
-  if (!token) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Eksik Turnstile doğrulama jetonu." });
-  }
-
-  if (!TURNSTILE_SECRET_KEY) {
-    return res.status(500).json({
-      success: false,
-      message: "Sunucu yapılandırması eksik. Lütfen daha sonra tekrar deneyin.",
-    });
-  }
-
-  const params = new URLSearchParams();
-  params.append("secret", TURNSTILE_SECRET_KEY);
-  params.append("response", token);
-
-  const forwardedFor = req.headers["x-forwarded-for"]; // may be string or array
-  const remoteIp =
-    req.headers["cf-connecting-ip"] ||
-    (Array.isArray(forwardedFor)
-      ? forwardedFor[0]
-      : typeof forwardedFor === "string"
-        ? forwardedFor.split(",")[0].trim()
-        : null) ||
-    req.ip;
-
-  if (remoteIp) {
-    params.append("remoteip", remoteIp);
-  }
-
-  try {
-    const response = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: params,
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Turnstile doğrulaması başarısız yanıt kodu: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (data.success) {
-      return res.json({ success: true });
-    }
-
-    console.warn("Turnstile doğrulaması geçersiz", data["error-codes"] || []);
-
-    return res.status(400).json({
-      success: false,
-      message: "Turnstile doğrulaması başarısız oldu.",
-      errors: data["error-codes"] || [],
-    });
-  } catch (error) {
-    console.error("Turnstile doğrulaması sırasında hata oluştu:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Turnstile doğrulaması sırasında bir hata oluştu.",
-    });
-  }
-});
 
 let queue = [];
 const partners = new Map();
