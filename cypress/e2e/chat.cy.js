@@ -81,7 +81,9 @@ describe("Anın Sohbeti", () => {
       .should("have.text", `Yabancı: ${truncatedMessage}`);
 
     cy.get("#next").click();
-    cy.get("#log div").last().should("have.text", "Yeni eşleşme aranıyor...");
+    cy.get('[data-waiting-status="true"] .waiting-status__message')
+      .last()
+      .should("have.text", "Yeni eşleşme aranıyor...");
 
     cy.get("@partner1").should(({ events }) => {
       expect(events.endedCount).to.eq(1);
