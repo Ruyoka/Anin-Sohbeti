@@ -583,7 +583,7 @@
     const WAITING_STATUS_TEXT =
       "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
     const MATCH_SEARCH_COUNTDOWN_SECONDS = 5;
-    const SKIP_SEARCH_COUNTDOWN_SECONDS = 3;
+    const SKIP_SEARCH_COUNTDOWN_SECONDS = 5;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
 
     let isMatched = false;
@@ -615,11 +615,15 @@
       }
     }
 
-    function clearSearchCountdown() {
+    function stopSearchCountdownTimer() {
       if (searchCountdownTimer) {
         clearInterval(searchCountdownTimer);
         searchCountdownTimer = null;
       }
+    }
+
+    function clearSearchCountdown() {
+      stopSearchCountdownTimer();
       searchCountdownRemaining = 0;
       if (isSearchCountdownActive) {
         isSearchCountdownActive = false;
@@ -629,7 +633,12 @@
 
     function startSearchCountdown(
       seconds,
-      { prefix = MATCH_SEARCH_TEXT, finalText = WAITING_STATUS_TEXT, countdownFormatter } = {}
+      {
+        prefix = MATCH_SEARCH_TEXT,
+        finalText = WAITING_STATUS_TEXT,
+        countdownFormatter,
+        onCountdownFinished,
+      } = {}
     ) {
       clearSearchCountdown();
 
@@ -641,7 +650,7 @@
       const formatCountdown =
         typeof countdownFormatter === "function"
           ? countdownFormatter
-          : (value) => `${prefix} [${value}]`;
+          : (value) => `${prefix} ${value}`;
 
       isSearchCountdownActive = true;
       searchCountdownRemaining = seconds;
@@ -650,13 +659,28 @@
 
       searchCountdownTimer = window.setInterval(() => {
         searchCountdownRemaining -= 1;
-        if (searchCountdownRemaining > 0) {
+        if (searchCountdownRemaining >= 0) {
           setWaitingStatusText(formatCountdown(searchCountdownRemaining));
+        }
+
+        if (searchCountdownRemaining > 0) {
           return;
         }
 
-        clearSearchCountdown();
-        setWaitingStatusText(finalText);
+        stopSearchCountdownTimer();
+        searchCountdownRemaining = 0;
+        isSearchCountdownActive = false;
+        updateControls();
+
+        if (typeof onCountdownFinished === "function") {
+          onCountdownFinished();
+        }
+
+        if (finalText) {
+          requestAnimationFrame(() => {
+            setWaitingStatusText(finalText);
+          });
+        }
       }, 1000);
     }
 
@@ -941,6 +965,8 @@
           : MATCH_SEARCH_COUNTDOWN_SECONDS;
       const messagePrefix = options.messagePrefix || MATCH_SEARCH_TEXT;
       const finalText = options.finalText || WAITING_STATUS_TEXT;
+      const onCountdownFinished = options.onCountdownFinished;
+      const countdownFormatter = options.countdownFormatter;
 
       hideWaitingStatus();
       log.replaceChildren();
@@ -951,6 +977,8 @@
       startSearchCountdown(countdownSeconds, {
         prefix: messagePrefix,
         finalText,
+        countdownFormatter,
+        onCountdownFinished,
       });
     }
 
@@ -1037,7 +1065,9 @@
         clearSearchCountdown();
         showWaitingStatus((data.message || WAITING_STATUS_TEXT).toString());
       } else {
-        hideWaitingStatus();
+        if (!isSearchCountdownActive) {
+          hideWaitingStatus();
+        }
       }
     });
 
@@ -1060,19 +1090,16 @@
 
     socket.on("ended", () => {
       const endedStatusText = "Bağlantı sonlandı. Yeni eşleşme bekleniyor…";
-      setMatchedState(false);
-      hideWaitingStatus();
-      log.replaceChildren();
-      msg.value = "";
-      clearCooldown();
-      setWaitingStatusText(endedStatusText);
-      startSearchCountdown(MATCH_SEARCH_COUNTDOWN_SECONDS, {
-        prefix: endedStatusText,
-        countdownFormatter: () => endedStatusText,
+      beginMatchSearch({
+        countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS,
+        messagePrefix: MATCH_SEARCH_TEXT,
+        onCountdownFinished: () => {
+          if (nickname) {
+            socket.emit("join");
+          }
+        },
       });
-      if (nickname) {
-        socket.emit("join");
-      }
+      appendMessage(endedStatusText, "system");
     });
 
     socket.on("disconnect", () => {

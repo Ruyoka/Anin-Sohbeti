@@ -158,7 +158,7 @@ io.on("connection", (socket) => {
     setTimeout(() => {
       enqueueSocketId(socket.id);
       tryMatch();
-    }, 3000);
+    }, 5000);
   });
 
   socket.on("disconnect", () => {
