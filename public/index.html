@@ -467,32 +467,142 @@
     const nicknameSubmit = document.getElementById("nickname-submit");
     const MATCH_SEARCH_TEXT = "Yeni eşleşme aranıyor...";
     const WAITING_STATUS_TEXT =
-      "Şu anda herkes meşgul. Birisi ile eşleşince size bildirim göndereceğiz :)";
-    const WAITING_STATUS_DELAY_MS = 5000;
+      "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
+    const MATCH_SEARCH_COUNTDOWN_SECONDS = 5;
+    const SKIP_SEARCH_COUNTDOWN_SECONDS = 3;
+    const SUPPORTS_NOTIFICATIONS = "Notification" in window;
 
     let isMatched = false;
     let nickname = "";
     let isCoolingDown = false;
     let cooldownTimer = null;
     let waitingStatusBubble = null;
-    let waitingStatusTimer = null;
     let audioContext = null;
+    let searchCountdownTimer = null;
+    let searchCountdownRemaining = 0;
+    let isSearchCountdownActive = false;
+    let notificationsEnabled =
+      SUPPORTS_NOTIFICATIONS && Notification.permission === "granted";
+    let notificationPermissionWatcher = null;
 
-    function clearWaitingStatusTimer() {
-      if (waitingStatusTimer) {
-        clearTimeout(waitingStatusTimer);
-        waitingStatusTimer = null;
+    function setWaitingStatusText(text) {
+      if (!text) {
+        return;
+      }
+
+      if (!waitingStatusBubble || !waitingStatusBubble.isConnected) {
+        waitingStatusBubble = appendMessage(text, "system");
+      } else {
+        waitingStatusBubble.textContent = text;
+      }
+
+      if (waitingStatusBubble) {
+        waitingStatusBubble.dataset.waitingStatus = "true";
       }
     }
 
-    function scheduleWaitingStatusFallback() {
-      clearWaitingStatusTimer();
-      waitingStatusTimer = setTimeout(() => {
-        waitingStatusTimer = null;
-        if (waitingStatusBubble && waitingStatusBubble.dataset.waitingStatus === "true") {
-          waitingStatusBubble.textContent = WAITING_STATUS_TEXT;
+    function clearSearchCountdown() {
+      if (searchCountdownTimer) {
+        clearInterval(searchCountdownTimer);
+        searchCountdownTimer = null;
+      }
+      searchCountdownRemaining = 0;
+      if (isSearchCountdownActive) {
+        isSearchCountdownActive = false;
+        updateControls();
+      }
+    }
+
+    function startSearchCountdown(seconds, { prefix = MATCH_SEARCH_TEXT, finalText = WAITING_STATUS_TEXT } = {}) {
+      clearSearchCountdown();
+
+      if (seconds <= 0) {
+        setWaitingStatusText(finalText);
+        return;
+      }
+
+      isSearchCountdownActive = true;
+      searchCountdownRemaining = seconds;
+      setWaitingStatusText(`${prefix} [${searchCountdownRemaining}]`);
+      updateControls();
+
+      searchCountdownTimer = window.setInterval(() => {
+        searchCountdownRemaining -= 1;
+        if (searchCountdownRemaining > 0) {
+          setWaitingStatusText(`${prefix} [${searchCountdownRemaining}]`);
+          return;
         }
-      }, WAITING_STATUS_DELAY_MS);
+
+        clearSearchCountdown();
+        setWaitingStatusText(finalText);
+      }, 1000);
+    }
+
+    function updateNotificationState(permissionState) {
+      notificationsEnabled = permissionState === "granted";
+    }
+
+    async function setupNotificationPermissionWatcher() {
+      if (!SUPPORTS_NOTIFICATIONS || !navigator.permissions?.query) {
+        return;
+      }
+
+      try {
+        notificationPermissionWatcher = await navigator.permissions.query({ name: "notifications" });
+        updateNotificationState(notificationPermissionWatcher.state);
+        notificationPermissionWatcher.onchange = () => {
+          updateNotificationState(notificationPermissionWatcher.state);
+        };
+      } catch (error) {
+        // Tarayıcı izin sorgusunu desteklemiyorsa sessizce devam et.
+      }
+    }
+
+    async function requestNotificationPermission() {
+      if (!SUPPORTS_NOTIFICATIONS) {
+        return;
+      }
+
+      if (Notification.permission === "granted") {
+        updateNotificationState("granted");
+        return;
+      }
+
+      try {
+        const result = await Notification.requestPermission();
+        updateNotificationState(result);
+        if (result !== "granted") {
+          window.alert(
+            "Tarayıcı bildirimlerine izin vermediğiniz için eşleşme ve yeni mesaj bildirimleri gönderilemeyecek."
+          );
+        }
+      } catch (error) {
+        // İzin isteme başarısız olursa sessizce devam et.
+      }
+    }
+
+    function triggerChatNotification(title, body) {
+      if (!SUPPORTS_NOTIFICATIONS) {
+        return;
+      }
+
+      if (Notification.permission !== "granted") {
+        notificationsEnabled = false;
+        return;
+      }
+
+      if (!notificationsEnabled || document.visibilityState !== "hidden") {
+        return;
+      }
+
+      try {
+        const notification = new Notification(title, { body });
+        notification.onclick = () => {
+          window.focus();
+        };
+      } catch (error) {
+        // Bildirim oluşturulamazsa sessizce devam et.
+      }
     }
 
     function ensureAudioContext() {
@@ -565,8 +675,10 @@
     }
 
     function updateControls() {
+      const hasMessage = Boolean(msg.value.trim());
       msg.disabled = !isMatched;
-      sendBtn.disabled = !isMatched || !msg.value.trim() || isCoolingDown;
+      sendBtn.disabled = !isMatched || !hasMessage || isCoolingDown;
+      nextBtn.disabled = !isMatched || isSearchCountdownActive;
     }
 
     function setMatchedState(state) {
@@ -620,54 +732,49 @@
       }
     }
 
-    function beginMatchSearch(initialText = MATCH_SEARCH_TEXT) {
+    function beginMatchSearch(arg) {
+      const options =
+        arg && typeof arg === "object"
+          ? arg
+          : { messagePrefix: typeof arg === "string" ? arg : MATCH_SEARCH_TEXT };
+
+      const countdownSeconds =
+        typeof options.countdownSeconds === "number"
+          ? options.countdownSeconds
+          : MATCH_SEARCH_COUNTDOWN_SECONDS;
+      const messagePrefix = options.messagePrefix || MATCH_SEARCH_TEXT;
+      const finalText = options.finalText || WAITING_STATUS_TEXT;
+
       hideWaitingStatus();
       log.replaceChildren();
       msg.value = "";
       clearCooldown();
+      setMatchedState(false);
       updateControls();
-      showWaitingStatus(initialText, { startTimer: true });
+      startSearchCountdown(countdownSeconds, {
+        prefix: messagePrefix,
+        finalText,
+      });
     }
 
-    function showWaitingStatus(text, options = {}) {
-      if (!text) {
-        return;
-      }
-
-      const shouldStartTimer = options.startTimer ?? true;
-
-      if (!waitingStatusBubble || !waitingStatusBubble.isConnected) {
-        waitingStatusBubble = appendMessage(text, "system");
-      } else if (waitingStatusBubble.textContent !== text) {
-        waitingStatusBubble.textContent = text;
-      }
-
-      if (waitingStatusBubble) {
-        waitingStatusBubble.dataset.waitingStatus = "true";
-      }
-
-      if (shouldStartTimer) {
-        if (text === WAITING_STATUS_TEXT) {
-          clearWaitingStatusTimer();
-        } else {
-          scheduleWaitingStatusFallback();
-        }
-      }
+    function showWaitingStatus(text) {
+      setWaitingStatusText(text);
     }
 
     function hideWaitingStatus() {
-      clearWaitingStatusTimer();
+      clearSearchCountdown();
       if (waitingStatusBubble && waitingStatusBubble.parentNode) {
         waitingStatusBubble.remove();
       }
       waitingStatusBubble = null;
+      updateControls();
     }
 
     function joinQueue() {
       if (!nickname || !socket.connected) {
         return;
       }
-      beginMatchSearch("Eşleşme bekleniyor...");
+      beginMatchSearch({ countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS });
       socket.emit("join");
     }
 
@@ -682,6 +789,7 @@
       nicknameInput.value = cleaned;
       sessionStorage.setItem("nickname", nickname);
       hideNicknameOverlay();
+      requestNotificationPermission();
       joinQueue();
     }
 
@@ -701,6 +809,7 @@
     }
 
     updateControls();
+    setupNotificationPermissionWatcher();
 
     socket.on("connect", () => {
       setMatchedState(false);
@@ -716,6 +825,7 @@
       resetChat("✓ Bir yabancı ile eşleştiniz!");
       setMatchedState(true);
       playMatchSound();
+      triggerChatNotification("Yeni eşleşme!", "Bir yabancı ile eşleştiniz.");
       if (!isCoolingDown) {
         msg.focus();
       }
@@ -727,6 +837,7 @@
           ? payload
           : { active: Boolean(payload), message: MATCH_SEARCH_TEXT };
       if (data.active) {
+        clearSearchCountdown();
         showWaitingStatus((data.message || WAITING_STATUS_TEXT).toString());
       } else {
         hideWaitingStatus();
@@ -744,11 +855,19 @@
 
       const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "Yabancı";
       appendMessage(data.text, "stranger", senderName);
+      if (data.text) {
+        const previewText = data.text.length > 120 ? `${data.text.slice(0, 117)}...` : data.text;
+        triggerChatNotification("Yeni mesaj", `${senderName}: ${previewText}`);
+      }
     });
 
     socket.on("ended", () => {
       setMatchedState(false);
-      resetChat("— Bağlantı sonlandı. Yeni eşleşme bekleniyor...");
+      hideWaitingStatus();
+      log.replaceChildren();
+      msg.value = "";
+      appendMessage("— Bağlantı sonlandı. Yeni eşleşme bekleniyor...", "system");
+      startSearchCountdown(MATCH_SEARCH_COUNTDOWN_SECONDS);
       if (nickname) {
         socket.emit("join");
       }
@@ -771,8 +890,20 @@
     };
 
     nextBtn.onclick = () => {
+      if (!isMatched || isSearchCountdownActive) {
+        return;
+      }
+
+      const shouldSkip = window.confirm(
+        "Bu kişiyi geçmek istediğinize emin misin? Bak sonra bulamazsan karışmam..."
+      );
+
+      if (!shouldSkip) {
+        return;
+      }
+
       setMatchedState(false);
-      beginMatchSearch();
+      beginMatchSearch({ countdownSeconds: SKIP_SEARCH_COUNTDOWN_SECONDS });
       socket.emit("next");
     };
 
