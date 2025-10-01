@@ -485,14 +485,15 @@
       left: 0;
       width: 48px;
       height: 62px;
-      transform: translate(-50%, 12%);
+      transform: translate(-50%, 18%);
       border-radius: 50% 50% 45% 45%;
       background: var(--balloon-color, #ff6b6b);
       border: none;
       cursor: pointer;
       box-shadow: 0 20px 34px -28px rgba(34, 72, 41, 0.6);
       animation: waitingMiniGameRise var(--rise-duration, 6200ms) linear forwards;
-      transition: transform 160ms ease, opacity 160ms ease;
+      transition: transform 180ms ease, opacity 180ms ease;
+      will-change: transform, opacity;
     }
 
     .waiting-mini-game__balloon::after {
@@ -520,11 +521,15 @@
 
     @keyframes waitingMiniGameRise {
       0% {
-        transform: translate(-50%, 16%) scale(1);
+        transform: translate(-50%, 118%) scale(1);
+      }
+
+      55% {
+        transform: translate(-50%, -12%) scale(1.03);
       }
 
       100% {
-        transform: translate(-50%, -140%) scale(1.02);
+        transform: translate(-50%, -176%) scale(1.06);
       }
     }
 
@@ -747,9 +752,11 @@
     let cooldownTimer = null;
     let waitingStatusBubble = null;
     let waitingStatusMessageEl = null;
+    let waitingStatusInviteTextEl = null;
     let waitingMiniGameContainer = null;
     let waitingMiniGameStartButton = null;
     let waitingMiniGameController = null;
+    let shouldShowMiniGameInvitation = false;
     let audioContext = null;
     let searchCountdownTimer = null;
     let searchCountdownRemaining = 0;
@@ -759,7 +766,9 @@
     let notificationPermissionWatcher = null;
 
     function createWaitingMiniGame(container, startButton) {
-      const GAME_DURATION_SECONDS = 30;
+      const GAME_DURATION_SECONDS = 60;
+      const EASY_STAGE_SECONDS = 30;
+      const DIFFICULT_STAGE_SECONDS = GAME_DURATION_SECONDS - EASY_STAGE_SECONDS;
       const BALLOON_COLORS = [
         "#ff6b6b",
         "#f9a34d",
@@ -767,12 +776,23 @@
         "#4d96ff",
         "#d96bff",
       ];
+      const EASY_STAGE = {
+        spawnInterval: { start: [1500, 1900], end: [900, 1200] },
+        riseDuration: { start: [5200, 6800], end: [4200, 5600] },
+        maxConcurrent: { start: 5, end: 8 },
+      };
+      const HARD_STAGE = {
+        spawnInterval: { start: [780, 1050], end: [320, 520] },
+        riseDuration: { start: [3600, 4400], end: [2300, 3000] },
+        maxConcurrent: { start: 8, end: 14 },
+      };
       const state = {
         running: false,
         spawnTimer: null,
         countdownTimer: null,
         timeLeft: GAME_DURATION_SECONDS,
         score: 0,
+        startedAt: 0,
       };
 
       const hud = document.createElement("div");
@@ -807,40 +827,105 @@
 
       container.append(hud, playfield, result);
 
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function lerp(start, end, t) {
+        return start + (end - start) * t;
+      }
+
+      function easeInOut(t) {
+        return t < 0.5
+          ? 2 * t * t
+          : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      }
+
+      function interpolateRange(range, t) {
+        const eased = easeInOut(clamp(t, 0, 1));
+        return [
+          lerp(range.start[0], range.end[0], eased),
+          lerp(range.start[1], range.end[1], eased),
+        ];
+      }
+
+      function interpolateMaxConcurrent(range, t) {
+        return Math.round(lerp(range.start, range.end, easeInOut(clamp(t, 0, 1))));
+      }
+
+      function randomInRange(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      function getElapsedSeconds() {
+        if (!state.startedAt) {
+          return 0;
+        }
+        return clamp((Date.now() - state.startedAt) / 1000, 0, GAME_DURATION_SECONDS);
+      }
+
+      function getDifficultySettings(elapsedSeconds) {
+        if (elapsedSeconds < EASY_STAGE_SECONDS) {
+          const progress = elapsedSeconds / EASY_STAGE_SECONDS;
+          return {
+            spawnInterval: interpolateRange(EASY_STAGE.spawnInterval, progress),
+            riseDuration: interpolateRange(EASY_STAGE.riseDuration, progress),
+            maxConcurrent: interpolateMaxConcurrent(EASY_STAGE.maxConcurrent, progress),
+          };
+        }
+
+        const difficultElapsed = elapsedSeconds - EASY_STAGE_SECONDS;
+        const difficultProgress =
+          DIFFICULT_STAGE_SECONDS > 0
+            ? difficultElapsed / DIFFICULT_STAGE_SECONDS
+            : 1;
+
+        return {
+          spawnInterval: interpolateRange(HARD_STAGE.spawnInterval, difficultProgress),
+          riseDuration: interpolateRange(HARD_STAGE.riseDuration, difficultProgress),
+          maxConcurrent: interpolateMaxConcurrent(HARD_STAGE.maxConcurrent, difficultProgress),
+        };
+      }
+
       function clearTimers() {
         if (state.spawnTimer) {
-          clearInterval(state.spawnTimer);
+          window.clearTimeout(state.spawnTimer);
           state.spawnTimer = null;
         }
         if (state.countdownTimer) {
-          clearInterval(state.countdownTimer);
+          window.clearInterval(state.countdownTimer);
           state.countdownTimer = null;
         }
       }
 
       function clearBalloons() {
-        playfield.querySelectorAll(".waiting-mini-game__balloon").forEach((node) =>
-          node.remove()
-        );
+        playfield
+          .querySelectorAll(".waiting-mini-game__balloon")
+          .forEach((node) => node.remove());
       }
 
       function updateHud() {
         scoreValue.textContent = state.score.toString();
-        timerValue.textContent = `${Math.max(0, state.timeLeft)}sn`;
+        timerValue.textContent = `${Math.max(0, Math.round(state.timeLeft))}sn`;
       }
 
-      function finishGame() {
+      function scheduleNextSpawn(customDelay) {
         if (!state.running) {
           return;
         }
-        state.running = false;
-        clearTimers();
-        clearBalloons();
-        updateHud();
-        startButton.disabled = false;
-        startButton.textContent = "Tekrar Oyna";
-        result.hidden = false;
-        result.textContent = `Süre doldu! ${state.score} balon patlattın.`;
+        if (state.spawnTimer) {
+          window.clearTimeout(state.spawnTimer);
+        }
+
+        const difficulty = getDifficultySettings(getElapsedSeconds());
+        const delay =
+          typeof customDelay === "number"
+            ? customDelay
+            : randomInRange(difficulty.spawnInterval[0], difficulty.spawnInterval[1]);
+
+        state.spawnTimer = window.setTimeout(() => {
+          spawnBalloon();
+        }, Math.max(120, Math.round(delay)));
       }
 
       function spawnBalloon() {
@@ -848,7 +933,9 @@
           return;
         }
 
-        if (playfield.childElementCount > 12) {
+        const difficulty = getDifficultySettings(getElapsedSeconds());
+        if (playfield.childElementCount >= difficulty.maxConcurrent) {
+          scheduleNextSpawn(160);
           return;
         }
 
@@ -859,29 +946,63 @@
         balloon.style.setProperty("--balloon-color", color);
         const left = 12 + Math.random() * 76;
         balloon.style.left = `${left}%`;
-        const duration = 5200 + Math.random() * 2200;
-        balloon.style.setProperty("--rise-duration", `${duration}ms`);
+        const duration = randomInRange(
+          difficulty.riseDuration[0],
+          difficulty.riseDuration[1]
+        );
+        balloon.style.setProperty("--rise-duration", `${Math.round(duration)}ms`);
 
+        let removed = false;
         const removeBalloon = () => {
-          balloon.removeEventListener("animationend", removeBalloon);
+          if (removed) {
+            return;
+          }
+          removed = true;
+          balloon.removeEventListener("animationend", handleAnimationEnd);
+          balloon.removeEventListener("click", handleClick);
           if (balloon.parentNode) {
             balloon.parentNode.removeChild(balloon);
           }
         };
 
-        balloon.addEventListener("animationend", removeBalloon);
+        const handleAnimationEnd = () => {
+          removeBalloon();
+        };
 
-        balloon.addEventListener("click", () => {
-          if (!state.running || balloon.classList.contains("waiting-mini-game__balloon--popped")) {
+        const handleClick = () => {
+          if (
+            !state.running ||
+            balloon.classList.contains("waiting-mini-game__balloon--popped")
+          ) {
             return;
           }
           balloon.classList.add("waiting-mini-game__balloon--popped");
           state.score += 1;
           updateHud();
-          setTimeout(removeBalloon, 160);
-        });
+          window.setTimeout(removeBalloon, 200);
+        };
+
+        balloon.addEventListener("animationend", handleAnimationEnd);
+        balloon.addEventListener("click", handleClick);
 
         playfield.appendChild(balloon);
+
+        scheduleNextSpawn();
+      }
+
+      function finishGame() {
+        if (!state.running) {
+          return;
+        }
+        state.running = false;
+        clearTimers();
+        clearBalloons();
+        state.timeLeft = 0;
+        updateHud();
+        startButton.disabled = false;
+        startButton.textContent = "Başla";
+        result.hidden = false;
+        result.textContent = `Süren doldu! Skorun: ${state.score}`;
       }
 
       function start() {
@@ -895,24 +1016,32 @@
         state.running = true;
         state.score = 0;
         state.timeLeft = GAME_DURATION_SECONDS;
+        state.startedAt = Date.now();
         clearBalloons();
         updateHud();
         startButton.disabled = true;
         startButton.textContent = "Oynanıyor...";
 
-        spawnBalloon();
-        state.spawnTimer = setInterval(spawnBalloon, 900);
+        scheduleNextSpawn();
 
-        state.countdownTimer = setInterval(() => {
-          state.timeLeft -= 1;
-          if (state.timeLeft <= 0) {
-            state.timeLeft = 0;
-            updateHud();
-            finishGame();
-          } else {
+        if (state.countdownTimer) {
+          window.clearInterval(state.countdownTimer);
+        }
+
+        state.countdownTimer = window.setInterval(() => {
+          if (!state.running) {
+            return;
+          }
+          const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
+          const nextTimeLeft = Math.max(0, GAME_DURATION_SECONDS - elapsed);
+          if (nextTimeLeft !== Math.round(state.timeLeft)) {
+            state.timeLeft = nextTimeLeft;
             updateHud();
           }
-        }, 1000);
+          if (nextTimeLeft <= 0) {
+            finishGame();
+          }
+        }, 250);
       }
 
       function stop({ hide = false } = {}) {
@@ -921,6 +1050,7 @@
         state.running = false;
         state.score = 0;
         state.timeLeft = GAME_DURATION_SECONDS;
+        state.startedAt = 0;
         updateHud();
         result.hidden = true;
         result.textContent = "";
@@ -943,6 +1073,19 @@
       };
     }
 
+    function updateMiniGameInvitationVisibility() {
+      const isVisible =
+        shouldShowMiniGameInvitation && !isSearchCountdownActive;
+
+      if (waitingStatusInviteTextEl) {
+        waitingStatusInviteTextEl.hidden = !isVisible;
+      }
+
+      if (waitingMiniGameStartButton) {
+        waitingMiniGameStartButton.hidden = !isVisible;
+      }
+    }
+
     function ensureWaitingStatusElements() {
       if (!waitingStatusBubble || !waitingStatusBubble.isConnected) {
         waitingStatusBubble = appendMessage("", "system");
@@ -961,26 +1104,27 @@
       if (!hasStructure) {
         waitingStatusBubble.textContent = "";
 
-        const inviteText = document.createElement("p");
-        inviteText.className = "waiting-status__invite-text";
-        inviteText.textContent = "Beklerken minik bir oyun oynasan mı acaba?";
+        waitingStatusMessageEl = document.createElement("p");
+        waitingStatusMessageEl.className = "waiting-status__message";
+
+        waitingStatusInviteTextEl = document.createElement("p");
+        waitingStatusInviteTextEl.className = "waiting-status__invite-text";
+        waitingStatusInviteTextEl.textContent =
+          "Beklerken minik bir oyun oynasan mı acaba?";
 
         waitingMiniGameStartButton = document.createElement("button");
         waitingMiniGameStartButton.type = "button";
         waitingMiniGameStartButton.className = "waiting-status__start-button";
         waitingMiniGameStartButton.textContent = "Başla";
 
-        waitingStatusMessageEl = document.createElement("p");
-        waitingStatusMessageEl.className = "waiting-status__message";
-
         waitingMiniGameContainer = document.createElement("div");
         waitingMiniGameContainer.className = "waiting-mini-game";
         waitingMiniGameContainer.dataset.active = "false";
 
         waitingStatusBubble.append(
-          inviteText,
-          waitingMiniGameStartButton,
           waitingStatusMessageEl,
+          waitingStatusInviteTextEl,
+          waitingMiniGameStartButton,
           waitingMiniGameContainer
         );
 
@@ -1004,8 +1148,15 @@
         );
       }
 
+      if (!waitingStatusInviteTextEl) {
+        waitingStatusInviteTextEl = waitingStatusBubble.querySelector(
+          ".waiting-status__invite-text"
+        );
+      }
+
       waitingStatusBubble.dataset.waitingStatus = "true";
       waitingStatusBubble.classList.add("waiting-status");
+      updateMiniGameInvitationVisibility();
     }
 
     function setWaitingStatusText(text) {
@@ -1014,6 +1165,9 @@
       }
 
       ensureWaitingStatusElements();
+
+      shouldShowMiniGameInvitation = text === WAITING_STATUS_TEXT;
+      updateMiniGameInvitationVisibility();
 
       if (waitingStatusMessageEl) {
         waitingStatusMessageEl.textContent = text;
@@ -1034,6 +1188,7 @@
         isSearchCountdownActive = false;
         updateControls();
       }
+      updateMiniGameInvitationVisibility();
     }
 
     function startSearchCountdown(
@@ -1061,6 +1216,7 @@
       searchCountdownRemaining = seconds;
       setWaitingStatusText(formatCountdown(searchCountdownRemaining));
       updateControls();
+      updateMiniGameInvitationVisibility();
 
       searchCountdownTimer = window.setInterval(() => {
         searchCountdownRemaining -= 1;
@@ -1076,6 +1232,7 @@
         searchCountdownRemaining = 0;
         isSearchCountdownActive = false;
         updateControls();
+        updateMiniGameInvitationVisibility();
 
         if (typeof onCountdownFinished === "function") {
           onCountdownFinished();
@@ -1393,6 +1550,8 @@
 
     function hideWaitingStatus() {
       clearSearchCountdown();
+      shouldShowMiniGameInvitation = false;
+      updateMiniGameInvitationVisibility();
       if (waitingMiniGameController) {
         waitingMiniGameController.stop({ hide: true });
       }
@@ -1401,6 +1560,7 @@
       }
       waitingStatusBubble = null;
       waitingStatusMessageEl = null;
+      waitingStatusInviteTextEl = null;
       waitingMiniGameContainer = null;
       waitingMiniGameStartButton = null;
       waitingMiniGameController = null;
