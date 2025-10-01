@@ -6,14 +6,17 @@
   <title>Anın Sohbeti - Anlık anonim sohbet ve yeni insanlarla tanış</title>
   <meta name="description" content="Anın Sohbeti ile rastgele insanlarla anlık olarak sohbet et. Hızlı, basit ve tamamen anonim chat deneyimi.">
   <meta name="keywords" content="anonim chat, anlık sohbet, rastgele sohbet, yeni insanlarla tanış, online chat, ekşi dertleşecek insan veritabanı">
+  <meta name="application-name" content="Anın Sohbeti">
 
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="/assets/android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/web-app-manifest-192x192.png">
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <link rel="shortcut icon" href="/assets/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
-  <meta name="apple-mobile-web-app-title" content="Anın Sohbeti">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Sohbet">
   <link rel="manifest" href="/assets/site.webmanifest">
   <meta name="msapplication-TileColor" content="#64A70B">
   <meta name="msapplication-TileImage" content="/assets/mstile-150x150.png">
@@ -1774,6 +1777,17 @@
         handleNicknameSubmit();
       }
     });
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/assets/sw.js", { scope: "/" })
+          .catch((error) => {
+            console.error("Service worker registration failed:", error);
+          });
+      });
+    }
   </script>
 </body>
 </html>
