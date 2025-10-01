@@ -35,6 +35,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     :root {
       --bg-body: #f4f7f1;
@@ -242,6 +243,24 @@
       padding: 14px 18px;
       font-size: 16px;
       background: #f7fbf6;
+    }
+
+    .nickname-form__error {
+      margin: 0;
+      font-size: 14px;
+      color: #c0392b;
+      background: rgba(192, 57, 43, 0.12);
+      border-radius: 14px;
+      padding: 10px 14px;
+    }
+
+    .nickname-form__noscript {
+      margin-top: 12px;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: rgba(47, 123, 69, 0.12);
+      border-radius: 14px;
+      padding: 12px 16px;
     }
 
     .nickname-form input:focus {
@@ -713,10 +732,22 @@
         >
         <h2>Rumuzunu seç</h2>
         <p>Sohbete katılmadan önce seni tanıyabileceğimiz bir rumuz belirle.</p>
-        <div class="nickname-form">
-          <input id="nickname" type="text" maxlength="24" autocomplete="off" placeholder="Örn. Pesimist">
-          <button id="nickname-submit" type="button">Sohbete Başla</button>
-        </div>
+        <form class="nickname-form" id="nickname-form" novalidate>
+          <input id="nickname" name="nickname" type="text" maxlength="24" autocomplete="off" placeholder="Örn. Pesimist">
+          <div
+            id="nickname-turnstile"
+            class="cf-turnstile"
+            data-sitekey="0x4AAAAAAB4YbuB3ldcngp_X"
+            data-size="invisible"
+            data-auto="false"
+          ></div>
+          <input type="hidden" name="cf-turnstile-response" id="cf-turnstile-response">
+          <p class="nickname-form__error" id="nickname-error" role="alert" hidden></p>
+          <button id="nickname-submit" type="submit">Sohbete Başla</button>
+        </form>
+        <noscript>
+          <p class="nickname-form__noscript">JavaScript devre dışı bırakılmış. Sohbete katılabilmek için lütfen JavaScript'i etkinleştir ve sayfayı yenile.</p>
+        </noscript>
       </div>
     </div>
     <div
@@ -757,7 +788,11 @@
     const nextBtn = document.getElementById("next");
     const nicknameOverlay = document.getElementById("nickname-overlay");
     const nicknameInput = document.getElementById("nickname");
+    const nicknameForm = document.getElementById("nickname-form");
     const nicknameSubmit = document.getElementById("nickname-submit");
+    const nicknameError = document.getElementById("nickname-error");
+    const turnstileContainer = document.getElementById("nickname-turnstile");
+    const turnstileResponseInput = document.getElementById("cf-turnstile-response");
     const skipConfirmOverlay = document.getElementById("skip-confirm-overlay");
     const skipConfirmCancel = document.getElementById("skip-confirm-cancel");
     const skipConfirmConfirm = document.getElementById("skip-confirm-confirm");
@@ -767,6 +802,8 @@
     const MATCH_SEARCH_COUNTDOWN_SECONDS = 5;
     const SKIP_SEARCH_COUNTDOWN_SECONDS = 5;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
+    const TURNSTILE_SITE_KEY = "0x4AAAAAAB4YbuB3ldcngp_X";
+    const TURNSTILE_VERIFY_ENDPOINT = "/api/turnstile/verify";
 
     let isMatched = false;
     let nickname = "";
@@ -786,6 +823,12 @@
     let notificationsEnabled =
       SUPPORTS_NOTIFICATIONS && Notification.permission === "granted";
     let notificationPermissionWatcher = null;
+    let turnstileWidgetId = null;
+    let turnstilePendingResolve = null;
+    let turnstilePendingReject = null;
+    let isVerifyingTurnstile = false;
+    let hasPassedTurnstile = false;
+    const nicknameSubmitDefaultText = nicknameSubmit.textContent;
 
     function createWaitingMiniGame(container, startButton) {
       const GAME_DURATION_SECONDS = 60;
@@ -1481,7 +1524,125 @@
       return value.replace(/\s+/g, " ").trim();
     }
 
+    function clearNicknameError() {
+      if (!nicknameError) {
+        return;
+      }
+      nicknameError.textContent = "";
+      nicknameError.hidden = true;
+    }
+
+    function showNicknameError(message) {
+      if (!nicknameError) {
+        return;
+      }
+      nicknameError.textContent = message;
+      nicknameError.hidden = false;
+    }
+
+    function resetTurnstileHandlers() {
+      turnstilePendingResolve = null;
+      turnstilePendingReject = null;
+    }
+
+    function renderTurnstileWidget() {
+      if (turnstileWidgetId || !turnstileContainer || !window.turnstile) {
+        return;
+      }
+      turnstileWidgetId = window.turnstile.render(turnstileContainer, {
+        sitekey: TURNSTILE_SITE_KEY,
+        size: "invisible",
+        callback(token) {
+          if (turnstileResponseInput) {
+            turnstileResponseInput.value = token;
+          }
+          if (turnstilePendingResolve) {
+            turnstilePendingResolve(token);
+            resetTurnstileHandlers();
+          }
+        },
+        "error-callback": () => {
+          if (window.turnstile && turnstileWidgetId) {
+            window.turnstile.reset(turnstileWidgetId);
+          }
+          if (turnstilePendingReject) {
+            turnstilePendingReject(
+              new Error(
+                "Güvenlik doğrulaması sırasında bir hata oluştu. Lütfen tekrar deneyin."
+              )
+            );
+            resetTurnstileHandlers();
+          }
+        },
+        "timeout-callback": () => {
+          if (window.turnstile && turnstileWidgetId) {
+            window.turnstile.reset(turnstileWidgetId);
+          }
+          if (turnstilePendingReject) {
+            turnstilePendingReject(
+              new Error(
+                "Güvenlik doğrulaması zaman aşımına uğradı. Lütfen tekrar deneyin."
+              )
+            );
+            resetTurnstileHandlers();
+          }
+        },
+      });
+    }
+
+    function ensureTurnstileInitialized() {
+      if (!turnstileContainer) {
+        return;
+      }
+      if (window.turnstile && typeof window.turnstile.render === "function") {
+        renderTurnstileWidget();
+      } else {
+        window.setTimeout(ensureTurnstileInitialized, 200);
+      }
+    }
+
+    function requestTurnstileToken() {
+      ensureTurnstileInitialized();
+      if (!window.turnstile || !turnstileWidgetId) {
+        return Promise.reject(
+          new Error(
+            "Güvenlik doğrulaması yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin."
+          )
+        );
+      }
+
+      return new Promise((resolve, reject) => {
+        turnstilePendingResolve = resolve;
+        turnstilePendingReject = reject;
+        try {
+          window.turnstile.execute(turnstileWidgetId);
+        } catch (error) {
+          resetTurnstileHandlers();
+          reject(
+            error instanceof Error
+              ? error
+              : new Error(
+                  "Güvenlik doğrulaması başlatılamadı. Lütfen tekrar deneyin."
+                )
+          );
+        }
+      });
+    }
+
+    ensureTurnstileInitialized();
+
     function showNicknameOverlay() {
+      hasPassedTurnstile = false;
+      clearNicknameError();
+      if (window.turnstile && turnstileWidgetId) {
+        window.turnstile.reset(turnstileWidgetId);
+      }
+      if (turnstileResponseInput) {
+        turnstileResponseInput.value = "";
+      }
+      nicknameSubmit.disabled = false;
+      nicknameSubmit.removeAttribute("aria-busy");
+      nicknameSubmit.textContent = nicknameSubmitDefaultText;
       nicknameOverlay.hidden = false;
       nicknameOverlay.setAttribute("aria-hidden", "false");
       requestAnimationFrame(() => nicknameInput.focus());
@@ -1622,49 +1783,104 @@
     }
 
     function joinQueue() {
-      if (!nickname || !socket.connected) {
+      if (!nickname || !socket.connected || !hasPassedTurnstile) {
         return;
       }
       beginMatchSearch({ countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS });
       socket.emit("join");
     }
 
-    function handleNicknameSubmit() {
+    async function handleNicknameSubmit(event) {
+      if (event) {
+        event.preventDefault();
+      }
+      if (isVerifyingTurnstile) {
+        return;
+      }
+
+      clearNicknameError();
+
       const cleaned = sanitizeNickname(nicknameInput.value).slice(0, 24);
       if (!cleaned) {
+        showNicknameError("Lütfen bir rumuz gir.");
         nicknameInput.focus();
         return;
       }
 
-      nickname = cleaned;
-      nicknameInput.value = cleaned;
-      sessionStorage.setItem("nickname", nickname);
-      hideNicknameOverlay();
-      requestNotificationPermission();
-      joinQueue();
+      isVerifyingTurnstile = true;
+      nicknameSubmit.disabled = true;
+      nicknameSubmit.setAttribute("aria-busy", "true");
+      nicknameSubmit.textContent = "Doğrulanıyor...";
+
+      try {
+        const token = await requestTurnstileToken();
+        if (!token) {
+          throw new Error(
+            "Güvenlik doğrulaması tamamlanamadı. Lütfen tekrar deneyin."
+          );
+        }
+
+        const response = await fetch(TURNSTILE_VERIFY_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok || !payload || !payload.success) {
+          const errorMessage =
+            (payload && payload.message) ||
+            "Güvenlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.";
+          throw new Error(errorMessage);
+        }
+
+        hasPassedTurnstile = true;
+        nickname = cleaned;
+        nicknameInput.value = cleaned;
+        sessionStorage.setItem("nickname", nickname);
+        hideNicknameOverlay();
+        requestNotificationPermission();
+        joinQueue();
+      } catch (error) {
+        console.error(error);
+        showNicknameError(
+          error && error.message
+            ? error.message
+            : "Sohbete başlanamadı. Lütfen tekrar dene."
+        );
+      } finally {
+        if (window.turnstile && turnstileWidgetId) {
+          window.turnstile.reset(turnstileWidgetId);
+        }
+        if (turnstileResponseInput) {
+          turnstileResponseInput.value = "";
+        }
+        nicknameSubmit.disabled = false;
+        nicknameSubmit.removeAttribute("aria-busy");
+        nicknameSubmit.textContent = nicknameSubmitDefaultText;
+        isVerifyingTurnstile = false;
+      }
     }
 
     const storedNickname = sessionStorage.getItem("nickname");
     if (storedNickname) {
       const cleanedStored = sanitizeNickname(storedNickname).slice(0, 24);
       if (cleanedStored) {
-        nickname = cleanedStored;
-        sessionStorage.setItem("nickname", nickname);
-        hideNicknameOverlay();
+        nicknameInput.value = cleanedStored;
+        sessionStorage.setItem("nickname", cleanedStored);
       } else {
         sessionStorage.removeItem("nickname");
-        showNicknameOverlay();
       }
-    } else {
-      showNicknameOverlay();
     }
+
+    showNicknameOverlay();
 
     updateControls();
     setupNotificationPermissionWatcher();
 
     socket.on("connect", () => {
       setMatchedState(false);
-      if (nickname) {
+      if (nickname && hasPassedTurnstile) {
         joinQueue();
       } else {
         resetChat("Sohbete katılmak için bir rumuz seç.");
@@ -1770,7 +1986,10 @@
       }
     });
 
-    nicknameSubmit.addEventListener("click", handleNicknameSubmit);
+    if (nicknameForm) {
+      nicknameForm.addEventListener("submit", handleNicknameSubmit);
+    }
+    nicknameInput.addEventListener("input", clearNicknameError);
     nicknameInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
