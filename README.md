@@ -15,6 +15,16 @@ Gerçek zamanlı, rastgele eşleştirmeli sohbet uygulaması.
    ```
 2. Varsayılan olarak uygulama 6000 portunu kullanır.
 
+## Cloudflare Turnstile entegrasyonu
+
+- Uygulama, giriş formunda Cloudflare Turnstile'ı görünmez modda kullanır.
+- Sunucu tarafında doğrulama yapılabilmesi için `.env` dosyanıza aşağıdaki anahtarı ekleyin:
+  ```env
+  TURNSTILE_SECRET_KEY=0x4AAAAAAB4YbtDAfAznXoaN5MfiETToWBU
+  ```
+- Gizli anahtar yalnızca sunucuda tutulmalı ve sürüm kontrolüne eklenmemelidir.
+- Ön uç, Turnstile tarafından üretilen `cf-turnstile-response` jetonunu `/api/turnstile/verify` uç noktasına gönderir; doğrulama başarısız olursa form gönderimi engellenir.
+
 ## npm scriptleri
 
 | Komut | Açıklama |
