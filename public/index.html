@@ -99,6 +99,100 @@
       backdrop-filter: blur(6px);
     }
 
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      background: rgba(20, 34, 24, 0.45);
+      z-index: 4;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+
+    .modal-overlay[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .confirm-modal {
+      background: #ffffff;
+      border-radius: var(--radius-md);
+      box-shadow: 0 28px 60px -32px rgba(34, 72, 41, 0.45);
+      padding: 28px 26px 24px;
+      width: min(360px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      text-align: center;
+    }
+
+    .confirm-modal p {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.55;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .confirm-modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .confirm-modal button {
+      border-radius: 999px;
+      padding: 13px 18px;
+      font-weight: 600;
+      font-size: 15px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .confirm-modal button:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(47, 123, 69, 0.2);
+    }
+
+    .confirm-cancel {
+      background: #f5faf4;
+      color: var(--accent);
+      border-color: rgba(47, 123, 69, 0.18);
+    }
+
+    .confirm-cancel:hover,
+    .confirm-cancel:focus-visible {
+      background: #ebf6ea;
+      transform: translateY(-1px);
+    }
+
+    .confirm-accept {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 16px 34px -26px rgba(34, 72, 41, 0.7);
+    }
+
+    .confirm-accept:hover,
+    .confirm-accept:focus-visible {
+      background: var(--accent-strong);
+      transform: translateY(-1px);
+    }
+
+    @media (min-width: 480px) {
+      .confirm-modal-actions {
+        flex-direction: row;
+      }
+
+      .confirm-modal-actions button {
+        flex: 1;
+      }
+    }
+
     .nickname-modal {
       background: #ffffff;
       border-radius: var(--radius-md);
@@ -443,6 +537,23 @@
         </div>
       </div>
     </div>
+    <div
+      id="skip-confirm-overlay"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="skip-confirm-text"
+      hidden
+    >
+      <div class="confirm-modal">
+        <p id="skip-confirm-text">Bu kişiyi geçmek istediğinize emin misin? Bak sonra bulamayabilirsin.</p>
+        <div class="confirm-modal-actions">
+          <button id="skip-confirm-cancel" type="button" class="confirm-cancel">Vazgeç</button>
+          <button id="skip-confirm-confirm" type="button" class="confirm-accept">Devam Et</button>
+        </div>
+      </div>
+    </div>
     <div id="chat">
       <div class="chat-window">
         <div id="log"></div>
@@ -465,6 +576,9 @@
     const nicknameOverlay = document.getElementById("nickname-overlay");
     const nicknameInput = document.getElementById("nickname");
     const nicknameSubmit = document.getElementById("nickname-submit");
+    const skipConfirmOverlay = document.getElementById("skip-confirm-overlay");
+    const skipConfirmCancel = document.getElementById("skip-confirm-cancel");
+    const skipConfirmConfirm = document.getElementById("skip-confirm-confirm");
     const MATCH_SEARCH_TEXT = "Yeni eşleşme aranıyor...";
     const WAITING_STATUS_TEXT =
       "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
@@ -513,7 +627,10 @@
       }
     }
 
-    function startSearchCountdown(seconds, { prefix = MATCH_SEARCH_TEXT, finalText = WAITING_STATUS_TEXT } = {}) {
+    function startSearchCountdown(
+      seconds,
+      { prefix = MATCH_SEARCH_TEXT, finalText = WAITING_STATUS_TEXT, countdownFormatter } = {}
+    ) {
       clearSearchCountdown();
 
       if (seconds <= 0) {
@@ -521,15 +638,20 @@
         return;
       }
 
+      const formatCountdown =
+        typeof countdownFormatter === "function"
+          ? countdownFormatter
+          : (value) => `${prefix} [${value}]`;
+
       isSearchCountdownActive = true;
       searchCountdownRemaining = seconds;
-      setWaitingStatusText(`${prefix} [${searchCountdownRemaining}]`);
+      setWaitingStatusText(formatCountdown(searchCountdownRemaining));
       updateControls();
 
       searchCountdownTimer = window.setInterval(() => {
         searchCountdownRemaining -= 1;
         if (searchCountdownRemaining > 0) {
-          setWaitingStatusText(`${prefix} [${searchCountdownRemaining}]`);
+          setWaitingStatusText(formatCountdown(searchCountdownRemaining));
           return;
         }
 
@@ -556,6 +678,81 @@
       } catch (error) {
         // Tarayıcı izin sorgusunu desteklemiyorsa sessizce devam et.
       }
+    }
+
+    function openSkipConfirmModal() {
+      if (!skipConfirmOverlay || !skipConfirmCancel || !skipConfirmConfirm) {
+        return Promise.resolve(false);
+      }
+
+      if (skipConfirmOverlay.dataset.open === "true") {
+        return Promise.resolve(false);
+      }
+
+      return new Promise((resolve) => {
+        const previouslyFocused = document.activeElement;
+
+        const restoreFocus = () => {
+          if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+            try {
+              previouslyFocused.focus({ preventScroll: true });
+            } catch (error) {
+              previouslyFocused.focus();
+            }
+          }
+        };
+
+        const cleanup = () => {
+          document.removeEventListener("keydown", handleKeydown);
+          skipConfirmOverlay.removeEventListener("click", handleOverlayClick);
+          skipConfirmCancel.removeEventListener("click", handleCancel);
+          skipConfirmConfirm.removeEventListener("click", handleConfirm);
+          delete skipConfirmOverlay.dataset.open;
+          skipConfirmOverlay.setAttribute("aria-hidden", "true");
+          skipConfirmOverlay.setAttribute("hidden", "");
+        };
+
+        const close = (result) => {
+          cleanup();
+          restoreFocus();
+          resolve(result);
+        };
+
+        const handleCancel = (event) => {
+          event.preventDefault();
+          close(false);
+        };
+
+        const handleConfirm = (event) => {
+          event.preventDefault();
+          close(true);
+        };
+
+        const handleOverlayClick = (event) => {
+          if (event.target === skipConfirmOverlay) {
+            close(false);
+          }
+        };
+
+        const handleKeydown = (event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            close(false);
+          }
+        };
+
+        skipConfirmOverlay.removeAttribute("hidden");
+        skipConfirmOverlay.setAttribute("aria-hidden", "false");
+        skipConfirmOverlay.dataset.open = "true";
+        skipConfirmCancel.addEventListener("click", handleCancel);
+        skipConfirmConfirm.addEventListener("click", handleConfirm);
+        skipConfirmOverlay.addEventListener("click", handleOverlayClick);
+        document.addEventListener("keydown", handleKeydown);
+
+        requestAnimationFrame(() => {
+          skipConfirmConfirm.focus({ preventScroll: true });
+        });
+      });
     }
 
     async function requestNotificationPermission() {
@@ -862,12 +1059,17 @@
     });
 
     socket.on("ended", () => {
+      const endedStatusText = "Bağlantı sonlandı. Yeni eşleşme bekleniyor…";
       setMatchedState(false);
       hideWaitingStatus();
       log.replaceChildren();
       msg.value = "";
-      appendMessage("— Bağlantı sonlandı. Yeni eşleşme bekleniyor...", "system");
-      startSearchCountdown(MATCH_SEARCH_COUNTDOWN_SECONDS);
+      clearCooldown();
+      setWaitingStatusText(endedStatusText);
+      startSearchCountdown(MATCH_SEARCH_COUNTDOWN_SECONDS, {
+        prefix: endedStatusText,
+        countdownFormatter: () => endedStatusText,
+      });
       if (nickname) {
         socket.emit("join");
       }
@@ -889,14 +1091,12 @@
       msg.focus();
     };
 
-    nextBtn.onclick = () => {
+    nextBtn.onclick = async () => {
       if (!isMatched || isSearchCountdownActive) {
         return;
       }
 
-      const shouldSkip = window.confirm(
-        "Bu kişiyi geçmek istediğinize emin misin? Bak sonra bulamazsan karışmam..."
-      );
+      const shouldSkip = await openSkipConfirmModal();
 
       if (!shouldSkip) {
         return;
