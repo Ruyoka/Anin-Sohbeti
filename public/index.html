@@ -357,83 +357,6 @@
       border-color: rgba(193, 60, 60, 0.28);
     }
 
-    .photo-viewer {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px;
-      background: rgba(12, 24, 16, 0.65);
-      z-index: 7;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 200ms ease;
-      backdrop-filter: blur(4px);
-    }
-
-    .photo-viewer[hidden] {
-      display: none;
-    }
-
-    .photo-viewer[data-open="true"] {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .photo-viewer__backdrop {
-      position: absolute;
-      inset: 0;
-    }
-
-    .photo-viewer__content {
-      position: relative;
-      margin: 0;
-      max-width: min(90vw, 560px);
-      max-height: min(90vh, 760px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .photo-viewer__content img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      border-radius: 24px;
-      box-shadow: 0 36px 72px -36px rgba(14, 32, 20, 0.85);
-      background: #0c1510;
-    }
-
-    .photo-viewer__close {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(10, 18, 12, 0.72);
-      color: #ffffff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: transform 160ms ease, background 160ms ease;
-    }
-
-    .photo-viewer__close svg {
-      width: 20px;
-      height: 20px;
-    }
-
-    .photo-viewer__close:hover,
-    .photo-viewer__close:focus-visible {
-      transform: scale(1.08);
-      background: rgba(10, 18, 12, 0.85);
-      outline: none;
-    }
-
     .voice-call-overlay__permission {
       display: flex;
       align-items: center;
@@ -836,44 +759,6 @@
       box-shadow: none;
     }
 
-    .message--has-media {
-      padding: 10px;
-      gap: 10px;
-    }
-
-    .message__media {
-      position: relative;
-      display: inline-flex;
-      align-items: stretch;
-      justify-content: stretch;
-      border: none;
-      padding: 0;
-      background: transparent;
-      border-radius: 18px;
-      overflow: hidden;
-      cursor: pointer;
-      box-shadow: 0 22px 44px -28px rgba(29, 72, 42, 0.65);
-      max-width: min(320px, 72vw);
-    }
-
-    .message__media:focus-visible {
-      outline: 2px solid rgba(47, 123, 69, 0.45);
-      outline-offset: 2px;
-    }
-
-    .message__media img {
-      display: block;
-      max-height: 250px;
-      width: 100%;
-      object-fit: cover;
-      background: #101c16;
-    }
-
-    .message__caption {
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
     .message__prefix {
       font-size: 13px;
       font-weight: 600;
@@ -893,18 +778,10 @@
       box-shadow: 0 16px 34px -28px rgba(29, 72, 42, 0.6);
     }
 
-    .message--me.message--has-media {
-      background: var(--bubble-me);
-    }
-
     .message--stranger {
       align-self: flex-start;
       background: var(--bubble-stranger);
       border: 1px solid var(--bubble-border);
-    }
-
-    .message--stranger.message--has-media {
-      background: var(--bubble-stranger);
     }
 
     .message--system {
@@ -1109,14 +986,13 @@
     }
 
     .controls__composer {
-      position: relative;
       display: flex;
       align-items: center;
       gap: 12px;
       background: #f7fbf6;
       border: 1px solid var(--border-soft);
       border-radius: 999px;
-      padding: 6px 14px;
+      padding: 6px 8px 6px 18px;
       transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
 
@@ -1124,159 +1000,6 @@
       border-color: rgba(47, 123, 69, 0.45);
       box-shadow: 0 0 0 3px rgba(47, 123, 69, 0.18);
       background: #f4faf4;
-    }
-
-    .composer-toggle {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: none;
-      background: transparent;
-      color: var(--accent);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background 160ms ease, color 160ms ease;
-      flex: 0 0 auto;
-    }
-
-    .composer-toggle svg {
-      width: 20px;
-      height: 20px;
-    }
-
-    .composer-toggle:hover,
-    .composer-toggle:focus-visible {
-      background: rgba(47, 123, 69, 0.12);
-      outline: none;
-    }
-
-    .composer-toggle:disabled {
-      color: rgba(47, 123, 69, 0.45);
-      cursor: not-allowed;
-    }
-
-    .composer-toggle:disabled:hover,
-    .composer-toggle:disabled:focus-visible {
-      background: transparent;
-    }
-
-    .composer__preview {
-      position: relative;
-      width: 60px;
-      height: 60px;
-      border-radius: 18px;
-      overflow: hidden;
-      border: 1px solid rgba(47, 123, 69, 0.25);
-      flex: 0 0 auto;
-      background: #ffffff;
-      box-shadow: 0 18px 34px -28px rgba(34, 72, 41, 0.55);
-    }
-
-    .composer__preview[hidden] {
-      display: none;
-    }
-
-    .composer__preview img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .composer__preview-remove {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(17, 30, 21, 0.72);
-      color: #ffffff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: transform 140ms ease, background 140ms ease;
-    }
-
-    .composer__preview-remove svg {
-      width: 14px;
-      height: 14px;
-    }
-
-    .composer__preview-remove:hover,
-    .composer__preview-remove:focus-visible {
-      transform: scale(1.08);
-      background: rgba(17, 30, 21, 0.82);
-      outline: none;
-    }
-
-    .composer-menu {
-      position: absolute;
-      left: 0;
-      bottom: calc(100% + 12px);
-      min-width: 180px;
-      background: #ffffff;
-      border-radius: 16px;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      box-shadow: 0 24px 48px -32px rgba(34, 72, 41, 0.65);
-      opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 160ms ease, transform 160ms ease;
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .composer-menu[data-open="true"] {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-
-    .composer-menu__item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 12px;
-      border: none;
-      background: transparent;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      cursor: pointer;
-      transition: background 160ms ease, transform 160ms ease, color 160ms ease;
-      text-align: left;
-    }
-
-    .composer-menu__item:hover,
-    .composer-menu__item:focus-visible {
-      background: rgba(47, 123, 69, 0.12);
-      color: var(--accent-strong);
-      transform: translateY(-1px);
-      outline: none;
-    }
-
-    .composer-menu__icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent);
-    }
-
-    .composer-menu__icon svg {
-      width: 22px;
-      height: 22px;
-    }
-
-    .composer-menu__label {
-      flex: 1;
     }
 
     #msg {
@@ -1737,63 +1460,12 @@
         <audio id="voice-call-remote-audio" autoplay playsinline hidden></audio>
       </div>
     </div>
-    <div class="photo-viewer" id="photo-viewer" aria-modal="true" role="dialog" hidden>
-      <div class="photo-viewer__backdrop" data-photo-viewer-close></div>
-      <figure class="photo-viewer__content">
-        <button
-          type="button"
-          class="photo-viewer__close"
-          id="photo-viewer-close"
-          aria-label="Kapat"
-        >
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M7.05 7.05a.9.9 0 0 1 1.27 0L12 10.73l3.68-3.68a.9.9 0 1 1 1.27 1.27L13.27 12l3.68 3.68a.9.9 0 1 1-1.27 1.27L12 13.27l-3.68 3.68a.9.9 0 0 1-1.27-1.27L10.73 12 7.05 8.32a.9.9 0 0 1 0-1.27Z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
-        <img id="photo-viewer-image" alt="Gönderilen fotoğraf">
-      </figure>
-    </div>
     <div id="chat">
       <div class="chat-window">
         <div id="log"></div>
       </div>
       <div id="controls">
-        <div class="controls__composer" data-menu-open="false">
-          <button
-            id="composer-toggle"
-            class="composer-toggle"
-            type="button"
-            aria-label="İçerik ekle"
-            aria-haspopup="true"
-            aria-expanded="false"
-            aria-controls="composer-menu"
-          >
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M12 4a.9.9 0 0 1 .9.9v6.2h6.2a.9.9 0 1 1 0 1.8H12.9v6.2a.9.9 0 1 1-1.8 0V12.9H4.9a.9.9 0 1 1 0-1.8h6.2V4.9A.9.9 0 0 1 12 4Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
-          <div class="composer__preview" id="composer-photo-preview" hidden>
-            <button
-              type="button"
-              class="composer__preview-remove"
-              id="composer-photo-remove"
-              aria-label="Fotoğrafı kaldır"
-            >
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M5.76 5.76a.9.9 0 0 1 1.27 0L10 8.73l2.97-2.97a.9.9 0 1 1 1.27 1.27L11.27 10l2.97 2.97a.9.9 0 0 1-1.27 1.27L10 11.27l-2.97 2.97a.9.9 0 0 1-1.27-1.27L8.73 10 5.76 7.03a.9.9 0 0 1 0-1.27Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </button>
-            <img id="composer-photo-preview-image" alt="Seçilen fotoğraf önizlemesi">
-          </div>
+        <div class="controls__composer">
           <input id="msg" placeholder="Mesaj yaz...">
           <button id="send" type="button" aria-label="Gönder">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -1811,34 +1483,7 @@
             </svg>
             <span class="visually-hidden">Gönder</span>
           </button>
-          <div class="composer-menu" id="composer-menu" hidden>
-            <button type="button" class="composer-menu__item" id="composer-menu-photo">
-              <span class="composer-menu__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M9.46 4.5h5.08a2 2 0 0 1 1.75 1.03l.69 1.24h2.02a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.77a2 2 0 0 1 2-2h2.02l.69-1.24A2 2 0 0 1 9.46 4.5Z"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M15.5 11.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                  />
-                </svg>
-              </span>
-              <span class="composer-menu__label">Fotoğraf</span>
-            </button>
-          </div>
         </div>
-        <input
-          type="file"
-          id="composer-photo-input"
-          class="visually-hidden"
-          accept="image/*"
-          hidden
-        >
         <div class="controls__actions">
           <button id="call" type="button" class="control-button control-button--call">
             <span class="control-button__icon" aria-hidden="true">
@@ -1873,32 +1518,6 @@
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
-    const composer = document.querySelector(".controls__composer");
-    const composerToggle = document.getElementById("composer-toggle");
-    const composerMenu = document.getElementById("composer-menu");
-    const composerMenuPhoto = document.getElementById("composer-menu-photo");
-    const composerPhotoInput = document.getElementById("composer-photo-input");
-    const composerPhotoPreview = document.getElementById("composer-photo-preview");
-    const composerPhotoPreviewImage = document.getElementById("composer-photo-preview-image");
-    const composerPhotoRemove = document.getElementById("composer-photo-remove");
-    const photoViewer = document.getElementById("photo-viewer");
-    const photoViewerImage = document.getElementById("photo-viewer-image");
-    const photoViewerClose = document.getElementById("photo-viewer-close");
-    const photoViewerBackdrop = photoViewer
-      ? photoViewer.querySelector("[data-photo-viewer-close]")
-      : null;
-    if (photoViewer) {
-      photoViewer.dataset.open = "false";
-    }
-    if (composerMenu) {
-      composerMenu.dataset.open = "false";
-    }
-    if (composer && !composer.dataset.menuOpen) {
-      composer.dataset.menuOpen = "false";
-    }
-    if (composerToggle) {
-      composerToggle.setAttribute("aria-expanded", "false");
-    }
     const nextBtn = document.getElementById("next");
     const callBtn = document.getElementById("call");
     const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
@@ -1938,8 +1557,6 @@
     const CALL_COOLDOWN_SECONDS = 15;
     const CALL_REQUEST_TIMEOUT_SECONDS = 10;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
-    const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
-    const PHOTO_NOTIFICATION_FALLBACK = "Fotoğraf gönderdi.";
 
     let isMatched = false;
     let nickname = "";
@@ -1964,11 +1581,6 @@
     let isCallCoolingDown = false;
     let callCooldownTimer = null;
     let callCooldownRemaining = 0;
-    let composerMenuOpen = false;
-    let composerMenuCloseTimer = null;
-    let selectedPhotoData = null;
-    let photoViewerPreviousFocus = null;
-    let photoViewerCloseTimer = null;
 
     function createWaitingMiniGame(container, startButton) {
       const GAME_DURATION_SECONDS = 60;
@@ -2675,223 +2287,6 @@
       nicknameOverlay.setAttribute("aria-hidden", "true");
     }
 
-    function setComposerMenuState(open) {
-      if (!composerMenu || !composer) {
-        composerMenuOpen = false;
-        if (composerToggle) {
-          composerToggle.setAttribute("aria-expanded", "false");
-        }
-        return;
-      }
-
-      if (composerMenuCloseTimer) {
-        clearTimeout(composerMenuCloseTimer);
-        composerMenuCloseTimer = null;
-      }
-
-      composerMenuOpen = Boolean(open);
-      composer.dataset.menuOpen = composerMenuOpen ? "true" : "false";
-
-      if (composerToggle) {
-        composerToggle.setAttribute(
-          "aria-expanded",
-          composerMenuOpen ? "true" : "false"
-        );
-      }
-
-      if (composerMenuOpen) {
-        composerMenu.hidden = false;
-        composerMenu.dataset.open = "true";
-        document.addEventListener("pointerdown", handleComposerOutsidePointer, true);
-        document.addEventListener("keydown", handleComposerMenuKeydown);
-      } else {
-        composerMenu.dataset.open = "false";
-        document.removeEventListener("pointerdown", handleComposerOutsidePointer, true);
-        document.removeEventListener("keydown", handleComposerMenuKeydown);
-        composerMenuCloseTimer = window.setTimeout(() => {
-          composerMenu.hidden = true;
-          composerMenuCloseTimer = null;
-        }, 180);
-      }
-    }
-
-    function handleComposerOutsidePointer(event) {
-      if (!composerMenuOpen || !composer) {
-        return;
-      }
-
-      if (composer.contains(event.target)) {
-        return;
-      }
-
-      setComposerMenuState(false);
-    }
-
-    function handleComposerMenuKeydown(event) {
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      event.preventDefault();
-      setComposerMenuState(false);
-      if (composerToggle && !composerToggle.disabled) {
-        try {
-          composerToggle.focus({ preventScroll: true });
-        } catch {
-          composerToggle.focus();
-        }
-      }
-    }
-
-    function clearSelectedPhoto({ skipUpdate = false } = {}) {
-      selectedPhotoData = null;
-
-      if (composerPhotoPreview) {
-        composerPhotoPreview.hidden = true;
-      }
-
-      if (composerPhotoPreviewImage) {
-        composerPhotoPreviewImage.src = "";
-        composerPhotoPreviewImage.alt = "Seçilen fotoğraf önizlemesi";
-      }
-
-      if (composerPhotoInput) {
-        composerPhotoInput.value = "";
-      }
-
-      if (!skipUpdate) {
-        updateControls();
-      }
-    }
-
-    function handlePhotoSelection(file) {
-      if (!file) {
-        return;
-      }
-
-      setComposerMenuState(false);
-
-      if (!file.type?.startsWith("image/")) {
-        window.alert("Lütfen bir fotoğraf seç.");
-        return;
-      }
-
-      if (file.size > MAX_PHOTO_BYTES) {
-        const maxSizeMb = (MAX_PHOTO_BYTES / (1024 * 1024)).toFixed(1).replace(/\.0$/, "");
-        window.alert(`Fotoğraf ${maxSizeMb} MB'den küçük olmalı.`);
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result;
-        if (typeof result !== "string") {
-          window.alert("Fotoğraf işlenemedi. Lütfen tekrar deneyin.");
-          return;
-        }
-
-        const safeName = (file.name || "").toString().slice(0, 120);
-        selectedPhotoData = {
-          dataUrl: result,
-          name: safeName,
-          size: file.size,
-          type: file.type,
-        };
-
-        if (composerPhotoPreview && composerPhotoPreviewImage) {
-          composerPhotoPreview.hidden = false;
-          composerPhotoPreviewImage.src = result;
-          composerPhotoPreviewImage.alt = safeName
-            ? `${safeName} fotoğrafı`
-            : "Seçilen fotoğraf önizlemesi";
-        }
-
-        updateControls();
-
-        if (msg && !msg.disabled) {
-          try {
-            msg.focus({ preventScroll: true });
-          } catch {
-            msg.focus();
-          }
-        }
-      };
-
-      reader.onerror = () => {
-        window.alert("Fotoğraf yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.");
-      };
-
-      reader.readAsDataURL(file);
-    }
-
-    function handlePhotoViewerKeydown(event) {
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      event.preventDefault();
-      closePhotoViewer();
-    }
-
-    function openPhotoViewer(src, altText) {
-      if (!photoViewer || !photoViewerImage) {
-        return;
-      }
-
-      if (photoViewerCloseTimer) {
-        clearTimeout(photoViewerCloseTimer);
-        photoViewerCloseTimer = null;
-      }
-
-      photoViewerPreviousFocus = document.activeElement;
-      photoViewer.hidden = false;
-      photoViewer.dataset.open = "true";
-      photoViewerImage.src = src;
-      photoViewerImage.alt = altText || "Gönderilen fotoğraf";
-      document.addEventListener("keydown", handlePhotoViewerKeydown);
-
-      if (photoViewerClose) {
-        requestAnimationFrame(() => {
-          try {
-            photoViewerClose.focus({ preventScroll: true });
-          } catch {
-            photoViewerClose.focus();
-          }
-        });
-      }
-    }
-
-    function closePhotoViewer() {
-      if (!photoViewer || !photoViewerImage) {
-        return;
-      }
-
-      if (photoViewerCloseTimer) {
-        clearTimeout(photoViewerCloseTimer);
-        photoViewerCloseTimer = null;
-      }
-
-      photoViewer.dataset.open = "false";
-      document.removeEventListener("keydown", handlePhotoViewerKeydown);
-
-      photoViewerCloseTimer = window.setTimeout(() => {
-        photoViewer.hidden = true;
-        photoViewerImage.src = "";
-        photoViewerImage.alt = "Gönderilen fotoğraf";
-        photoViewerCloseTimer = null;
-      }, 200);
-
-      if (photoViewerPreviousFocus && typeof photoViewerPreviousFocus.focus === "function") {
-        try {
-          photoViewerPreviousFocus.focus({ preventScroll: true });
-        } catch {
-          photoViewerPreviousFocus.focus();
-        }
-      }
-
-      photoViewerPreviousFocus = null;
-    }
-
     function clearCooldown() {
       if (cooldownTimer) {
         clearTimeout(cooldownTimer);
@@ -2969,16 +2364,9 @@
 
     function updateControls() {
       const hasMessage = Boolean(msg.value.trim());
-      const hasPhoto = Boolean(selectedPhotoData);
       msg.disabled = !isMatched;
-      sendBtn.disabled = !isMatched || (!hasMessage && !hasPhoto) || isCoolingDown;
+      sendBtn.disabled = !isMatched || !hasMessage || isCoolingDown;
       nextBtn.disabled = !isMatched || isSearchCountdownActive;
-      if (composerToggle) {
-        composerToggle.disabled = !isMatched;
-        if (!isMatched && composerMenuOpen) {
-          setComposerMenuState(false);
-        }
-      }
       if (callBtn) {
         const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
         const hasActiveRequest = callRequestController?.isActive?.() ?? false;
@@ -2992,13 +2380,11 @@
       isMatched = state;
       if (!state) {
         clearCooldown();
-        clearSelectedPhoto({ skipUpdate: true });
-        setComposerMenuState(false);
       } else {
         hideWaitingStatus();
       }
-      voiceCallManager?.handleMatchStateChange?.(state);
-      callRequestController?.handleMatchStateChange?.(state);
+    voiceCallManager?.handleMatchStateChange?.(state);
+    callRequestController?.handleMatchStateChange?.(state);
     updateControls();
   }
 
@@ -3958,39 +3344,11 @@
       };
     })();
 
-    function createMessageElement(messageContent, type, prefixText) {
+    function createMessageElement(txt, type, prefixText) {
       const bubble = document.createElement("div");
       bubble.classList.add("message", `message--${type}`);
 
       if (type === "stranger" || type === "me") {
-        let messageText = "";
-        let imageData = null;
-
-        if (typeof messageContent === "string") {
-          messageText = messageContent;
-        } else if (messageContent && typeof messageContent === "object") {
-          if (typeof messageContent.text === "string") {
-            messageText = messageContent.text;
-          }
-          if (messageContent.image && typeof messageContent.image === "object") {
-            const dataUrl =
-              typeof messageContent.image.dataUrl === "string"
-                ? messageContent.image.dataUrl
-                : "";
-            if (dataUrl.startsWith("data:image/") && dataUrl.length <= MAX_PHOTO_BYTES * 4) {
-              imageData = {
-                dataUrl,
-                name:
-                  typeof messageContent.image.name === "string"
-                    ? messageContent.image.name
-                    : "",
-              };
-            }
-          }
-        } else if (messageContent != null) {
-          messageText = messageContent.toString();
-        }
-
         if (prefixText) {
           const prefix = document.createElement("span");
           prefix.className = "message__prefix";
@@ -3998,33 +3356,12 @@
           bubble.appendChild(prefix);
         }
 
-        if (imageData) {
-          bubble.classList.add("message--has-media");
-          const mediaButton = document.createElement("button");
-          mediaButton.type = "button";
-          mediaButton.className = "message__media";
-          mediaButton.setAttribute(
-            "aria-label",
-            imageData.name ? `${imageData.name} fotoğrafını büyüt` : "Fotoğrafı büyüt"
-          );
-          const mediaImage = document.createElement("img");
-          mediaImage.src = imageData.dataUrl;
-          mediaImage.alt = imageData.name ? `${imageData.name} fotoğrafı` : "Gönderilen fotoğraf";
-          mediaButton.appendChild(mediaImage);
-          mediaButton.addEventListener("click", () => {
-            openPhotoViewer(mediaImage.src, mediaImage.alt);
-          });
-          bubble.appendChild(mediaButton);
-        }
-
-        if (messageText) {
-          const textNode = document.createElement("span");
-          textNode.className = imageData ? "message__caption" : "message__text";
-          textNode.textContent = messageText;
-          bubble.appendChild(textNode);
-        }
+        const content = document.createElement("span");
+        content.className = "message__text";
+        content.textContent = txt;
+        bubble.appendChild(content);
       } else {
-        bubble.textContent = (messageContent ?? "").toString();
+        bubble.textContent = txt;
       }
 
       return bubble;
@@ -4040,8 +3377,6 @@
     function resetChat(statusText) {
       log.replaceChildren();
       msg.value = "";
-      clearSelectedPhoto({ skipUpdate: true });
-      setComposerMenuState(false);
       clearCooldown();
       hideWaitingStatus();
       updateControls();
@@ -4068,8 +3403,6 @@
       hideWaitingStatus();
       log.replaceChildren();
       msg.value = "";
-      clearSelectedPhoto({ skipUpdate: true });
-      setComposerMenuState(false);
       clearCooldown();
       setMatchedState(false);
       updateControls();
@@ -4181,43 +3514,19 @@
     });
 
     socket.on("message", (payload) => {
-      const baseData =
+      const data =
         payload && typeof payload === "object"
           ? {
               text: (payload.text ?? "").toString(),
               nickname: (payload.nickname ?? "").toString(),
-              image: payload.image && typeof payload.image === "object" ? payload.image : null,
             }
-          : { text: (payload ?? "").toString(), nickname: "", image: null };
+          : { text: (payload ?? "").toString(), nickname: "" };
 
-      const senderName = sanitizeNickname(baseData.nickname).slice(0, 50) || "Yabancı";
-      let imageData = null;
-
-      if (baseData.image) {
-        const dataUrl =
-          typeof baseData.image.dataUrl === "string" ? baseData.image.dataUrl : "";
-        if (dataUrl.startsWith("data:image/") && dataUrl.length <= MAX_PHOTO_BYTES * 4) {
-          imageData = {
-            dataUrl,
-            name:
-              typeof baseData.image.name === "string" ? baseData.image.name.slice(0, 120) : "",
-          };
-        }
-      }
-
-      appendMessage({ text: baseData.text, image: imageData }, "stranger", senderName);
-
-      const hasText = Boolean(baseData.text);
-      const notificationPreview = hasText
-        ? (baseData.text.length > 120
-            ? `${baseData.text.slice(0, 117)}...`
-            : baseData.text)
-        : imageData
-        ? PHOTO_NOTIFICATION_FALLBACK
-        : "";
-
-      if (notificationPreview) {
-        triggerChatNotification("Yeni mesaj", `${senderName}: ${notificationPreview}`);
+      const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "Yabancı";
+      appendMessage(data.text, "stranger", senderName);
+      if (data.text) {
+        const previewText = data.text.length > 120 ? `${data.text.slice(0, 117)}...` : data.text;
+        triggerChatNotification("Yeni mesaj", `${senderName}: ${previewText}`);
       }
     });
 
@@ -4300,83 +3609,16 @@
       });
     }
 
-    if (composerToggle) {
-      composerToggle.addEventListener("click", () => {
-        if (composerToggle.disabled) {
-          return;
-        }
-        setComposerMenuState(!composerMenuOpen);
-      });
-    }
-
-    if (composerMenuPhoto) {
-      composerMenuPhoto.addEventListener("click", () => {
-        if (composerToggle?.disabled) {
-          return;
-        }
-        setComposerMenuState(false);
-        composerPhotoInput?.click?.();
-      });
-    }
-
-    if (composerPhotoInput) {
-      composerPhotoInput.addEventListener("change", () => {
-        const file = composerPhotoInput.files && composerPhotoInput.files[0];
-        if (file) {
-          handlePhotoSelection(file);
-        }
-        composerPhotoInput.value = "";
-      });
-    }
-
-    if (composerPhotoRemove) {
-      composerPhotoRemove.addEventListener("click", () => {
-        clearSelectedPhoto();
-      });
-    }
-
-    if (photoViewerClose) {
-      photoViewerClose.addEventListener("click", closePhotoViewer);
-    }
-
-    if (photoViewerBackdrop) {
-      photoViewerBackdrop.addEventListener("click", closePhotoViewer);
-    }
-
     sendBtn.onclick = () => {
-      if (!isMatched || !nickname || isCoolingDown) {
-        return;
-      }
+      if (!isMatched || !nickname || !msg.value.trim() || isCoolingDown) return;
 
       const messageText = msg.value.trim().slice(0, 2000);
-      const hasMessage = Boolean(messageText);
-      const hasPhoto = Boolean(selectedPhotoData);
-
-      if (!hasMessage && !hasPhoto) {
-        return;
-      }
-
-      const imagePayload = hasPhoto ? { ...selectedPhotoData } : null;
-      const outgoingPayload = { text: messageText, nickname };
-
-      if (imagePayload) {
-        outgoingPayload.image = imagePayload;
-      }
-
-      setComposerMenuState(false);
-      socket.emit("message", outgoingPayload);
-      appendMessage({ text: messageText, image: imagePayload }, "me", nickname);
+      socket.emit("message", { text: messageText, nickname });
+      appendMessage(messageText, "me", nickname);
       msg.value = "";
-      if (hasPhoto) {
-        clearSelectedPhoto({ skipUpdate: true });
-      }
       startCooldown();
       updateControls();
-      try {
-        msg.focus({ preventScroll: true });
-      } catch {
-        msg.focus();
-      }
+      msg.focus();
     };
 
     nextBtn.onclick = async () => {
