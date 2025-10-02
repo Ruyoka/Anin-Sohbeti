@@ -7,6 +7,7 @@ const { Server } = require("socket.io");
 const PORT = process.env.PORT || 6000;
 const WAITING_STATUS_TEXT =
   "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
+const MAX_IMAGE_DATA_LENGTH = 6 * 1024 * 1024;
 
 const app = express();
 const server = http.createServer(app);
@@ -194,13 +195,46 @@ io.on("connection", (socket) => {
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
-    const payload =
+    const basePayload =
       msg && typeof msg === "object"
         ? {
             text: (msg.text || "").toString().slice(0, 2000),
             nickname: (msg.nickname || "").toString().slice(0, 50),
+            image:
+              msg.image && typeof msg.image === "object"
+                ? msg.image
+                : null,
           }
-        : { text: (msg || "").toString().slice(0, 2000), nickname: "" };
+        : { text: (msg || "").toString().slice(0, 2000), nickname: "", image: null };
+
+    let imagePayload = null;
+
+    if (basePayload.image) {
+      const rawDataUrl = (basePayload.image.dataUrl || "").toString();
+      if (
+        rawDataUrl.startsWith("data:image/") &&
+        rawDataUrl.length <= MAX_IMAGE_DATA_LENGTH
+      ) {
+        const name = (basePayload.image.name || "").toString().slice(0, 120);
+        imagePayload = { dataUrl: rawDataUrl, name };
+        if (typeof basePayload.image.type === "string") {
+          imagePayload.type = basePayload.image.type.slice(0, 100);
+        }
+        if (typeof basePayload.image.size === "number" && Number.isFinite(basePayload.image.size)) {
+          const clampedSize = Math.max(0, Math.min(basePayload.image.size, MAX_IMAGE_DATA_LENGTH));
+          imagePayload.size = clampedSize;
+        }
+      }
+    }
+
+    const payload = {
+      text: basePayload.text,
+      nickname: basePayload.nickname,
+    };
+
+    if (imagePayload) {
+      payload.image = imagePayload;
+    }
 
     io.to(partnerId).emit("message", payload);
   });
