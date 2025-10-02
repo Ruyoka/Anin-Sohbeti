@@ -81,6 +81,8 @@ function endCurrentChat(socketId, options = {}) {
   clearWaitTimer(partnerId);
   notifyWaitingStatus(partnerId, false);
 
+  io.to(partnerId).emit("voice-call:peer-ended");
+
   if (!skipNotifyPartner) {
     io.to(partnerId).emit("ended");
   }
@@ -151,6 +153,82 @@ io.on("connection", (socket) => {
         : { text: (msg || "").toString().slice(0, 2000), nickname: "" };
 
     io.to(partnerId).emit("message", payload);
+  });
+
+  socket.on("voice-call:offer", (payload) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    const data =
+      payload && typeof payload === "object"
+        ? { sdp: payload.sdp }
+        : { sdp: null };
+
+    io.to(partnerId).emit("voice-call:offer", data);
+  });
+
+  socket.on("voice-call:answer", (payload) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    const data =
+      payload && typeof payload === "object"
+        ? { sdp: payload.sdp }
+        : { sdp: null };
+
+    io.to(partnerId).emit("voice-call:answer", data);
+  });
+
+  socket.on("voice-call:candidate", (payload) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    const data =
+      payload && typeof payload === "object"
+        ? { candidate: payload.candidate }
+        : { candidate: null };
+
+    io.to(partnerId).emit("voice-call:candidate", data);
+  });
+
+  socket.on("voice-call:request", () => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    io.to(partnerId).emit("voice-call:incoming-request");
+  });
+
+  socket.on("voice-call:respond", (payload = {}) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    const accepted = Boolean(payload.accepted);
+    const reason =
+      typeof payload.reason === "string"
+        ? payload.reason.slice(0, 40)
+        : "";
+
+    if (accepted) {
+      io.to(partnerId).emit("voice-call:request-accepted");
+    } else {
+      io
+        .to(partnerId)
+        .emit("voice-call:request-rejected", { reason: reason || "declined" });
+    }
+  });
+
+  socket.on("voice-call:cancel-request", () => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    io.to(partnerId).emit("voice-call:request-cancelled");
+  });
+
+  socket.on("voice-call:end", () => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    io.to(partnerId).emit("voice-call:ended");
   });
 
   socket.on("next", () => {
