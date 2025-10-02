@@ -216,10 +216,6 @@
     }
 
     .voice-call-overlay__status {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
       margin: 0;
       font-size: 15px;
       font-weight: 600;
@@ -228,17 +224,6 @@
       border-radius: 16px;
       border: 1px solid rgba(47, 123, 69, 0.18);
       padding: 12px 16px;
-    }
-
-    .voice-call-overlay__status-text {
-      flex: 1 1 auto;
-    }
-
-    .voice-call-overlay__timer {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-muted);
-      font-variant-numeric: tabular-nums;
     }
 
     .voice-call-overlay__status[data-state="connected"] {
@@ -440,245 +425,6 @@
       cursor: not-allowed;
       transform: none;
       box-shadow: none;
-    }
-
-    .voice-call-mini {
-      position: absolute;
-      left: 50%;
-      bottom: 24px;
-      transform: translate(-50%, 120%);
-      background: rgba(255, 255, 255, 0.98);
-      box-shadow: 0 24px 48px -32px rgba(20, 40, 26, 0.55);
-      border-radius: 999px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 200ms ease, transform 200ms ease;
-      z-index: 5;
-      max-width: calc(100% - 32px);
-    }
-
-    .voice-call-mini[data-open="true"] {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translate(-50%, 0);
-    }
-
-    .voice-call-mini__expand {
-      background: transparent;
-      border: none;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 6px 10px;
-      min-height: 0;
-      cursor: pointer;
-      border-radius: 999px;
-      transition: background 160ms ease;
-    }
-
-    .voice-call-mini__expand:hover,
-    .voice-call-mini__expand:focus-visible {
-      background: rgba(47, 123, 69, 0.12);
-    }
-
-    .voice-call-mini__title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--accent-strong);
-    }
-
-    .voice-call-mini__timer {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-muted);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .voice-call-mini__actions {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .voice-call-mini__action {
-      width: 36px;
-      height: 36px;
-      min-height: 0;
-      padding: 0;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: none;
-      cursor: pointer;
-      transition: transform 140ms ease, background 140ms ease, color 140ms ease;
-    }
-
-    .voice-call-mini__action svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    .voice-call-mini__action--mute .icon--mic-off {
-      display: none;
-    }
-
-    .voice-call-mini__action--mute[data-muted="true"] .icon--mic-on {
-      display: none;
-    }
-
-    .voice-call-mini__action--mute[data-muted="true"] .icon--mic-off {
-      display: block;
-    }
-
-    .voice-call-mini__action--mute {
-      background: rgba(47, 123, 69, 0.12);
-      color: var(--accent-strong);
-    }
-
-    .voice-call-mini__action--mute[data-muted="true"] {
-      background: rgba(255, 224, 224, 0.95);
-      color: #c13c3c;
-    }
-
-    .voice-call-mini__action--mute:hover,
-    .voice-call-mini__action--mute:focus-visible {
-      transform: translateY(-1px);
-      background: rgba(47, 123, 69, 0.18);
-    }
-
-    .voice-call-mini__action--mute[data-muted="true"]:hover,
-    .voice-call-mini__action--mute[data-muted="true"]:focus-visible {
-      background: rgba(255, 210, 210, 0.95);
-    }
-
-    .voice-call-mini__action--end {
-      background: #f55b5b;
-      color: #ffffff;
-    }
-
-    .voice-call-mini__action--end:hover,
-    .voice-call-mini__action--end:focus-visible {
-      background: #e04c4c;
-      transform: translateY(-1px);
-    }
-
-    .voice-call-mini__action:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-      transform: none;
-      background: rgba(47, 123, 69, 0.12);
-    }
-
-    .voice-call-incoming {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px 20px;
-      background: rgba(12, 26, 18, 0.55);
-      z-index: 5;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 200ms ease;
-    }
-
-    .voice-call-incoming[data-open="true"] {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .voice-call-incoming__panel {
-      background: #ffffff;
-      border-radius: 28px;
-      box-shadow: 0 28px 64px -34px rgba(30, 64, 38, 0.55);
-      padding: 30px 28px 26px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-      align-items: center;
-      width: min(360px, 100%);
-      text-align: center;
-      transform: translateY(20px);
-      transition: transform 220ms ease;
-    }
-
-    .voice-call-incoming[data-open="true"] .voice-call-incoming__panel {
-      transform: translateY(0);
-    }
-
-    .voice-call-incoming__icon {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: rgba(47, 123, 69, 0.12);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent-strong);
-    }
-
-    .voice-call-incoming__icon svg {
-      width: 28px;
-      height: 28px;
-    }
-
-    .voice-call-incoming__title {
-      margin: 0;
-      font-size: 22px;
-      font-weight: 600;
-    }
-
-    .voice-call-incoming__text {
-      margin: 0;
-      font-size: 15px;
-      color: var(--text-muted);
-    }
-
-    .voice-call-incoming__actions {
-      display: flex;
-      width: 100%;
-      gap: 12px;
-    }
-
-    .voice-call-incoming__actions button {
-      flex: 1 1 0;
-      border-radius: 999px;
-      border: none;
-      min-height: 52px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 160ms ease, background 160ms ease, color 160ms ease;
-    }
-
-    #voice-call-accept {
-      background: var(--accent);
-      color: #ffffff;
-      box-shadow: 0 18px 38px -24px rgba(34, 72, 41, 0.6);
-    }
-
-    #voice-call-accept:hover,
-    #voice-call-accept:focus-visible {
-      background: var(--accent-strong);
-      transform: translateY(-1px);
-    }
-
-    #voice-call-decline {
-      background: rgba(255, 236, 236, 0.95);
-      color: #c13c3c;
-      box-shadow: none;
-    }
-
-    #voice-call-decline:hover,
-    #voice-call-decline:focus-visible {
-      background: rgba(255, 224, 224, 0.95);
-      transform: translateY(-1px);
     }
 
     .confirm-modal {
@@ -1110,20 +856,11 @@
       }
     }
 
-    @keyframes buttonSpinner {
-      0% {
-        transform: translateY(-50%) rotate(0deg);
-      }
-
-      100% {
-        transform: translateY(-50%) rotate(360deg);
-      }
-    }
-
     #controls {
       display: flex;
-      flex-direction: column;
-      gap: 16px;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
       padding: 18px 24px calc(18px + env(safe-area-inset-bottom));
       background: rgba(255, 255, 255, 0.98);
       position: sticky;
@@ -1135,29 +872,8 @@
       z-index: 1;
     }
 
-    .controls__input-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-    }
-
-    .controls__actions {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      width: 100%;
-      max-width: 360px;
-      margin: 0 auto;
-    }
-
-    .controls__actions .control-button {
-      flex: 1 1 0;
-      min-width: 0;
-    }
-
     #msg {
-      flex: 1 1 auto;
+      flex: 1 1 220px;
       min-width: 0;
       border: 1px solid var(--border-soft);
       border-radius: 999px;
@@ -1240,8 +956,7 @@
       cursor: not-allowed;
     }
 
-    #call.control-button,
-    #next.control-button {
+    #call.control-button {
       background: #eff7ee;
       color: var(--accent);
       padding: 14px 20px;
@@ -1250,58 +965,39 @@
       border: 1px solid rgba(47, 123, 69, 0.14);
     }
 
-    #call.control-button svg,
-    #next.control-button svg {
+    #call.control-button svg {
       width: 18px;
       height: 18px;
     }
 
     #call.control-button:not(:disabled):hover,
-    #next.control-button:not(:disabled):hover,
-    #call.control-button:not(:disabled):focus-visible,
-    #next.control-button:not(:disabled):focus-visible {
+    #call.control-button:not(:disabled):focus-visible {
       background: #e6f3e5;
       transform: translateY(-1px);
     }
 
-    #call.control-button:disabled,
-    #next.control-button:disabled {
+    #call.control-button:disabled {
       opacity: 0.5;
       box-shadow: none;
       cursor: not-allowed;
     }
 
-    #call.control-button.control-button--countdown .control-button__icon {
-      display: none;
+    #next {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #eff7ee;
+      color: var(--accent);
+      border: 1px solid var(--bubble-border);
+      flex: 1 1 auto;
+      box-shadow: 0 18px 34px -28px rgba(34, 72, 41, 0.6);
     }
 
-    #call.control-button.control-button--countdown .control-button__label {
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.04em;
-    }
-
-    #call.control-button[data-state="requesting"] {
-      position: relative;
-      color: var(--accent-strong);
-    }
-
-    #call.control-button[data-state="requesting"] .control-button__label {
-      padding-left: 18px;
-      position: relative;
-    }
-
-    #call.control-button[data-state="requesting"] .control-button__label::before {
-      content: "";
-      position: absolute;
-      left: -18px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      border: 2px solid currentColor;
-      border-top-color: transparent;
-      animation: buttonSpinner 640ms linear infinite;
+    #next:not(:disabled):hover,
+    #next:not(:disabled):focus-visible {
+      background: #e2f0e3;
+      transform: translateY(-1px);
     }
 
     button:disabled {
@@ -1360,7 +1056,28 @@
 
     @media (max-width: 767px) {
       #controls {
-        padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
+        flex-wrap: wrap;
+        align-items: stretch;
+        row-gap: 12px;
+      }
+
+      #msg {
+        flex: 1 1 100%;
+      }
+
+      #send.control-button {
+        order: 2;
+      }
+
+      #call.control-button {
+        order: 3;
+        flex: 1 1 calc(100% - 64px);
+      }
+
+      #next {
+        order: 4;
+        flex: 1 1 100%;
+        width: 100%;
       }
 
       .voice-call-overlay {
@@ -1386,28 +1103,6 @@
       .voice-call-action--end {
         width: 100%;
       }
-
-      .voice-call-mini {
-        left: 16px;
-        right: 16px;
-        bottom: calc(16px + env(safe-area-inset-bottom));
-        transform: translateY(120%);
-        max-width: none;
-        justify-content: space-between;
-      }
-
-      .voice-call-mini[data-open="true"] {
-        transform: translateY(0);
-      }
-
-      .voice-call-incoming {
-        padding: 24px 16px;
-      }
-
-      .voice-call-incoming__panel {
-        border-radius: 24px;
-        width: 100%;
-      }
     }
   </style>
 </head>
@@ -1429,106 +1124,6 @@
         <div class="nickname-form">
           <input id="nickname" type="text" maxlength="24" autocomplete="off" placeholder="Örn. Pesimist">
           <button id="nickname-submit" type="button">Sohbete Başla</button>
-        </div>
-      </div>
-    </div>
-    <div
-      id="voice-call-mini"
-      class="voice-call-mini"
-      aria-hidden="true"
-      hidden
-    >
-      <button
-        type="button"
-        class="voice-call-mini__expand"
-        id="voice-call-mini-expand"
-        aria-label="Sesli sohbet penceresini aç"
-      >
-        <span class="voice-call-mini__title">Sesli Sohbet</span>
-        <span class="voice-call-mini__timer" id="voice-call-mini-timer">00:00</span>
-      </button>
-      <div class="voice-call-mini__actions">
-        <button
-          type="button"
-          class="voice-call-mini__action voice-call-mini__action--mute"
-          id="voice-call-mini-mute"
-          data-muted="false"
-          disabled
-          aria-label="Mikrofonu kapat"
-        >
-          <svg
-            class="icon--mic-on"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 15.5a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Z"
-              fill="currentColor"
-            />
-            <path
-              d="M6.75 11.5a.75.75 0 0 0-1.5 0 6.75 6.75 0 0 0 6 6.708V21a.75.75 0 0 0 1.5 0v-2.792a6.75 6.75 0 0 0 6-6.708.75.75 0 0 0-1.5 0 5.25 5.25 0 0 1-10.5 0Z"
-              fill="currentColor"
-            />
-          </svg>
-          <svg
-            class="icon--mic-off"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9.81 5.23 16 11.42V12a4 4 0 0 1-6.19 3.32l-1.1 1.1A5.48 5.48 0 0 0 11.25 18.7V21a.75.75 0 1 0 1.5 0v-2.3a5.5 5.5 0 0 0 4.72-4.45.75.75 0 1 0-1.48-.25 4 4 0 0 1-1.09 2.14L8.69 10.88V7a3.24 3.24 0 0 1 1.12-1.77Z"
-              fill="currentColor"
-            />
-            <path
-              d="M12 3a3.18 3.18 0 0 1 3.17 3.17v3.42L9.66 4.08A3.17 3.17 0 0 1 12 3Z"
-              fill="currentColor"
-            />
-            <path
-              d="M5.47 3.47a.75.75 0 0 0-1.06 1.06l3.1 3.1V12a5.49 5.49 0 0 0 1.09 3.28l-1.13 1.13a.75.75 0 0 0 1.06 1.06l11-11a.75.75 0 0 0-1.06-1.06l-2.6 2.6-3.53-3.53L5.47 3.47Z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="voice-call-mini__action voice-call-mini__action--end"
-          id="voice-call-mini-end"
-          aria-label="Görüşmeyi bitir"
-        >
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M12 9a18.53 18.53 0 0 1 8.7 2.18 2 2 0 0 1 .97 1.73v2a1.3 1.3 0 0 1-1.83 1.19l-2.03-.87a1.3 1.3 0 0 1-.78-1.19v-1.06a11 11 0 0 0-9.74 0v1.06a1.3 1.3 0 0 1-.78 1.19l-2.03.87A1.3 1.3 0 0 1 2.33 15v-2a2 2 0 0 1 .97-1.73A18.53 18.53 0 0 1 12 9Z"
-              fill="currentColor"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
-    <div
-      id="voice-call-incoming"
-      class="voice-call-incoming"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden="true"
-      aria-labelledby="voice-call-incoming-title"
-      hidden
-    >
-      <div class="voice-call-incoming__panel">
-        <div class="voice-call-incoming__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
-        <h2 class="voice-call-incoming__title" id="voice-call-incoming-title">Sesli Sohbet</h2>
-        <p class="voice-call-incoming__text" id="voice-call-incoming-text">Karşı taraf sizi arıyor.</p>
-        <div class="voice-call-incoming__actions">
-          <button type="button" id="voice-call-accept">Kabul Et</button>
-          <button type="button" id="voice-call-decline">Reddet</button>
         </div>
       </div>
     </div>
@@ -1580,10 +1175,7 @@
           id="voice-call-status"
           data-state="connecting"
         >
-          <span class="voice-call-overlay__status-text" id="voice-call-status-text">
-            Bağlanıyor…
-          </span>
-          <span class="voice-call-overlay__timer" id="voice-call-timer" hidden>00:00</span>
+          Bağlanıyor…
         </div>
         <div class="voice-call-overlay__permission" id="voice-call-permission" hidden>
           <span>Mikrofon izni gerekli. Tekrar dene.</span>
@@ -1675,56 +1267,42 @@
         <div id="log"></div>
       </div>
       <div id="controls">
-        <div class="controls__input-row">
-          <input id="msg" placeholder="Mesaj yaz…">
-          <button
-            id="send"
-            type="button"
-            class="control-button control-button--send"
-            aria-label="Gönder"
-          >
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M3.318 20.682a.9.9 0 0 1-1.163-1.163l2.62-7.842-2.62-7.842A.9.9 0 0 1 3.318 2.672l18.01 8.005a.9.9 0 0 1 0 1.646l-18.01 8.005Z"
-                  fill="currentColor"
-                />
-                <path
-                  d="M4.96 12h9.823"
-                  stroke="#ffffff"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </span>
-            <span class="visually-hidden">Gönder</span>
-          </button>
-        </div>
-        <div class="controls__actions">
-          <button id="call" type="button" class="control-button control-button--call">
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span class="control-button__label">Ara</span>
-          </button>
-          <button id="next" type="button" class="control-button control-button--next">
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M5 12a.9.9 0 0 1 .9-.9h8.52l-2.18-2.22a.9.9 0 1 1 1.3-1.24l3.72 3.8a.9.9 0 0 1 0 1.26l-3.72 3.8a.9.9 0 1 1-1.3-1.24l2.18-2.22H5.9A.9.9 0 0 1 5 12Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span class="control-button__label">Sonraki</span>
-          </button>
-        </div>
+        <input id="msg" placeholder="Mesaj yaz...">
+        <button
+          id="send"
+          type="button"
+          class="control-button control-button--send"
+          aria-label="Gönder"
+        >
+          <span class="control-button__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M3.318 20.682a.9.9 0 0 1-1.163-1.163l2.62-7.842-2.62-7.842A.9.9 0 0 1 3.318 2.672l18.01 8.005a.9.9 0 0 1 0 1.646l-18.01 8.005Z"
+                fill="currentColor"
+              />
+              <path
+                d="M4.96 12h9.823"
+                stroke="#ffffff"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <span class="visually-hidden">Gönder</span>
+        </button>
+        <button id="call" type="button" class="control-button control-button--call">
+          <span class="control-button__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span class="control-button__label">Ara</span>
+        </button>
+        <button id="next" type="button" class="control-button control-button--next">Sonraki</button>
       </div>
     </div>
   </div>
@@ -1739,8 +1317,6 @@
     const callBtn = document.getElementById("call");
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
     const voiceCallStatus = document.getElementById("voice-call-status");
-    const voiceCallStatusText = document.getElementById("voice-call-status-text");
-    const voiceCallTimer = document.getElementById("voice-call-timer");
     const voiceCallPermissionNotice = document.getElementById("voice-call-permission");
     const voiceCallRetryBtn = document.getElementById("voice-call-retry");
     const voiceCallLocalLevel = document.getElementById("voice-call-local-level");
@@ -1750,16 +1326,6 @@
     const voiceCallEndBtn = document.getElementById("voice-call-end");
     const voiceCallCloseBtn = document.getElementById("voice-call-close");
     const voiceCallRemoteAudio = document.getElementById("voice-call-remote-audio");
-    const voiceCallMiniPanel = document.getElementById("voice-call-mini");
-    const voiceCallMiniExpand = document.getElementById("voice-call-mini-expand");
-    const voiceCallMiniTimer = document.getElementById("voice-call-mini-timer");
-    const voiceCallMiniMuteBtn = document.getElementById("voice-call-mini-mute");
-    const voiceCallMiniEndBtn = document.getElementById("voice-call-mini-end");
-    const voiceCallIncomingOverlay = document.getElementById("voice-call-incoming");
-    const voiceCallIncomingAccept = document.getElementById("voice-call-accept");
-    const voiceCallIncomingDecline = document.getElementById("voice-call-decline");
-    const voiceCallIncomingText = document.getElementById("voice-call-incoming-text");
-    const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
     const nicknameOverlay = document.getElementById("nickname-overlay");
     const nicknameInput = document.getElementById("nickname");
     const nicknameSubmit = document.getElementById("nickname-submit");
@@ -1772,7 +1338,6 @@
     const MATCH_SEARCH_COUNTDOWN_SECONDS = 5;
     const SKIP_SEARCH_COUNTDOWN_SECONDS = 5;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
-    const CALL_REJECT_COOLDOWN_SECONDS = 15;
 
     let isMatched = false;
     let nickname = "";
@@ -1793,9 +1358,6 @@
       SUPPORTS_NOTIFICATIONS && Notification.permission === "granted";
     let notificationPermissionWatcher = null;
     let voiceCallManager = null;
-    let callCooldownTimerId = null;
-    let callCooldownRemaining = 0;
-    let callRequestUiActive = false;
 
     function createWaitingMiniGame(container, startButton) {
       const GAME_DURATION_SECONDS = 60;
@@ -2521,69 +2083,6 @@
       }, 2000);
     }
 
-    function clearCallCooldown() {
-      if (callCooldownTimerId) {
-        clearInterval(callCooldownTimerId);
-        callCooldownTimerId = null;
-      }
-      if (callCooldownRemaining !== 0) {
-        callCooldownRemaining = 0;
-        updateCallButtonUi();
-      }
-    }
-
-    function updateCallButtonUi() {
-      if (!callBtn || !callBtnLabel) {
-        return;
-      }
-      const isCountdownActive = callCooldownRemaining > 0;
-      callBtn.classList.toggle("control-button--countdown", isCountdownActive);
-      if (isCountdownActive) {
-        delete callBtn.dataset.state;
-        callBtnLabel.textContent = String(callCooldownRemaining);
-        return;
-      }
-      if (callRequestUiActive) {
-        callBtn.dataset.state = "requesting";
-        callBtnLabel.textContent = "Aranıyor…";
-      } else {
-        delete callBtn.dataset.state;
-        callBtnLabel.textContent = "Ara";
-      }
-    }
-
-    function setCallRequestUi(active) {
-      if (callRequestUiActive === active) {
-        return;
-      }
-      callRequestUiActive = active;
-      updateCallButtonUi();
-      updateControls();
-    }
-
-    function beginCallCooldown(seconds) {
-      clearCallCooldown();
-      callCooldownRemaining = Math.max(0, seconds | 0);
-      if (callCooldownRemaining === 0) {
-        updateCallButtonUi();
-        updateControls();
-        return;
-      }
-      updateCallButtonUi();
-      updateControls();
-      callCooldownTimerId = setInterval(() => {
-        callCooldownRemaining -= 1;
-        if (callCooldownRemaining <= 0) {
-          clearCallCooldown();
-          updateCallButtonUi();
-          updateControls();
-          return;
-        }
-        updateCallButtonUi();
-        updateControls();
-      }, 1000);
-    }
-
     function updateControls() {
       const hasMessage = Boolean(msg.value.trim());
       msg.disabled = !isMatched;
@@ -2591,1066 +2090,20 @@
       nextBtn.disabled = !isMatched || isSearchCountdownActive;
       if (callBtn) {
         const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
-        const disableCall =
-          !isMatched ||
-          isCallBusy ||
-          callCooldownRemaining > 0 ||
-          callRequestUiActive;
-        callBtn.disabled = disableCall;
+        callBtn.disabled = !isMatched || isCallBusy;
       }
-      updateCallButtonUi();
     }
 
     function setMatchedState(state) {
       isMatched = state;
       if (!state) {
         clearCooldown();
-        clearCallCooldown();
-        setCallRequestUi(false);
       } else {
         hideWaitingStatus();
       }
       voiceCallManager?.handleMatchStateChange?.(state);
       updateControls();
     }
-
-    voiceCallManager = (() => {
-      if (!voiceCallOverlay || !voiceCallStatus || !voiceCallMuteBtn || !voiceCallEndBtn) {
-        return {
-          requestCall: () => {},
-          handleIncomingRequest: () => {},
-          handleRequestAccepted: () => {},
-          handleRequestRejected: () => {},
-          handleRequestCancelled: () => {},
-          handleOffer: () => {},
-          handleAnswer: () => {},
-          handleCandidate: () => {},
-          handlePeerEnded: () => {},
-          handleMatchStateChange: () => {},
-          handleDisconnect: () => {},
-          isBusy: () => false,
-        };
-      }
-
-      const remotePulseDots = Array.from(
-        voiceCallRemotePulse ? voiceCallRemotePulse.querySelectorAll("span") : []
-      );
-      const ICE_SERVERS = [
-        { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
-      ];
-
-      let state = "idle";
-      let role = null;
-      let peerConnection = null;
-      let localStream = null;
-      let remoteStream = null;
-      let hasAddedLocalTracks = false;
-      let analyserContext = null;
-      let localAnalyser = null;
-      let remoteAnalyser = null;
-      let localSource = null;
-      let remoteSource = null;
-      let levelAnimationFrame = null;
-      let pendingRemoteCandidates = [];
-      let pendingRemoteOffer = null;
-      let shouldNotifyPeerOnEnd = false;
-      let hasSentEndSignal = false;
-      let isCleaningUp = false;
-      let lastIntent = null;
-      let callStartTimestamp = null;
-      let callTimerInterval = null;
-      let isOverlayMinimized = false;
-      let incomingPromptVisible = false;
-
-      function overlayVisible() {
-        return voiceCallOverlay?.dataset.open === "true";
-      }
-
-      function miniVisible() {
-        return voiceCallMiniPanel?.dataset.open === "true";
-      }
-
-      function formatDuration(seconds) {
-        const clamped = Math.max(0, Number.isFinite(seconds) ? seconds : 0);
-        const mins = Math.floor(clamped / 60)
-          .toString()
-          .padStart(2, "0");
-        const secs = Math.floor(clamped % 60)
-          .toString()
-          .padStart(2, "0");
-        return `${mins}:${secs}`;
-      }
-
-      function updateTimerDisplay(seconds = 0) {
-        const formatted = formatDuration(seconds);
-        if (voiceCallTimer) {
-          voiceCallTimer.textContent = formatted;
-        }
-        if (voiceCallMiniTimer) {
-          voiceCallMiniTimer.textContent = formatted;
-        }
-      }
-
-      function startCallTimer() {
-        stopCallTimer();
-        callStartTimestamp = Date.now();
-        if (voiceCallTimer) {
-          voiceCallTimer.hidden = false;
-        }
-        updateTimerDisplay(0);
-        callTimerInterval = window.setInterval(() => {
-          if (!callStartTimestamp) {
-            return;
-          }
-          const elapsed = Math.floor((Date.now() - callStartTimestamp) / 1000);
-          updateTimerDisplay(elapsed);
-        }, 1000);
-      }
-
-      function stopCallTimer() {
-        if (callTimerInterval) {
-          clearInterval(callTimerInterval);
-          callTimerInterval = null;
-        }
-        callStartTimestamp = null;
-        updateTimerDisplay(0);
-        if (voiceCallTimer) {
-          voiceCallTimer.hidden = true;
-        }
-      }
-
-      function showMiniPanel() {
-        if (!voiceCallMiniPanel) {
-          return;
-        }
-        voiceCallMiniPanel.hidden = false;
-        voiceCallMiniPanel.setAttribute("aria-hidden", "false");
-        requestAnimationFrame(() => {
-          voiceCallMiniPanel.dataset.open = "true";
-        });
-        isOverlayMinimized = true;
-      }
-
-      function hideMiniPanel() {
-        if (!voiceCallMiniPanel) {
-          return;
-        }
-        voiceCallMiniPanel.dataset.open = "false";
-        voiceCallMiniPanel.setAttribute("aria-hidden", "true");
-        const handleTransitionEnd = (event) => {
-          if (event.target !== voiceCallMiniPanel) {
-            return;
-          }
-          voiceCallMiniPanel.removeEventListener("transitionend", handleTransitionEnd);
-          if (voiceCallMiniPanel.dataset.open !== "true") {
-            voiceCallMiniPanel.hidden = true;
-          }
-        };
-        voiceCallMiniPanel.addEventListener("transitionend", handleTransitionEnd);
-        setTimeout(() => {
-          if (voiceCallMiniPanel.dataset.open !== "true") {
-            voiceCallMiniPanel.hidden = true;
-          }
-        }, 240);
-        isOverlayMinimized = false;
-      }
-
-      function showIncomingPrompt() {
-        if (!voiceCallIncomingOverlay) {
-          return;
-        }
-        incomingPromptVisible = true;
-        voiceCallIncomingOverlay.hidden = false;
-        voiceCallIncomingOverlay.setAttribute("aria-hidden", "false");
-        requestAnimationFrame(() => {
-          voiceCallIncomingOverlay.dataset.open = "true";
-        });
-      }
-
-      function hideIncomingPrompt() {
-        if (!voiceCallIncomingOverlay) {
-          return;
-        }
-        incomingPromptVisible = false;
-        voiceCallIncomingOverlay.dataset.open = "false";
-        voiceCallIncomingOverlay.setAttribute("aria-hidden", "true");
-        const handleTransitionEnd = (event) => {
-          if (event.target !== voiceCallIncomingOverlay) {
-            return;
-          }
-          voiceCallIncomingOverlay.removeEventListener(
-            "transitionend",
-            handleTransitionEnd
-          );
-          if (voiceCallIncomingOverlay.dataset.open !== "true") {
-            voiceCallIncomingOverlay.hidden = true;
-          }
-        };
-        voiceCallIncomingOverlay.addEventListener(
-          "transitionend",
-          handleTransitionEnd
-        );
-        setTimeout(() => {
-          if (voiceCallIncomingOverlay.dataset.open !== "true") {
-            voiceCallIncomingOverlay.hidden = true;
-          }
-        }, 260);
-      }
-
-      function minimizeOverlay() {
-        if (!voiceCallOverlay || !overlayVisible()) {
-          return;
-        }
-        voiceCallOverlay.dataset.open = "false";
-        voiceCallOverlay.setAttribute("aria-hidden", "true");
-        const handleTransitionEnd = (event) => {
-          if (event.target !== voiceCallOverlay) {
-            return;
-          }
-          voiceCallOverlay.removeEventListener("transitionend", handleTransitionEnd);
-          if (voiceCallOverlay.dataset.open !== "true") {
-            voiceCallOverlay.hidden = true;
-            showMiniPanel();
-          }
-        };
-        voiceCallOverlay.addEventListener("transitionend", handleTransitionEnd);
-        setTimeout(() => {
-          if (voiceCallOverlay.dataset.open !== "true") {
-            voiceCallOverlay.hidden = true;
-            showMiniPanel();
-          }
-        }, 240);
-      }
-
-      function requestCall() {
-        if (!isMatched || state !== "idle" || !socket.connected) {
-          return;
-        }
-        lastIntent = "outgoing";
-        setCallRequestUi(true);
-        state = "requesting";
-        updateControls();
-        socket.emit("voice-call:request");
-      }
-
-      function handleIncomingRequest() {
-        if (!isMatched) {
-          socket.emit("voice-call:respond", { accepted: false, reason: "unmatched" });
-          return;
-        }
-        if (state !== "idle") {
-          socket.emit("voice-call:respond", { accepted: false, reason: "busy" });
-          return;
-        }
-        state = "incoming-request";
-        if (voiceCallIncomingText) {
-          voiceCallIncomingText.textContent = "Karşı taraf sizi arıyor.";
-        }
-        hideMiniPanel();
-        showIncomingPrompt();
-        appendMessage("Sizi arıyor…", "system");
-        updateControls();
-      }
-
-      function acceptIncomingCall() {
-        if (state !== "incoming-request") {
-          return;
-        }
-        hideIncomingPrompt();
-        resetCallUi();
-        showOverlay();
-        state = "starting-incoming";
-        lastIntent = "incoming";
-        shouldNotifyPeerOnEnd = true;
-        hasSentEndSignal = false;
-        if (voiceCallMiniEndBtn) {
-          voiceCallMiniEndBtn.disabled = false;
-        }
-        if (socket.connected) {
-          socket.emit("voice-call:respond", { accepted: true });
-        }
-        beginIncomingCall();
-      }
-
-      function declineIncomingCall(reason = "declined") {
-        if (state !== "incoming-request") {
-          return;
-        }
-        hideIncomingPrompt();
-        state = "idle";
-        if (socket.connected) {
-          socket.emit("voice-call:respond", { accepted: false, reason });
-        }
-        updateControls();
-      }
-
-      function handleRequestAccepted() {
-        if (state !== "requesting") {
-          return;
-        }
-        setCallRequestUi(false);
-        resetCallUi();
-        showOverlay();
-        state = "starting-outgoing";
-        lastIntent = "outgoing";
-        shouldNotifyPeerOnEnd = true;
-        hasSentEndSignal = false;
-        if (voiceCallMiniEndBtn) {
-          voiceCallMiniEndBtn.disabled = false;
-        }
-        startOutgoingCall();
-      }
-
-      function handleRequestRejected(payload) {
-        if (state !== "requesting") {
-          return;
-        }
-        setCallRequestUi(false);
-        state = "idle";
-        const reason =
-          payload && typeof payload.reason === "string" ? payload.reason : "declined";
-        const message =
-          reason === "busy"
-            ? "Bu kişi şu anda meşgul."
-            : "Bu kişi aramanızı reddetti.";
-        appendMessage(message, "system");
-        beginCallCooldown(CALL_REJECT_COOLDOWN_SECONDS);
-        updateControls();
-      }
-
-      function handleRequestCancelled() {
-        if (state !== "incoming-request") {
-          return;
-        }
-        hideIncomingPrompt();
-        state = "idle";
-        appendMessage("Arama iptal edildi.", "system");
-        updateControls();
-      }
-
-      function shouldMinimizeForClose() {
-        return (
-          state === "starting-outgoing" ||
-          state === "starting-incoming" ||
-          state === "requesting-stream" ||
-          state === "awaiting-answer" ||
-          state === "connecting" ||
-          state === "connected"
-        );
-      }
-
-      function showOverlay() {
-        if (!voiceCallOverlay) {
-          return;
-        }
-        hideMiniPanel();
-        voiceCallOverlay.hidden = false;
-        voiceCallOverlay.setAttribute("aria-hidden", "false");
-        requestAnimationFrame(() => {
-          voiceCallOverlay.dataset.open = "true";
-        });
-        isOverlayMinimized = false;
-        updateControls();
-        setTimeout(() => {
-          voiceCallEndBtn?.focus({ preventScroll: true });
-        }, 220);
-      }
-
-      function hideOverlay() {
-        if (!voiceCallOverlay) {
-          return;
-        }
-        voiceCallOverlay.dataset.open = "false";
-        voiceCallOverlay.setAttribute("aria-hidden", "true");
-        const handleTransitionEnd = (event) => {
-          if (event.target !== voiceCallOverlay) {
-            return;
-          }
-          voiceCallOverlay.removeEventListener("transitionend", handleTransitionEnd);
-          if (voiceCallOverlay.dataset.open !== "true") {
-            voiceCallOverlay.hidden = true;
-          }
-        };
-        voiceCallOverlay.addEventListener("transitionend", handleTransitionEnd);
-        setTimeout(() => {
-          if (voiceCallOverlay.dataset.open !== "true") {
-            voiceCallOverlay.hidden = true;
-          }
-        }, 260);
-        isOverlayMinimized = false;
-        hideMiniPanel();
-        updateControls();
-      }
-
-      function setStatus(text, stateKey = "connecting") {
-        if (!voiceCallStatus) {
-          return;
-        }
-        if (voiceCallStatusText) {
-          voiceCallStatusText.textContent = text;
-        } else {
-          voiceCallStatus.textContent = text;
-        }
-        voiceCallStatus.dataset.state = stateKey;
-        if (voiceCallTimer) {
-          voiceCallTimer.hidden = stateKey !== "connected";
-        }
-      }
-
-      function updateLocalLevel(level) {
-        voiceCallLocalLevel?.style.setProperty("--level", level.toFixed(3));
-      }
-
-      function updateRemoteLevel(level) {
-        voiceCallRemotePulse?.style.setProperty("--level", level.toFixed(3));
-        remotePulseDots.forEach((dot, index) => {
-          const intensity = Math.min(1, level * (0.6 + index * 0.25));
-          dot.style.setProperty("--pulse-intensity", intensity.toFixed(3));
-          dot.style.setProperty("--pulse-alpha", (0.28 + intensity * 0.5).toFixed(3));
-        });
-      }
-
-      function resetCallUi() {
-        setStatus("Bağlanıyor…", "connecting");
-        if (voiceCallPermissionNotice) {
-          voiceCallPermissionNotice.hidden = true;
-        }
-        updateLocalLevel(0);
-        updateRemoteLevel(0);
-        updateMuteState(false, { applyTracks: false });
-        voiceCallMuteBtn.disabled = true;
-        if (voiceCallMiniMuteBtn) {
-          voiceCallMiniMuteBtn.disabled = true;
-          voiceCallMiniMuteBtn.dataset.muted = "false";
-        }
-        if (voiceCallMiniEndBtn) {
-          voiceCallMiniEndBtn.disabled = true;
-        }
-        stopCallTimer();
-        hideMiniPanel();
-      }
-
-      function ensureAnalyserContext() {
-        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextCtor) {
-          return null;
-        }
-        if (!analyserContext) {
-          analyserContext = new AudioContextCtor();
-        }
-        if (analyserContext.state === "suspended") {
-          analyserContext.resume().catch(() => {});
-        }
-        return analyserContext;
-      }
-
-      function computeLevel(analyser) {
-        if (!analyser) {
-          return 0;
-        }
-        const length = analyser.fftSize;
-        const data = new Uint8Array(length);
-        analyser.getByteTimeDomainData(data);
-        let sum = 0;
-        for (let i = 0; i < length; i += 1) {
-          const value = (data[i] - 128) / 128;
-          sum += value * value;
-        }
-        const rms = Math.sqrt(sum / length);
-        return Math.min(1, rms * 2.2);
-      }
-
-      function monitorLevels() {
-        const localLevel = localAnalyser ? computeLevel(localAnalyser) : 0;
-        const remoteLevel = remoteAnalyser ? computeLevel(remoteAnalyser) : 0;
-        updateLocalLevel(localLevel);
-        updateRemoteLevel(remoteLevel);
-        levelAnimationFrame = requestAnimationFrame(monitorLevels);
-      }
-
-      function startLevelMonitoring() {
-        if (levelAnimationFrame) {
-          cancelAnimationFrame(levelAnimationFrame);
-        }
-        levelAnimationFrame = requestAnimationFrame(monitorLevels);
-      }
-
-      function stopLevelMonitoring() {
-        if (levelAnimationFrame) {
-          cancelAnimationFrame(levelAnimationFrame);
-          levelAnimationFrame = null;
-        }
-        if (localSource) {
-          try {
-            localSource.disconnect();
-          } catch {
-            /* noop */
-          }
-          localSource = null;
-        }
-        if (remoteSource) {
-          try {
-            remoteSource.disconnect();
-          } catch {
-            /* noop */
-          }
-          remoteSource = null;
-        }
-        localAnalyser = null;
-        remoteAnalyser = null;
-        updateLocalLevel(0);
-        updateRemoteLevel(0);
-      }
-
-      function connectLocalAnalyser(stream) {
-        const context = ensureAnalyserContext();
-        if (!context) {
-          return;
-        }
-        if (localSource) {
-          try {
-            localSource.disconnect();
-          } catch {
-            /* noop */
-          }
-        }
-        localAnalyser = context.createAnalyser();
-        localAnalyser.fftSize = 512;
-        localSource = context.createMediaStreamSource(stream);
-        localSource.connect(localAnalyser);
-        startLevelMonitoring();
-      }
-
-      function connectRemoteAnalyser(stream) {
-        const context = ensureAnalyserContext();
-        if (!context) {
-          return;
-        }
-        if (remoteSource) {
-          try {
-            remoteSource.disconnect();
-          } catch {
-            /* noop */
-          }
-        }
-        remoteAnalyser = context.createAnalyser();
-        remoteAnalyser.fftSize = 512;
-        remoteSource = context.createMediaStreamSource(stream);
-        remoteSource.connect(remoteAnalyser);
-        startLevelMonitoring();
-      }
-
-      function updateMuteState(muted, { applyTracks = true } = {}) {
-        voiceCallMuteBtn.dataset.muted = muted ? "true" : "false";
-        if (voiceCallMuteLabel) {
-          voiceCallMuteLabel.textContent = muted ? "Sesi Aç" : "Sesi Kapat";
-        }
-        if (voiceCallMiniMuteBtn) {
-          voiceCallMiniMuteBtn.dataset.muted = muted ? "true" : "false";
-          voiceCallMiniMuteBtn.setAttribute(
-            "aria-label",
-            muted ? "Mikrofonu aç" : "Mikrofonu kapat"
-          );
-        }
-        if (applyTracks && localStream) {
-          localStream.getAudioTracks().forEach((track) => {
-            track.enabled = !muted;
-          });
-        }
-      }
-
-      function toggleMute() {
-        const nextMuted = voiceCallMuteBtn.dataset.muted !== "true";
-        updateMuteState(nextMuted);
-      }
-
-      async function ensureLocalStream() {
-        if (localStream) {
-          return localStream;
-        }
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true },
-          });
-          localStream = stream;
-          voiceCallMuteBtn.disabled = false;
-          if (voiceCallMiniMuteBtn) {
-            voiceCallMiniMuteBtn.disabled = false;
-          }
-          if (voiceCallMiniEndBtn) {
-            voiceCallMiniEndBtn.disabled = false;
-          }
-          updateMuteState(false);
-          connectLocalAnalyser(stream);
-          return stream;
-        } catch (error) {
-          handlePermissionDenied(error);
-          throw error;
-        }
-      }
-
-      function handlePermissionDenied(error) {
-        console.error("Mikrofon izni alınamadı:", error);
-        state = "permission-denied";
-        if (voiceCallPermissionNotice) {
-          voiceCallPermissionNotice.hidden = false;
-        }
-        setStatus("Mikrofon izni gerekli. Tekrar dene.", "permission");
-        voiceCallMuteBtn.disabled = true;
-        if (voiceCallMiniMuteBtn) {
-          voiceCallMiniMuteBtn.disabled = true;
-          voiceCallMiniMuteBtn.dataset.muted = "false";
-        }
-        if (voiceCallMiniEndBtn) {
-          voiceCallMiniEndBtn.disabled = true;
-        }
-        stopLevelMonitoring();
-        updateControls();
-      }
-
-      function createPeerConnection() {
-        if (peerConnection) {
-          return peerConnection;
-        }
-        peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-        peerConnection.onicecandidate = (event) => {
-          if (event.candidate && socket.connected) {
-            socket.emit("voice-call:candidate", { candidate: event.candidate.toJSON() });
-          }
-        };
-        peerConnection.ontrack = (event) => {
-          const [stream] = event.streams;
-          if (!stream) {
-            return;
-          }
-          remoteStream = stream;
-          if (voiceCallRemoteAudio) {
-            voiceCallRemoteAudio.srcObject = stream;
-            voiceCallRemoteAudio.play?.().catch(() => {});
-          }
-          connectRemoteAnalyser(stream);
-        };
-        peerConnection.onconnectionstatechange = () => {
-          if (!peerConnection) {
-            return;
-          }
-          const connectionState = peerConnection.connectionState;
-          if (connectionState === "connected") {
-            state = "connected";
-            setStatus("Görüşme başladı", "connected");
-            startCallTimer();
-            updateControls();
-          } else if (
-            (connectionState === "failed" || connectionState === "disconnected") &&
-            !isCleaningUp
-          ) {
-            handlePeerEnded();
-          }
-        };
-        peerConnection.oniceconnectionstatechange = () => {
-          if (!peerConnection) {
-            return;
-          }
-          const iceState = peerConnection.iceConnectionState;
-          if ((iceState === "failed" || iceState === "disconnected") && !isCleaningUp) {
-            handlePeerEnded();
-          }
-        };
-        if (localStream && !hasAddedLocalTracks) {
-          addLocalTracks(peerConnection, localStream);
-        }
-        return peerConnection;
-      }
-
-      function addLocalTracks(pc, stream) {
-        if (hasAddedLocalTracks) {
-          return;
-        }
-        stream.getAudioTracks().forEach((track) => {
-          pc.addTrack(track, stream);
-        });
-        hasAddedLocalTracks = true;
-      }
-
-      async function flushPendingCandidates() {
-        if (!peerConnection || !peerConnection.remoteDescription) {
-          return;
-        }
-        const candidates = [...pendingRemoteCandidates];
-        pendingRemoteCandidates = [];
-        for (const candidateInit of candidates) {
-          try {
-            await peerConnection.addIceCandidate(candidateInit);
-          } catch (error) {
-            console.error("ICE adayı eklenemedi:", error);
-          }
-        }
-      }
-
-      async function startOutgoingCall({ fromRetry = false } = {}) {
-        if (!isMatched || !socket.connected) {
-          return;
-        }
-        const isRetry = fromRetry && state === "permission-denied";
-        const isFreshStart = !fromRetry && state === "starting-outgoing";
-        if (!isRetry && !isFreshStart) {
-          return;
-        }
-        lastIntent = "outgoing";
-        if (fromRetry) {
-          if (voiceCallPermissionNotice) {
-            voiceCallPermissionNotice.hidden = true;
-          }
-          setStatus("Bağlanıyor…", "connecting");
-        }
-        state = "requesting-stream";
-        try {
-          const stream = await ensureLocalStream();
-          const pc = createPeerConnection();
-          addLocalTracks(pc, stream);
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          role = "caller";
-          shouldNotifyPeerOnEnd = true;
-          hasSentEndSignal = false;
-          state = "awaiting-answer";
-          socket.emit("voice-call:offer", { sdp: offer });
-        } catch (error) {
-          if (state !== "permission-denied") {
-            console.error("Sesli arama başlatılamadı:", error);
-            handleEnd({ notifyPeer: false, showStatus: true });
-          }
-        }
-      }
-
-      async function beginIncomingCall({ fromRetry = false } = {}) {
-        if (!pendingRemoteOffer) {
-          return;
-        }
-        const isRetry = fromRetry && state === "permission-denied" && lastIntent === "incoming";
-        const isAccepted = !fromRetry && state === "starting-incoming";
-        if (!isRetry && !isAccepted) {
-          return;
-        }
-        lastIntent = "incoming";
-        if (fromRetry) {
-          if (voiceCallPermissionNotice) {
-            voiceCallPermissionNotice.hidden = true;
-          }
-          setStatus("Bağlanıyor…", "connecting");
-        }
-        state = "requesting-stream";
-        try {
-          const stream = await ensureLocalStream();
-          const pc = createPeerConnection();
-          addLocalTracks(pc, stream);
-          await pc.setRemoteDescription(pendingRemoteOffer);
-          pendingRemoteOffer = null;
-          await flushPendingCandidates();
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          role = "callee";
-          shouldNotifyPeerOnEnd = true;
-          hasSentEndSignal = false;
-          state = "connecting";
-          socket.emit("voice-call:answer", { sdp: answer });
-        } catch (error) {
-          if (state === "permission-denied") {
-            return;
-          }
-          console.error("Sesli arama yanıtı gönderilemedi:", error);
-          handleEnd({ notifyPeer: true, showStatus: true });
-        }
-
-      }
-
-      async function handleOffer(payload) {
-        if (!payload || !payload.sdp) {
-          return;
-        }
-        if (!isMatched) {
-          socket.emit("voice-call:respond", { accepted: false, reason: "unmatched" });
-          return;
-        }
-        pendingRemoteOffer = payload.sdp;
-        if (state === "incoming-request") {
-          return;
-        }
-        if (state === "permission-denied" && lastIntent === "incoming") {
-          await beginIncomingCall({ fromRetry: true });
-          return;
-        }
-        if (state !== "starting-incoming") {
-          socket.emit("voice-call:end");
-          return;
-        }
-        await beginIncomingCall();
-      }
-
-      async function handleAnswer(payload) {
-        if (!payload || !payload.sdp) {
-          return;
-        }
-        if (!peerConnection || role !== "caller") {
-          return;
-        }
-        try {
-          await peerConnection.setRemoteDescription(payload.sdp);
-          await flushPendingCandidates();
-        } catch (error) {
-          console.error("Sesli arama cevabı uygulanamadı:", error);
-          handleEnd({ notifyPeer: false, showStatus: true });
-        }
-      }
-
-      async function handleCandidate(payload) {
-        if (!payload || !payload.candidate) {
-          return;
-        }
-        if (!peerConnection || !peerConnection.remoteDescription) {
-          pendingRemoteCandidates.push(payload.candidate);
-          return;
-        }
-        try {
-          await peerConnection.addIceCandidate(payload.candidate);
-        } catch (error) {
-          console.error("ICE adayı eklenemedi:", error);
-        }
-      }
-
-      function handleRetry() {
-        if (state !== "permission-denied") {
-          return;
-        }
-        if (voiceCallPermissionNotice) {
-          voiceCallPermissionNotice.hidden = true;
-        }
-        setStatus("Bağlanıyor…", "connecting");
-        if (lastIntent === "outgoing") {
-          startOutgoingCall({ fromRetry: true });
-        } else if (lastIntent === "incoming") {
-          beginIncomingCall({ fromRetry: true });
-        }
-      }
-
-      function handlePeerEnded() {
-        if (state === "incoming-request") {
-          hideIncomingPrompt();
-          state = "idle";
-          setCallRequestUi(false);
-          updateControls();
-          return;
-        }
-        if (state === "requesting") {
-          setCallRequestUi(false);
-          state = "idle";
-          updateControls();
-          return;
-        }
-        if (isCleaningUp) {
-          return;
-        }
-        shouldNotifyPeerOnEnd = false;
-        hasSentEndSignal = true;
-        setStatus("Bağlantı koptu", "ended");
-        teardown({ keepOverlay: false });
-      }
-
-      function handleEnd({ notifyPeer = true, showStatus = true } = {}) {
-        if (state === "requesting") {
-          if (notifyPeer && socket.connected) {
-            socket.emit("voice-call:cancel-request");
-          }
-          setCallRequestUi(false);
-          state = "idle";
-          updateControls();
-          return;
-        }
-        if (state === "incoming-request") {
-          if (notifyPeer && socket.connected) {
-            socket.emit("voice-call:respond", { accepted: false, reason: "ignored" });
-          }
-          hideIncomingPrompt();
-          state = "idle";
-          updateControls();
-          return;
-        }
-        if (!overlayVisible() && !miniVisible() && state === "idle" && !peerConnection) {
-          hideOverlay();
-          return;
-        }
-        const permissionBlocked = state === "permission-denied";
-        if (notifyPeer && shouldNotifyPeerOnEnd && !hasSentEndSignal && socket.connected) {
-          socket.emit("voice-call:end");
-          hasSentEndSignal = true;
-        }
-        if (showStatus && !permissionBlocked) {
-          setStatus("Bağlantı koptu", "ended");
-        }
-        teardown({ keepOverlay: false });
-      }
-
-      function teardown({ keepOverlay = false } = {}) {
-        isCleaningUp = true;
-        stopLevelMonitoring();
-        if (localStream) {
-          localStream.getTracks().forEach((track) => track.stop());
-          localStream = null;
-        }
-        if (remoteStream) {
-          remoteStream.getTracks().forEach((track) => track.stop());
-          remoteStream = null;
-        }
-        if (voiceCallRemoteAudio) {
-          voiceCallRemoteAudio.srcObject = null;
-        }
-        if (peerConnection) {
-          try {
-            peerConnection.close();
-          } catch {
-            /* noop */
-          }
-        }
-        if (peerConnection) {
-          peerConnection.onicecandidate = null;
-          peerConnection.ontrack = null;
-          peerConnection.onconnectionstatechange = null;
-          peerConnection.oniceconnectionstatechange = null;
-        }
-        peerConnection = null;
-        hasAddedLocalTracks = false;
-        pendingRemoteCandidates = [];
-        pendingRemoteOffer = null;
-        updateMuteState(false, { applyTracks: false });
-        voiceCallMuteBtn.disabled = true;
-        if (voiceCallMiniMuteBtn) {
-          voiceCallMiniMuteBtn.disabled = true;
-          voiceCallMiniMuteBtn.dataset.muted = "false";
-        }
-        if (voiceCallMiniEndBtn) {
-          voiceCallMiniEndBtn.disabled = true;
-        }
-        if (voiceCallPermissionNotice) {
-          voiceCallPermissionNotice.hidden = true;
-        }
-        shouldNotifyPeerOnEnd = false;
-        hasSentEndSignal = false;
-        role = null;
-        lastIntent = null;
-        state = "idle";
-        isCleaningUp = false;
-        stopCallTimer();
-        hideMiniPanel();
-        hideIncomingPrompt();
-        setCallRequestUi(false);
-        updateControls();
-        if (!keepOverlay) {
-          hideOverlay();
-        }
-      }
-
-      function handleMatchStateChange(isActive) {
-        if (!isActive && (overlayVisible() || miniVisible() || state !== "idle")) {
-          handleEnd({ notifyPeer: false, showStatus: false });
-        }
-      }
-
-      function handleDisconnect() {
-        if (overlayVisible() || miniVisible() || state !== "idle") {
-          shouldNotifyPeerOnEnd = false;
-          hasSentEndSignal = true;
-          handleEnd({ notifyPeer: false, showStatus: false });
-        }
-      }
-
-      function isBusy() {
-        return overlayVisible() || state !== "idle";
-      }
-
-      voiceCallMuteBtn.addEventListener("click", () => {
-        if (voiceCallMuteBtn.disabled) {
-          return;
-        }
-        toggleMute();
-      });
-
-      voiceCallEndBtn.addEventListener("click", () => {
-        const shouldShowStatus = state !== "permission-denied";
-        handleEnd({ notifyPeer: true, showStatus: shouldShowStatus });
-      });
-
-      voiceCallCloseBtn?.addEventListener("click", () => {
-        if (shouldMinimizeForClose()) {
-          minimizeOverlay();
-          return;
-        }
-        const shouldShowStatus = state !== "permission-denied";
-        handleEnd({ notifyPeer: true, showStatus: shouldShowStatus });
-      });
-
-      voiceCallMiniMuteBtn?.addEventListener("click", () => {
-        if (voiceCallMiniMuteBtn.disabled) {
-          return;
-        }
-        toggleMute();
-      });
-
-      voiceCallMiniEndBtn?.addEventListener("click", () => {
-        const shouldShowStatus = state !== "permission-denied";
-        handleEnd({ notifyPeer: true, showStatus: shouldShowStatus });
-      });
-
-      voiceCallMiniExpand?.addEventListener("click", () => {
-        if (state === "idle") {
-          hideMiniPanel();
-          return;
-        }
-        showOverlay();
-      });
-
-      voiceCallIncomingAccept?.addEventListener("click", () => {
-        acceptIncomingCall();
-      });
-
-      voiceCallIncomingDecline?.addEventListener("click", () => {
-        declineIncomingCall();
-      });
-
-      voiceCallRetryBtn?.addEventListener("click", () => {
-        handleRetry();
-      });
-
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          if (incomingPromptVisible) {
-            declineIncomingCall("ignored");
-            return;
-          }
-          if (overlayVisible()) {
-            if (shouldMinimizeForClose()) {
-              minimizeOverlay();
-            } else {
-              handleEnd({ notifyPeer: true, showStatus: state !== "permission-denied" });
-            }
-          }
-        }
-      });
-
-      return {
-        requestCall,
-        handleIncomingRequest,
-        handleRequestAccepted,
-        handleRequestRejected,
-        handleRequestCancelled,
-        handleOffer,
-        handleAnswer,
-        handleCandidate,
-        handlePeerEnded,
-        handleMatchStateChange,
-        handleDisconnect,
-        isBusy,
-      };
-    })();
 
     voiceCallManager = (() => {
       if (!voiceCallOverlay || !voiceCallStatus || !voiceCallMuteBtn || !voiceCallEndBtn) {
@@ -4476,22 +2929,6 @@
       }
     });
 
-    socket.on("voice-call:incoming-request", () => {
-      voiceCallManager?.handleIncomingRequest?.();
-    });
-
-    socket.on("voice-call:request-accepted", () => {
-      voiceCallManager?.handleRequestAccepted?.();
-    });
-
-    socket.on("voice-call:request-rejected", (payload) => {
-      voiceCallManager?.handleRequestRejected?.(payload);
-    });
-
-    socket.on("voice-call:request-cancelled", () => {
-      voiceCallManager?.handleRequestCancelled?.();
-    });
-
     socket.on("voice-call:offer", (payload) => {
       voiceCallManager?.handleOffer?.(payload);
     });
@@ -4536,7 +2973,7 @@
         if (callBtn.disabled) {
           return;
         }
-        voiceCallManager?.requestCall?.();
+        voiceCallManager?.startOutgoingCall?.();
       });
     }
 

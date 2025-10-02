@@ -190,38 +190,6 @@ io.on("connection", (socket) => {
 
     io.to(partnerId).emit("voice-call:candidate", data);
   });
-  socket.on("voice-call:request", () => {
-    const partnerId = partners.get(socket.id);
-    if (!partnerId) return;
-
-    io.to(partnerId).emit("voice-call:incoming-request");
-  });
-
-  socket.on("voice-call:respond", (payload = {}) => {
-    const partnerId = partners.get(socket.id);
-    if (!partnerId) return;
-
-    const accepted = Boolean(payload.accepted);
-    const reason =
-      typeof payload.reason === "string"
-        ? payload.reason.slice(0, 40)
-        : "";
-
-    if (accepted) {
-      io.to(partnerId).emit("voice-call:request-accepted");
-    } else {
-      io
-        .to(partnerId)
-        .emit("voice-call:request-rejected", { reason: reason || "declined" });
-    }
-  });
-
-  socket.on("voice-call:cancel-request", () => {
-    const partnerId = partners.get(socket.id);
-    if (!partnerId) return;
-
-    io.to(partnerId).emit("voice-call:request-cancelled");
-  });
 
   socket.on("voice-call:end", () => {
     const partnerId = partners.get(socket.id);
