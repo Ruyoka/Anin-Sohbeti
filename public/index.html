@@ -1260,16 +1260,24 @@
       <h1>Ekşi Anın Sohbeti</h1>
       <p>Anlık eşleş, sohbet et ve yeni insanlarla tanış.</p>
     </header>
-    <div class="nickname-overlay" id="nickname-overlay" role="dialog" aria-modal="true">
+    <div
+      class="nickname-overlay"
+      id="nickname-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="nickname-title"
+      aria-describedby="nickname-description"
+    >
       <div class="nickname-modal">
         <img
           src="/assets/logo.png"
           alt="Anın Sohbeti logosu"
           class="nickname-modal__logo"
         >
-        <h2>Rumuzunu seç</h2>
-        <p>Sohbete katılmadan önce seni tanıyabileceğimiz bir rumuz belirle.</p>
+        <h2 id="nickname-title">Rumuzunu seç</h2>
+        <p id="nickname-description">Sohbete katılmadan önce seni tanıyabileceğimiz bir rumuz belirle.</p>
         <div class="nickname-form">
+          <label class="visually-hidden" for="nickname">Rumuz</label>
           <input id="nickname" type="text" maxlength="24" autocomplete="off" placeholder="Örn. Pesimist">
           <button id="nickname-submit" type="button">Sohbete Başla</button>
         </div>
