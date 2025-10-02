@@ -12,13 +12,70 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
+
 app.use(express.static("public"));
 
 let queue = [];
 const partners = new Map();
 const waitTimers = new Map();
+const recentMatches = new Map();
+let scheduledTryMatchHandle = null;
+let scheduledTryMatchTime = 0;
 const callRequestsByCaller = new Map();
 const callRequestsByCallee = new Map();
+
+function getPairKey(firstId, secondId) {
+  return [firstId, secondId].sort().join(":");
+}
+
+function getCooldownRemaining(firstId, secondId, now = Date.now()) {
+  const key = getPairKey(firstId, secondId);
+  const timestamp = recentMatches.get(key);
+  if (!timestamp) {
+    return 0;
+  }
+  const remaining = RECENT_MATCH_COOLDOWN_MS - (now - timestamp);
+  if (remaining <= 0) {
+    recentMatches.delete(key);
+    return 0;
+  }
+  return remaining;
+}
+
+function recordRecentMatch(firstId, secondId) {
+  const key = getPairKey(firstId, secondId);
+  const timestamp = Date.now();
+  recentMatches.set(key, timestamp);
+  setTimeout(() => {
+    const stored = recentMatches.get(key);
+    if (stored && stored <= timestamp) {
+      recentMatches.delete(key);
+    }
+  }, RECENT_MATCH_COOLDOWN_MS);
+}
+
+function clearScheduledTryMatch() {
+  if (scheduledTryMatchHandle) {
+    clearTimeout(scheduledTryMatchHandle);
+    scheduledTryMatchHandle = null;
+    scheduledTryMatchTime = 0;
+  }
+}
+
+function scheduleTryMatchAfter(delayMs) {
+  const delay = Math.max(0, delayMs);
+  const targetTime = Date.now() + delay;
+  if (scheduledTryMatchHandle && scheduledTryMatchTime <= targetTime) {
+    return;
+  }
+  clearScheduledTryMatch();
+  scheduledTryMatchHandle = setTimeout(() => {
+    clearScheduledTryMatch();
+    tryMatch();
+  }, delay);
+  scheduledTryMatchTime = targetTime;
+}
 
 function removeCallRequestByCaller(callerId) {
   const request = callRequestsByCaller.get(callerId);
@@ -94,22 +151,6 @@ function startWaitTimer(socketId) {
   waitTimers.set(socketId, timer);
 }
 
-function dequeueAvailable() {
-  while (queue.length) {
-    const id = queue.shift();
-    const socketExists = io.sockets.sockets.get(id);
-    if (!socketExists) {
-      notifyWaitingStatus(id, false);
-      continue;
-    }
-    if (partners.has(id)) {
-      continue;
-    }
-    return id;
-  }
-  return null;
-}
-
 function endCurrentChat(socketId, options = {}) {
   const { skipNotifyPartner = false } = options;
   clearCallRequestsForSocket(socketId, "ended");
@@ -150,22 +191,22 @@ function enqueueSocketId(socketId) {
 }
 
 function tryMatch() {
+  clearScheduledTryMatch();
   while (queue.length >= 2) {
-    const first = dequeueAvailable();
-    if (!first) break;
-    const second = dequeueAvailable();
-    if (!second) {
-      queue.unshift(first);
-      startWaitTimer(first);
+    const pair = findNextPair();
+    if (!pair) {
       break;
     }
 
+    const { first, second } = pair;
     const firstSocket = io.sockets.sockets.get(first);
     const secondSocket = io.sockets.sockets.get(second);
     if (!firstSocket || !secondSocket) {
       if (firstSocket) {
-        queue.unshift(first);
-        startWaitTimer(first);
+        enqueueSocketId(first);
+      }
+      if (secondSocket) {
+        enqueueSocketId(second);
       }
       continue;
     }
@@ -176,9 +217,55 @@ function tryMatch() {
     clearWaitTimer(second);
     notifyWaitingStatus(first, false);
     notifyWaitingStatus(second, false);
+    recordRecentMatch(first, second);
     io.to(first).emit("matched");
     io.to(second).emit("matched");
   }
+}
+
+function findNextPair() {
+  const now = Date.now();
+  let minCooldownRemaining = null;
+
+  for (let i = 0; i < queue.length; i++) {
+    const first = queue[i];
+    const firstSocket = io.sockets.sockets.get(first);
+    if (!firstSocket || partners.has(first)) {
+      queue.splice(i, 1);
+      clearWaitTimer(first);
+      i--;
+      continue;
+    }
+
+    for (let j = i + 1; j < queue.length; j++) {
+      const second = queue[j];
+      const secondSocket = io.sockets.sockets.get(second);
+      if (!secondSocket || partners.has(second)) {
+        queue.splice(j, 1);
+        clearWaitTimer(second);
+        j--;
+        continue;
+      }
+
+      const remaining = getCooldownRemaining(first, second, now);
+      if (remaining > 0) {
+        if (minCooldownRemaining === null || remaining < minCooldownRemaining) {
+          minCooldownRemaining = remaining;
+        }
+        continue;
+      }
+
+      queue.splice(j, 1);
+      queue.splice(i, 1);
+      return { first, second };
+    }
+  }
+
+  if (minCooldownRemaining !== null) {
+    scheduleTryMatchAfter(minCooldownRemaining);
+  }
+
+  return null;
 }
 
 io.on("connection", (socket) => {
