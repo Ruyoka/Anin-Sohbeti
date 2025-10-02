@@ -90,6 +90,18 @@
       position: relative;
     }
 
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     [hidden] {
       display: none !important;
     }
@@ -123,6 +135,296 @@
     .modal-overlay[data-open="true"] {
       opacity: 1;
       pointer-events: auto;
+    }
+
+    .voice-call-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      background: rgba(12, 26, 18, 0.55);
+      z-index: 6;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms ease;
+      backdrop-filter: blur(6px);
+    }
+
+    .voice-call-overlay[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .voice-call-overlay__panel {
+      background: #ffffff;
+      border-radius: 28px;
+      width: min(420px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding: 28px 26px 32px;
+      box-shadow: 0 32px 68px -38px rgba(30, 64, 38, 0.55);
+      transform: translateY(18px);
+      opacity: 0;
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+
+    .voice-call-overlay[data-open="true"] .voice-call-overlay__panel {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .voice-call-overlay__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .voice-call-overlay__title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .voice-call-overlay__close {
+      width: 44px;
+      height: 44px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 50%;
+      background: #eff7ee;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+    }
+
+    .voice-call-overlay__close svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .voice-call-overlay__close:hover,
+    .voice-call-overlay__close:focus-visible {
+      background: #e6f3e5;
+      transform: translateY(-1px);
+    }
+
+    .voice-call-overlay__status {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+      background: #f5faf4;
+      border-radius: 16px;
+      border: 1px solid rgba(47, 123, 69, 0.18);
+      padding: 12px 16px;
+    }
+
+    .voice-call-overlay__status[data-state="connected"] {
+      color: var(--accent-strong);
+      background: #e9f7ec;
+      border-color: rgba(47, 123, 69, 0.24);
+    }
+
+    .voice-call-overlay__status[data-state="permission"] {
+      color: #c13c3c;
+      background: #fff4f4;
+      border-color: rgba(193, 60, 60, 0.28);
+    }
+
+    .voice-call-overlay__status[data-state="ended"] {
+      color: #c13c3c;
+      background: #fff2f2;
+      border-color: rgba(193, 60, 60, 0.28);
+    }
+
+    .voice-call-overlay__permission {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 14px;
+      background: #fff1f1;
+      border: 1px solid rgba(209, 68, 68, 0.26);
+      color: #c13c3c;
+      border-radius: 16px;
+      padding: 12px 16px;
+    }
+
+    .voice-call-overlay__permission button {
+      min-height: 0;
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 999px;
+      background: #f55b5b;
+      color: #ffffff;
+      box-shadow: none;
+    }
+
+    .voice-call-overlay__permission button:hover,
+    .voice-call-overlay__permission button:focus-visible {
+      background: #e04c4c;
+      transform: translateY(-1px);
+    }
+
+    .voice-call-overlay__levels {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .voice-call-level {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #f7fbf6 0%, #eef6ef 100%);
+      border: 1px solid rgba(47, 123, 69, 0.14);
+    }
+
+    .voice-call-level__label {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--accent-strong);
+      min-width: 80px;
+    }
+
+    .voice-call-level__visual {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .voice-call-level__bar {
+      position: relative;
+      flex: 1;
+      height: 10px;
+      background: rgba(47, 123, 69, 0.18);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .voice-call-level__fill {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #2f7b45, #64b774);
+      transform-origin: left center;
+      transform: scaleX(var(--level, 0));
+      transition: transform 120ms ease-out;
+    }
+
+    .voice-call-remote-pulse {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .voice-call-remote-pulse span {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(33, 98, 56, var(--pulse-alpha, 0.25));
+      transform: scale(calc(1 + var(--pulse-intensity, 0) * 0.7));
+      opacity: calc(0.45 + var(--pulse-intensity, 0) * 0.55);
+      transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+    }
+
+    .voice-call-remote-pulse span:nth-child(2) {
+      transition-delay: 30ms;
+    }
+
+    .voice-call-remote-pulse span:nth-child(3) {
+      transition-delay: 60ms;
+    }
+
+    .voice-call-overlay__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .voice-call-action {
+      flex: 1 1 calc(50% - 6px);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: none;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 15px;
+      min-height: 52px;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
+    }
+
+    .voice-call-action__icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .voice-call-action--mute {
+      background: #eff7ee;
+      color: var(--accent);
+      box-shadow: 0 18px 34px -30px rgba(34, 72, 41, 0.6);
+    }
+
+    .voice-call-action--mute .icon--mic-off {
+      display: none;
+    }
+
+    .voice-call-action--mute[data-muted="true"] .icon--mic-on {
+      display: none;
+    }
+
+    .voice-call-action--mute[data-muted="true"] .icon--mic-off {
+      display: block;
+    }
+
+    .voice-call-action--mute:not(:disabled):hover,
+    .voice-call-action--mute:not(:disabled):focus-visible {
+      background: #e6f3e5;
+      transform: translateY(-1px);
+    }
+
+    .voice-call-action--mute[data-muted="true"] {
+      background: rgba(255, 236, 236, 0.95);
+      color: #c13c3c;
+      box-shadow: none;
+    }
+
+    .voice-call-action--mute[data-muted="true"]:hover,
+    .voice-call-action--mute[data-muted="true"]:focus-visible {
+      background: rgba(255, 224, 224, 0.95);
+      transform: translateY(-1px);
+    }
+
+    .voice-call-action--end {
+      background: #f55b5b;
+      color: #ffffff;
+      box-shadow: 0 20px 44px -30px rgba(245, 91, 91, 0.65);
+    }
+
+    .voice-call-action--end:hover,
+    .voice-call-action--end:focus-visible {
+      background: #e04c4c;
+      transform: translateY(-1px);
+    }
+
+    .voice-call-action:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
     .confirm-modal {
@@ -595,36 +897,107 @@
       border-radius: 999px;
       border: none;
       cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
     }
 
-    #controls button {
-      flex: 0 1 132px;
-      white-space: nowrap;
+    .control-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 52px;
+      padding: 14px 22px;
+      font-size: 15px;
+      border-radius: 999px;
+    }
+
+    .control-button__icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-button__label {
+      font-weight: 600;
+    }
+
+    #controls .control-button {
+      flex: 0 0 auto;
       min-width: 0;
+      white-space: nowrap;
     }
 
-    #send {
+    #send.control-button {
+      width: 52px;
+      min-width: 52px;
+      height: 52px;
+      padding: 0;
+      border-radius: 50%;
       background: var(--accent);
       color: #ffffff;
       box-shadow: 0 16px 34px -26px rgba(34, 72, 41, 0.7);
     }
 
-    #send:not(:disabled):hover,
-    #send:not(:disabled):focus-visible {
+    #send.control-button svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    #send.control-button:not(:disabled):hover,
+    #send.control-button:not(:disabled):focus-visible {
       background: var(--accent-strong);
       transform: translateY(-1px);
     }
 
+    #send.control-button:disabled {
+      opacity: 0.6;
+      transform: none;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    #call.control-button {
+      background: #eff7ee;
+      color: var(--accent);
+      padding: 14px 20px;
+      font-size: 15px;
+      box-shadow: 0 16px 32px -28px rgba(34, 72, 41, 0.5);
+      border: 1px solid rgba(47, 123, 69, 0.14);
+    }
+
+    #call.control-button svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    #call.control-button:not(:disabled):hover,
+    #call.control-button:not(:disabled):focus-visible {
+      background: #e6f3e5;
+      transform: translateY(-1px);
+    }
+
+    #call.control-button:disabled {
+      opacity: 0.5;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
     #next {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       background: #eff7ee;
       color: var(--accent);
       border: 1px solid var(--bubble-border);
+      flex: 1 1 auto;
+      box-shadow: 0 18px 34px -28px rgba(34, 72, 41, 0.6);
     }
 
     #next:not(:disabled):hover,
     #next:not(:disabled):focus-visible {
       background: #e2f0e3;
+      transform: translateY(-1px);
     }
 
     button:disabled {
@@ -685,18 +1058,49 @@
       #controls {
         flex-wrap: wrap;
         align-items: stretch;
+        row-gap: 12px;
       }
 
       #msg {
-        flex: 1 1 auto;
+        flex: 1 1 100%;
       }
 
-      #send {
-        flex: 0 0 auto;
+      #send.control-button {
+        order: 2;
+      }
+
+      #call.control-button {
+        order: 3;
+        flex: 1 1 calc(100% - 64px);
       }
 
       #next {
+        order: 4;
         flex: 1 1 100%;
+        width: 100%;
+      }
+
+      .voice-call-overlay {
+        padding: 0;
+      }
+
+      .voice-call-overlay__panel {
+        border-radius: 0;
+        width: 100%;
+        max-width: none;
+        min-height: 100%;
+      }
+
+      .voice-call-overlay__actions {
+        flex-direction: column;
+      }
+
+      .voice-call-action {
+        flex: 1 1 100%;
+        width: 100%;
+      }
+
+      .voice-call-action--end {
         width: 100%;
       }
     }
@@ -740,14 +1144,165 @@
         </div>
       </div>
     </div>
+    <div
+      id="voice-call-overlay"
+      class="voice-call-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="voice-call-title"
+      hidden
+    >
+      <div class="voice-call-overlay__panel">
+        <div class="voice-call-overlay__header">
+          <h2 class="voice-call-overlay__title" id="voice-call-title">Sesli Sohbet</h2>
+          <button
+            type="button"
+            class="voice-call-overlay__close"
+            id="voice-call-close"
+            aria-label="Kapat"
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M6.343 6.343a1 1 0 0 1 1.414 0L12 10.586l4.243-4.243a1 1 0 1 1 1.414 1.414L13.414 12l4.243 4.243a1 1 0 1 1-1.414 1.414L12 13.414l-4.243 4.243a1 1 0 0 1-1.414-1.414L10.586 12 6.343 7.757a1 1 0 0 1 0-1.414Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          class="voice-call-overlay__status"
+          id="voice-call-status"
+          data-state="connecting"
+        >
+          Bağlanıyor…
+        </div>
+        <div class="voice-call-overlay__permission" id="voice-call-permission" hidden>
+          <span>Mikrofon izni gerekli. Tekrar dene.</span>
+          <button type="button" id="voice-call-retry">Tekrar dene</button>
+        </div>
+        <div class="voice-call-overlay__levels">
+          <div class="voice-call-level voice-call-level--local">
+            <div class="voice-call-level__label">Sen</div>
+            <div class="voice-call-level__visual">
+              <div class="voice-call-level__bar">
+                <span class="voice-call-level__fill" id="voice-call-local-level"></span>
+              </div>
+            </div>
+          </div>
+          <div class="voice-call-level voice-call-level--remote">
+            <div class="voice-call-level__label">Yabancı</div>
+            <div class="voice-call-level__visual">
+              <div class="voice-call-remote-pulse" id="voice-call-remote-pulse">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="voice-call-overlay__actions">
+          <button
+            type="button"
+            class="voice-call-action voice-call-action--mute"
+            id="voice-call-mute"
+            data-muted="false"
+            disabled
+          >
+            <span class="voice-call-action__icon" aria-hidden="true">
+              <svg
+                class="icon--mic-on"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 15.5a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M6.75 11.5a.75.75 0 0 0-1.5 0 6.75 6.75 0 0 0 6 6.708V21a.75.75 0 0 0 1.5 0v-2.792a6.75 6.75 0 0 0 6-6.708.75.75 0 0 0-1.5 0 5.25 5.25 0 0 1-10.5 0Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <svg
+                class="icon--mic-off"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9.81 5.23 16 11.42V12a4 4 0 0 1-6.19 3.32l-1.1 1.1A5.48 5.48 0 0 0 11.25 18.7V21a.75.75 0 1 0 1.5 0v-2.3a5.5 5.5 0 0 0 4.72-4.45.75.75 0 1 0-1.48-.25 4 4 0 0 1-1.09 2.14L8.69 10.88V7a3.24 3.24 0 0 1 1.12-1.77Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M12 3a3.18 3.18 0 0 1 3.17 3.17v3.42L9.66 4.08A3.17 3.17 0 0 1 12 3Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M5.47 3.47a.75.75 0 0 0-1.06 1.06l3.1 3.1V12a5.49 5.49 0 0 0 1.09 3.28l-1.13 1.13a.75.75 0 0 0 1.06 1.06l11-11a.75.75 0 0 0-1.06-1.06l-2.6 2.6-3.53-3.53L5.47 3.47Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span class="voice-call-action__label" id="voice-call-mute-label">Sesi Kapat</span>
+          </button>
+          <button type="button" class="voice-call-action voice-call-action--end" id="voice-call-end">
+            <span class="voice-call-action__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12 9a18.53 18.53 0 0 1 8.7 2.18 2 2 0 0 1 .97 1.73v2a1.3 1.3 0 0 1-1.83 1.19l-2.03-.87a1.3 1.3 0 0 1-.78-1.19v-1.06a11 11 0 0 0-9.74 0v1.06a1.3 1.3 0 0 1-.78 1.19l-2.03.87A1.3 1.3 0 0 1 2.33 15v-2a2 2 0 0 1 .97-1.73A18.53 18.53 0 0 1 12 9Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span class="voice-call-action__label">Görüşmeyi Bitir</span>
+          </button>
+        </div>
+        <audio id="voice-call-remote-audio" autoplay playsinline hidden></audio>
+      </div>
+    </div>
     <div id="chat">
       <div class="chat-window">
         <div id="log"></div>
       </div>
       <div id="controls">
         <input id="msg" placeholder="Mesaj yaz...">
-        <button id="send">Gönder</button>
-        <button id="next">Sonraki</button>
+        <button
+          id="send"
+          type="button"
+          class="control-button control-button--send"
+          aria-label="Gönder"
+        >
+          <span class="control-button__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M3.318 20.682a.9.9 0 0 1-1.163-1.163l2.62-7.842-2.62-7.842A.9.9 0 0 1 3.318 2.672l18.01 8.005a.9.9 0 0 1 0 1.646l-18.01 8.005Z"
+                fill="currentColor"
+              />
+              <path
+                d="M4.96 12h9.823"
+                stroke="#ffffff"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <span class="visually-hidden">Gönder</span>
+        </button>
+        <button id="call" type="button" class="control-button control-button--call">
+          <span class="control-button__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span class="control-button__label">Ara</span>
+        </button>
+        <button id="next" type="button" class="control-button control-button--next">Sonraki</button>
       </div>
     </div>
   </div>
@@ -759,6 +1314,18 @@
     const msg = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
     const nextBtn = document.getElementById("next");
+    const callBtn = document.getElementById("call");
+    const voiceCallOverlay = document.getElementById("voice-call-overlay");
+    const voiceCallStatus = document.getElementById("voice-call-status");
+    const voiceCallPermissionNotice = document.getElementById("voice-call-permission");
+    const voiceCallRetryBtn = document.getElementById("voice-call-retry");
+    const voiceCallLocalLevel = document.getElementById("voice-call-local-level");
+    const voiceCallRemotePulse = document.getElementById("voice-call-remote-pulse");
+    const voiceCallMuteBtn = document.getElementById("voice-call-mute");
+    const voiceCallMuteLabel = document.getElementById("voice-call-mute-label");
+    const voiceCallEndBtn = document.getElementById("voice-call-end");
+    const voiceCallCloseBtn = document.getElementById("voice-call-close");
+    const voiceCallRemoteAudio = document.getElementById("voice-call-remote-audio");
     const nicknameOverlay = document.getElementById("nickname-overlay");
     const nicknameInput = document.getElementById("nickname");
     const nicknameSubmit = document.getElementById("nickname-submit");
@@ -790,6 +1357,7 @@
     let notificationsEnabled =
       SUPPORTS_NOTIFICATIONS && Notification.permission === "granted";
     let notificationPermissionWatcher = null;
+    let voiceCallManager = null;
 
     function createWaitingMiniGame(container, startButton) {
       const GAME_DURATION_SECONDS = 60;
@@ -1319,7 +1887,7 @@
         notificationPermissionWatcher.onchange = () => {
           updateNotificationState(notificationPermissionWatcher.state);
         };
-      } catch (error) {
+      } catch {
         // Tarayıcı izin sorgusunu desteklemiyorsa sessizce devam et.
       }
     }
@@ -1340,7 +1908,7 @@
           if (previouslyFocused && typeof previouslyFocused.focus === "function") {
             try {
               previouslyFocused.focus({ preventScroll: true });
-            } catch (error) {
+            } catch {
               previouslyFocused.focus();
             }
           }
@@ -1417,7 +1985,7 @@
             "Tarayıcı bildirimlerine izin vermediğiniz için eşleşme ve yeni mesaj bildirimleri gönderilemeyecek."
           );
         }
-      } catch (error) {
+      } catch {
         // İzin isteme başarısız olursa sessizce devam et.
       }
     }
@@ -1441,7 +2009,7 @@
         notification.onclick = () => {
           window.focus();
         };
-      } catch (error) {
+      } catch {
         // Bildirim oluşturulamazsa sessizce devam et.
       }
     }
@@ -1520,6 +2088,10 @@
       msg.disabled = !isMatched;
       sendBtn.disabled = !isMatched || !hasMessage || isCoolingDown;
       nextBtn.disabled = !isMatched || isSearchCountdownActive;
+      if (callBtn) {
+        const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
+        callBtn.disabled = !isMatched || isCallBusy;
+      }
     }
 
     function setMatchedState(state) {
@@ -1529,8 +2101,647 @@
       } else {
         hideWaitingStatus();
       }
+      voiceCallManager?.handleMatchStateChange?.(state);
       updateControls();
     }
+
+    voiceCallManager = (() => {
+      if (!voiceCallOverlay || !voiceCallStatus || !voiceCallMuteBtn || !voiceCallEndBtn) {
+        return {
+          startOutgoingCall: () => {},
+          handleOffer: () => {},
+          handleAnswer: () => {},
+          handleCandidate: () => {},
+          handlePeerEnded: () => {},
+          handleMatchStateChange: () => {},
+          handleDisconnect: () => {},
+          isBusy: () => false,
+        };
+      }
+
+      const remotePulseDots = Array.from(
+        voiceCallRemotePulse ? voiceCallRemotePulse.querySelectorAll("span") : []
+      );
+      const ICE_SERVERS = [
+        { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+      ];
+
+      let state = "idle";
+      let role = null;
+      let peerConnection = null;
+      let localStream = null;
+      let remoteStream = null;
+      let hasAddedLocalTracks = false;
+      let analyserContext = null;
+      let localAnalyser = null;
+      let remoteAnalyser = null;
+      let localSource = null;
+      let remoteSource = null;
+      let levelAnimationFrame = null;
+      let pendingRemoteCandidates = [];
+      let pendingRemoteOffer = null;
+      let closeTimer = null;
+      let shouldNotifyPeerOnEnd = false;
+      let hasSentEndSignal = false;
+      let isCleaningUp = false;
+      let lastIntent = null;
+
+      function overlayVisible() {
+        return voiceCallOverlay?.dataset.open === "true";
+      }
+
+      function cleanupCloseTimer() {
+        if (closeTimer) {
+          clearTimeout(closeTimer);
+          closeTimer = null;
+        }
+      }
+
+      function showOverlay() {
+        if (!voiceCallOverlay) {
+          return;
+        }
+        cleanupCloseTimer();
+        voiceCallOverlay.hidden = false;
+        voiceCallOverlay.setAttribute("aria-hidden", "false");
+        requestAnimationFrame(() => {
+          voiceCallOverlay.dataset.open = "true";
+        });
+        updateControls();
+        setTimeout(() => {
+          voiceCallEndBtn?.focus({ preventScroll: true });
+        }, 220);
+      }
+
+      function hideOverlay() {
+        if (!voiceCallOverlay) {
+          return;
+        }
+        cleanupCloseTimer();
+        voiceCallOverlay.dataset.open = "false";
+        voiceCallOverlay.setAttribute("aria-hidden", "true");
+        const handleTransitionEnd = (event) => {
+          if (event.target !== voiceCallOverlay) {
+            return;
+          }
+          voiceCallOverlay.removeEventListener("transitionend", handleTransitionEnd);
+          if (voiceCallOverlay.dataset.open !== "true") {
+            voiceCallOverlay.hidden = true;
+          }
+        };
+        voiceCallOverlay.addEventListener("transitionend", handleTransitionEnd);
+        setTimeout(() => {
+          if (voiceCallOverlay.dataset.open !== "true") {
+            voiceCallOverlay.hidden = true;
+          }
+        }, 260);
+        updateControls();
+      }
+
+      function scheduleOverlayClose(delay = 1400) {
+        cleanupCloseTimer();
+        closeTimer = setTimeout(() => {
+          hideOverlay();
+        }, delay);
+      }
+
+      function setStatus(text, stateKey = "connecting") {
+        if (!voiceCallStatus) {
+          return;
+        }
+        voiceCallStatus.textContent = text;
+        voiceCallStatus.dataset.state = stateKey;
+      }
+
+      function updateLocalLevel(level) {
+        voiceCallLocalLevel?.style.setProperty("--level", level.toFixed(3));
+      }
+
+      function updateRemoteLevel(level) {
+        voiceCallRemotePulse?.style.setProperty("--level", level.toFixed(3));
+        remotePulseDots.forEach((dot, index) => {
+          const intensity = Math.min(1, level * (0.6 + index * 0.25));
+          dot.style.setProperty("--pulse-intensity", intensity.toFixed(3));
+          dot.style.setProperty("--pulse-alpha", (0.28 + intensity * 0.5).toFixed(3));
+        });
+      }
+
+      function resetCallUi() {
+        setStatus("Bağlanıyor…", "connecting");
+        if (voiceCallPermissionNotice) {
+          voiceCallPermissionNotice.hidden = true;
+        }
+        updateLocalLevel(0);
+        updateRemoteLevel(0);
+        updateMuteState(false, { applyTracks: false });
+        voiceCallMuteBtn.disabled = true;
+      }
+
+      function ensureAnalyserContext() {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) {
+          return null;
+        }
+        if (!analyserContext) {
+          analyserContext = new AudioContextCtor();
+        }
+        if (analyserContext.state === "suspended") {
+          analyserContext.resume().catch(() => {});
+        }
+        return analyserContext;
+      }
+
+      function computeLevel(analyser) {
+        if (!analyser) {
+          return 0;
+        }
+        const length = analyser.fftSize;
+        const data = new Uint8Array(length);
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < length; i += 1) {
+          const value = (data[i] - 128) / 128;
+          sum += value * value;
+        }
+        const rms = Math.sqrt(sum / length);
+        return Math.min(1, rms * 2.2);
+      }
+
+      function monitorLevels() {
+        const localLevel = localAnalyser ? computeLevel(localAnalyser) : 0;
+        const remoteLevel = remoteAnalyser ? computeLevel(remoteAnalyser) : 0;
+        updateLocalLevel(localLevel);
+        updateRemoteLevel(remoteLevel);
+        levelAnimationFrame = requestAnimationFrame(monitorLevels);
+      }
+
+      function startLevelMonitoring() {
+        if (levelAnimationFrame) {
+          cancelAnimationFrame(levelAnimationFrame);
+        }
+        levelAnimationFrame = requestAnimationFrame(monitorLevels);
+      }
+
+      function stopLevelMonitoring() {
+        if (levelAnimationFrame) {
+          cancelAnimationFrame(levelAnimationFrame);
+          levelAnimationFrame = null;
+        }
+        if (localSource) {
+          try {
+            localSource.disconnect();
+          } catch {
+            /* noop */
+          }
+          localSource = null;
+        }
+        if (remoteSource) {
+          try {
+            remoteSource.disconnect();
+          } catch {
+            /* noop */
+          }
+          remoteSource = null;
+        }
+        localAnalyser = null;
+        remoteAnalyser = null;
+        updateLocalLevel(0);
+        updateRemoteLevel(0);
+      }
+
+      function connectLocalAnalyser(stream) {
+        const context = ensureAnalyserContext();
+        if (!context) {
+          return;
+        }
+        if (localSource) {
+          try {
+            localSource.disconnect();
+          } catch {
+            /* noop */
+          }
+        }
+        localAnalyser = context.createAnalyser();
+        localAnalyser.fftSize = 512;
+        localSource = context.createMediaStreamSource(stream);
+        localSource.connect(localAnalyser);
+        startLevelMonitoring();
+      }
+
+      function connectRemoteAnalyser(stream) {
+        const context = ensureAnalyserContext();
+        if (!context) {
+          return;
+        }
+        if (remoteSource) {
+          try {
+            remoteSource.disconnect();
+          } catch {
+            /* noop */
+          }
+        }
+        remoteAnalyser = context.createAnalyser();
+        remoteAnalyser.fftSize = 512;
+        remoteSource = context.createMediaStreamSource(stream);
+        remoteSource.connect(remoteAnalyser);
+        startLevelMonitoring();
+      }
+
+      function updateMuteState(muted, { applyTracks = true } = {}) {
+        voiceCallMuteBtn.dataset.muted = muted ? "true" : "false";
+        if (voiceCallMuteLabel) {
+          voiceCallMuteLabel.textContent = muted ? "Sesi Aç" : "Sesi Kapat";
+        }
+        if (applyTracks && localStream) {
+          localStream.getAudioTracks().forEach((track) => {
+            track.enabled = !muted;
+          });
+        }
+      }
+
+      function toggleMute() {
+        const nextMuted = voiceCallMuteBtn.dataset.muted !== "true";
+        updateMuteState(nextMuted);
+      }
+
+      async function ensureLocalStream() {
+        if (localStream) {
+          return localStream;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true },
+          });
+          localStream = stream;
+          voiceCallMuteBtn.disabled = false;
+          updateMuteState(false);
+          connectLocalAnalyser(stream);
+          return stream;
+        } catch (error) {
+          handlePermissionDenied(error);
+          throw error;
+        }
+      }
+
+      function handlePermissionDenied(error) {
+        console.error("Mikrofon izni alınamadı:", error);
+        state = "permission-denied";
+        if (voiceCallPermissionNotice) {
+          voiceCallPermissionNotice.hidden = false;
+        }
+        setStatus("Mikrofon izni gerekli. Tekrar dene.", "permission");
+        voiceCallMuteBtn.disabled = true;
+        stopLevelMonitoring();
+        updateControls();
+      }
+
+      function createPeerConnection() {
+        if (peerConnection) {
+          return peerConnection;
+        }
+        peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        peerConnection.onicecandidate = (event) => {
+          if (event.candidate && socket.connected) {
+            socket.emit("voice-call:candidate", { candidate: event.candidate.toJSON() });
+          }
+        };
+        peerConnection.ontrack = (event) => {
+          const [stream] = event.streams;
+          if (!stream) {
+            return;
+          }
+          remoteStream = stream;
+          if (voiceCallRemoteAudio) {
+            voiceCallRemoteAudio.srcObject = stream;
+            voiceCallRemoteAudio.play?.().catch(() => {});
+          }
+          connectRemoteAnalyser(stream);
+        };
+        peerConnection.onconnectionstatechange = () => {
+          if (!peerConnection) {
+            return;
+          }
+          const connectionState = peerConnection.connectionState;
+          if (connectionState === "connected") {
+            state = "connected";
+            setStatus("Görüşme başladı", "connected");
+          } else if (
+            (connectionState === "failed" || connectionState === "disconnected") &&
+            !isCleaningUp
+          ) {
+            handlePeerEnded();
+          }
+        };
+        peerConnection.oniceconnectionstatechange = () => {
+          if (!peerConnection) {
+            return;
+          }
+          const iceState = peerConnection.iceConnectionState;
+          if ((iceState === "failed" || iceState === "disconnected") && !isCleaningUp) {
+            handlePeerEnded();
+          }
+        };
+        if (localStream && !hasAddedLocalTracks) {
+          addLocalTracks(peerConnection, localStream);
+        }
+        return peerConnection;
+      }
+
+      function addLocalTracks(pc, stream) {
+        if (hasAddedLocalTracks) {
+          return;
+        }
+        stream.getAudioTracks().forEach((track) => {
+          pc.addTrack(track, stream);
+        });
+        hasAddedLocalTracks = true;
+      }
+
+      async function flushPendingCandidates() {
+        if (!peerConnection || !peerConnection.remoteDescription) {
+          return;
+        }
+        const candidates = [...pendingRemoteCandidates];
+        pendingRemoteCandidates = [];
+        for (const candidateInit of candidates) {
+          try {
+            await peerConnection.addIceCandidate(candidateInit);
+          } catch (error) {
+            console.error("ICE adayı eklenemedi:", error);
+          }
+        }
+      }
+
+      async function startOutgoingCall({ fromRetry = false } = {}) {
+        if (!isMatched) {
+          return;
+        }
+        if (!fromRetry && state !== "idle") {
+          return;
+        }
+        if (fromRetry && state !== "permission-denied") {
+          return;
+        }
+        lastIntent = "outgoing";
+        if (!fromRetry) {
+          resetCallUi();
+          showOverlay();
+        } else {
+          if (voiceCallPermissionNotice) {
+            voiceCallPermissionNotice.hidden = true;
+          }
+          setStatus("Bağlanıyor…", "connecting");
+        }
+        state = "requesting-stream";
+        try {
+          const stream = await ensureLocalStream();
+          const pc = createPeerConnection();
+          addLocalTracks(pc, stream);
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          role = "caller";
+          shouldNotifyPeerOnEnd = true;
+          hasSentEndSignal = false;
+          state = "awaiting-answer";
+          socket.emit("voice-call:offer", { sdp: offer });
+        } catch (error) {
+          if (state !== "permission-denied") {
+            console.error("Sesli arama başlatılamadı:", error);
+            handleEnd({ notifyPeer: false, showStatus: true });
+          }
+        }
+      }
+
+      async function beginIncomingCall() {
+        if (!pendingRemoteOffer) {
+          return;
+        }
+        state = "requesting-stream";
+        try {
+          const stream = await ensureLocalStream();
+          const pc = createPeerConnection();
+          addLocalTracks(pc, stream);
+          await pc.setRemoteDescription(pendingRemoteOffer);
+          pendingRemoteOffer = null;
+          await flushPendingCandidates();
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          role = "callee";
+          state = "connecting";
+          socket.emit("voice-call:answer", { sdp: answer });
+        } catch (error) {
+          if (state === "permission-denied") {
+            return;
+          }
+          console.error("Sesli arama yanıtı gönderilemedi:", error);
+          handleEnd({ notifyPeer: true, showStatus: true });
+        }
+      }
+
+      async function handleOffer(payload) {
+        if (!payload || !payload.sdp) {
+          return;
+        }
+        if (!isMatched) {
+          socket.emit("voice-call:end");
+          return;
+        }
+        if (overlayVisible() && state !== "permission-denied") {
+          socket.emit("voice-call:end");
+          return;
+        }
+        pendingRemoteOffer = payload.sdp;
+        lastIntent = "incoming";
+        shouldNotifyPeerOnEnd = true;
+        hasSentEndSignal = false;
+        resetCallUi();
+        showOverlay();
+        state = "incoming";
+        await beginIncomingCall();
+      }
+
+      async function handleAnswer(payload) {
+        if (!payload || !payload.sdp) {
+          return;
+        }
+        if (!peerConnection || role !== "caller") {
+          return;
+        }
+        try {
+          await peerConnection.setRemoteDescription(payload.sdp);
+          await flushPendingCandidates();
+        } catch (error) {
+          console.error("Sesli arama cevabı uygulanamadı:", error);
+          handleEnd({ notifyPeer: false, showStatus: true });
+        }
+      }
+
+      async function handleCandidate(payload) {
+        if (!payload || !payload.candidate) {
+          return;
+        }
+        if (!peerConnection || !peerConnection.remoteDescription) {
+          pendingRemoteCandidates.push(payload.candidate);
+          return;
+        }
+        try {
+          await peerConnection.addIceCandidate(payload.candidate);
+        } catch (error) {
+          console.error("ICE adayı eklenemedi:", error);
+        }
+      }
+
+      function handleRetry() {
+        if (state !== "permission-denied") {
+          return;
+        }
+        if (voiceCallPermissionNotice) {
+          voiceCallPermissionNotice.hidden = true;
+        }
+        setStatus("Bağlanıyor…", "connecting");
+        if (lastIntent === "outgoing") {
+          startOutgoingCall({ fromRetry: true });
+        } else if (lastIntent === "incoming") {
+          beginIncomingCall();
+        }
+      }
+
+      function handlePeerEnded() {
+        if (isCleaningUp) {
+          return;
+        }
+        shouldNotifyPeerOnEnd = false;
+        hasSentEndSignal = true;
+        setStatus("Bağlantı koptu", "ended");
+        teardown({ keepOverlay: true });
+        scheduleOverlayClose();
+      }
+
+      function handleEnd({ notifyPeer = true, showStatus = true } = {}) {
+        if (!overlayVisible() && state === "idle" && !peerConnection) {
+          hideOverlay();
+          return;
+        }
+        const permissionBlocked = state === "permission-denied";
+        if (notifyPeer && shouldNotifyPeerOnEnd && !hasSentEndSignal && socket.connected) {
+          socket.emit("voice-call:end");
+          hasSentEndSignal = true;
+        }
+        if (showStatus && !permissionBlocked) {
+          setStatus("Bağlantı koptu", "ended");
+        }
+        const keepOverlay = showStatus && !permissionBlocked;
+        teardown({ keepOverlay });
+        if (showStatus && !permissionBlocked) {
+          scheduleOverlayClose();
+        }
+      }
+
+      function teardown({ keepOverlay = false } = {}) {
+        isCleaningUp = true;
+        cleanupCloseTimer();
+        stopLevelMonitoring();
+        if (localStream) {
+          localStream.getTracks().forEach((track) => track.stop());
+          localStream = null;
+        }
+        if (remoteStream) {
+          remoteStream.getTracks().forEach((track) => track.stop());
+          remoteStream = null;
+        }
+        if (voiceCallRemoteAudio) {
+          voiceCallRemoteAudio.srcObject = null;
+        }
+        if (peerConnection) {
+          try {
+            peerConnection.close();
+          } catch {
+            /* noop */
+          }
+        }
+        if (peerConnection) {
+          peerConnection.onicecandidate = null;
+          peerConnection.ontrack = null;
+          peerConnection.onconnectionstatechange = null;
+          peerConnection.oniceconnectionstatechange = null;
+        }
+        peerConnection = null;
+        hasAddedLocalTracks = false;
+        pendingRemoteCandidates = [];
+        pendingRemoteOffer = null;
+        updateMuteState(false, { applyTracks: false });
+        voiceCallMuteBtn.disabled = true;
+        if (voiceCallPermissionNotice) {
+          voiceCallPermissionNotice.hidden = true;
+        }
+        shouldNotifyPeerOnEnd = false;
+        hasSentEndSignal = false;
+        role = null;
+        lastIntent = null;
+        state = "idle";
+        isCleaningUp = false;
+        updateControls();
+        if (!keepOverlay) {
+          hideOverlay();
+        }
+      }
+
+      function handleMatchStateChange(isActive) {
+        if (!isActive && (overlayVisible() || state !== "idle")) {
+          handleEnd({ notifyPeer: true, showStatus: false });
+        }
+      }
+
+      function handleDisconnect() {
+        if (overlayVisible() || state !== "idle") {
+          shouldNotifyPeerOnEnd = false;
+          hasSentEndSignal = true;
+          handleEnd({ notifyPeer: false, showStatus: false });
+        }
+      }
+
+      function isBusy() {
+        return overlayVisible() || state !== "idle";
+      }
+
+      voiceCallMuteBtn.addEventListener("click", () => {
+        if (voiceCallMuteBtn.disabled) {
+          return;
+        }
+        toggleMute();
+      });
+
+      voiceCallEndBtn.addEventListener("click", () => {
+        const shouldShowStatus = state !== "permission-denied";
+        handleEnd({ notifyPeer: true, showStatus: shouldShowStatus });
+      });
+
+      voiceCallCloseBtn?.addEventListener("click", () => {
+        const shouldShowStatus = state !== "permission-denied";
+        handleEnd({ notifyPeer: true, showStatus: shouldShowStatus });
+      });
+
+      voiceCallRetryBtn?.addEventListener("click", () => {
+        handleRetry();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && overlayVisible()) {
+          handleEnd({ notifyPeer: true, showStatus: false });
+        }
+      });
+
+      return {
+        startOutgoingCall,
+        handleOffer,
+        handleAnswer,
+        handleCandidate,
+        handlePeerEnded,
+        handleMatchStateChange,
+        handleDisconnect,
+        isBusy,
+      };
+    })();
 
     function createMessageElement(txt, type, prefixText) {
       const bubble = document.createElement("div");
@@ -1718,6 +2929,26 @@
       }
     });
 
+    socket.on("voice-call:offer", (payload) => {
+      voiceCallManager?.handleOffer?.(payload);
+    });
+
+    socket.on("voice-call:answer", (payload) => {
+      voiceCallManager?.handleAnswer?.(payload);
+    });
+
+    socket.on("voice-call:candidate", (payload) => {
+      voiceCallManager?.handleCandidate?.(payload);
+    });
+
+    socket.on("voice-call:ended", () => {
+      voiceCallManager?.handlePeerEnded?.();
+    });
+
+    socket.on("voice-call:peer-ended", () => {
+      voiceCallManager?.handlePeerEnded?.();
+    });
+
     socket.on("ended", () => {
       const endedStatusText = "Bağlantı sonlandı. Yeni eşleşme bekleniyor…";
       beginMatchSearch({
@@ -1734,7 +2965,17 @@
 
     socket.on("disconnect", () => {
       setMatchedState(false);
+      voiceCallManager?.handleDisconnect?.();
     });
+
+    if (callBtn) {
+      callBtn.addEventListener("click", () => {
+        if (callBtn.disabled) {
+          return;
+        }
+        voiceCallManager?.startOutgoingCall?.();
+      });
+    }
 
     sendBtn.onclick = () => {
       if (!isMatched || !nickname || !msg.value.trim() || isCoolingDown) return;
