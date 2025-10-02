@@ -137,6 +137,119 @@
       pointer-events: auto;
     }
 
+    .call-request-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      background: rgba(18, 34, 24, 0.35);
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .call-request-overlay[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .call-request-overlay__card {
+      width: min(400px, 80vw);
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 32px 60px -34px rgba(33, 64, 41, 0.55);
+      padding: 26px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transform: translateY(12px);
+      opacity: 0;
+      transition: transform 180ms ease, opacity 180ms ease;
+    }
+
+    .call-request-overlay[data-open="true"] .call-request-overlay__card {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .call-request-overlay__title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--accent-strong);
+    }
+
+    .call-request-overlay__text {
+      margin: 0;
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    .call-request-overlay__countdown {
+      margin: -6px 0 0;
+      font-size: 14px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .call-request-overlay__actions {
+      display: none;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .call-request-overlay[data-mode="outgoing"] #call-request-actions-outgoing {
+      display: flex;
+    }
+
+    .call-request-overlay[data-mode="incoming"] #call-request-actions-incoming {
+      display: flex;
+    }
+
+    .call-request-button {
+      flex: 1;
+      min-height: 46px;
+      border-radius: 999px;
+      border: none;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
+    }
+
+    .call-request-button:focus-visible {
+      outline: 3px solid rgba(33, 98, 56, 0.2);
+      outline-offset: 2px;
+    }
+
+    .call-request-button--accept {
+      background: #45a263;
+      color: #ffffff;
+      box-shadow: 0 20px 44px -28px rgba(69, 162, 99, 0.6);
+    }
+
+    .call-request-button--accept:hover,
+    .call-request-button--accept:focus-visible {
+      background: #3c8e56;
+      transform: translateY(-1px);
+    }
+
+    .call-request-button--danger {
+      background: #f55b5b;
+      color: #ffffff;
+      box-shadow: 0 18px 40px -30px rgba(245, 91, 91, 0.6);
+    }
+
+    .call-request-button--danger:hover,
+    .call-request-button--danger:focus-visible {
+      background: #e04c4c;
+      transform: translateY(-1px);
+    }
+
     .voice-call-overlay {
       position: absolute;
       inset: 0;
@@ -1107,6 +1220,14 @@
         gap: 10px;
       }
 
+      .call-request-overlay {
+        padding: 24px 16px;
+      }
+
+      .call-request-overlay__card {
+        width: 80%;
+      }
+
       .voice-call-overlay {
         padding: 0;
       }
@@ -1168,6 +1289,48 @@
         <div class="confirm-modal-actions">
           <button id="skip-confirm-cancel" type="button" class="confirm-cancel">Vazgeç</button>
           <button id="skip-confirm-confirm" type="button" class="confirm-accept">Devam Et</button>
+        </div>
+      </div>
+    </div>
+    <div
+      id="call-request-overlay"
+      class="call-request-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="call-request-overlay__card">
+        <h2 class="call-request-overlay__title" id="call-request-title"></h2>
+        <p class="call-request-overlay__text" id="call-request-text"></p>
+        <p class="call-request-overlay__countdown" id="call-request-countdown" hidden></p>
+        <div class="call-request-overlay__actions" id="call-request-actions-outgoing">
+          <button
+            type="button"
+            class="call-request-button call-request-button--danger"
+            id="call-request-cancel"
+          >
+            İptal Et
+          </button>
+        </div>
+        <div
+          class="call-request-overlay__actions call-request-overlay__actions--incoming"
+          id="call-request-actions-incoming"
+        >
+          <button
+            type="button"
+            class="call-request-button call-request-button--accept"
+            id="call-request-accept"
+          >
+            Olur
+          </button>
+          <button
+            type="button"
+            class="call-request-button call-request-button--danger"
+            id="call-request-reject"
+          >
+            İstemem
+          </button>
         </div>
       </div>
     </div>
@@ -1349,6 +1512,8 @@
     const sendBtn = document.getElementById("send");
     const nextBtn = document.getElementById("next");
     const callBtn = document.getElementById("call");
+    const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
+    const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
     const voiceCallStatus = document.getElementById("voice-call-status");
     const voiceCallPermissionNotice = document.getElementById("voice-call-permission");
@@ -1366,6 +1531,13 @@
     const skipConfirmOverlay = document.getElementById("skip-confirm-overlay");
     const skipConfirmCancel = document.getElementById("skip-confirm-cancel");
     const skipConfirmConfirm = document.getElementById("skip-confirm-confirm");
+    const callRequestOverlay = document.getElementById("call-request-overlay");
+    const callRequestTitle = document.getElementById("call-request-title");
+    const callRequestText = document.getElementById("call-request-text");
+    const callRequestCountdown = document.getElementById("call-request-countdown");
+    const callRequestCancelBtn = document.getElementById("call-request-cancel");
+    const callRequestAcceptBtn = document.getElementById("call-request-accept");
+    const callRequestRejectBtn = document.getElementById("call-request-reject");
     const MATCH_SEARCH_TEXT = "Yeni eşleşme aranıyor...";
     const DISCONNECT_SEARCH_MESSAGE =
       "Bağlantı sonlandı, yeni eşleşme aranıyor…";
@@ -1374,6 +1546,8 @@
     const MATCH_SEARCH_COUNTDOWN_SECONDS = 5;
     const DISCONNECT_SEARCH_COUNTDOWN_SECONDS = 3;
     const SKIP_SEARCH_COUNTDOWN_SECONDS = 5;
+    const CALL_COOLDOWN_SECONDS = 15;
+    const CALL_REQUEST_TIMEOUT_SECONDS = 10;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
 
     let isMatched = false;
@@ -1395,6 +1569,10 @@
       SUPPORTS_NOTIFICATIONS && Notification.permission === "granted";
     let notificationPermissionWatcher = null;
     let voiceCallManager = null;
+    let callRequestController = null;
+    let isCallCoolingDown = false;
+    let callCooldownTimer = null;
+    let callCooldownRemaining = 0;
 
     function createWaitingMiniGame(container, startButton) {
       const GAME_DURATION_SECONDS = 60;
@@ -2109,6 +2287,62 @@
       isCoolingDown = false;
     }
 
+    function updateCallButtonVisualState() {
+      if (!callBtn || !callBtnLabel) {
+        return;
+      }
+      if (isCallCoolingDown) {
+        const safeRemaining = Math.max(callCooldownRemaining, 0);
+        if (callBtnIcon) {
+          callBtnIcon.hidden = true;
+        }
+        callBtnLabel.textContent = `${safeRemaining} sn`;
+        callBtn.dataset.countdown = "true";
+      } else {
+        if (callBtnIcon) {
+          callBtnIcon.hidden = false;
+        }
+        callBtnLabel.textContent = "Ara";
+        delete callBtn.dataset.countdown;
+      }
+    }
+
+    function clearCallCooldown() {
+      if (callCooldownTimer) {
+        clearInterval(callCooldownTimer);
+        callCooldownTimer = null;
+      }
+      isCallCoolingDown = false;
+      callCooldownRemaining = 0;
+      updateCallButtonVisualState();
+    }
+
+    function startCallCooldown({ reset = true } = {}) {
+      if (!callBtn) {
+        return;
+      }
+      if (!reset && isCallCoolingDown) {
+        return;
+      }
+      if (callCooldownTimer) {
+        clearInterval(callCooldownTimer);
+        callCooldownTimer = null;
+      }
+      isCallCoolingDown = true;
+      callCooldownRemaining = CALL_COOLDOWN_SECONDS;
+      updateCallButtonVisualState();
+      callCooldownTimer = setInterval(() => {
+        callCooldownRemaining -= 1;
+        if (callCooldownRemaining <= 0) {
+          clearCallCooldown();
+          updateControls();
+        } else {
+          updateCallButtonVisualState();
+        }
+      }, 1000);
+      updateControls();
+    }
+
     function startCooldown() {
       clearCooldown();
       isCoolingDown = true;
@@ -2127,7 +2361,10 @@
       nextBtn.disabled = !isMatched || isSearchCountdownActive;
       if (callBtn) {
         const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
-        callBtn.disabled = !isMatched || isCallBusy;
+        const hasActiveRequest = callRequestController?.isActive?.() ?? false;
+        callBtn.disabled =
+          !isMatched || isCallBusy || hasActiveRequest || isCallCoolingDown;
+        updateCallButtonVisualState();
       }
     }
 
@@ -2138,9 +2375,10 @@
       } else {
         hideWaitingStatus();
       }
-      voiceCallManager?.handleMatchStateChange?.(state);
-      updateControls();
-    }
+    voiceCallManager?.handleMatchStateChange?.(state);
+    callRequestController?.handleMatchStateChange?.(state);
+    updateControls();
+  }
 
     voiceCallManager = (() => {
       if (!voiceCallOverlay || !voiceCallStatus || !voiceCallMuteBtn || !voiceCallEndBtn) {
@@ -2780,6 +3018,299 @@
       };
     })();
 
+    callRequestOverlay?.setAttribute("aria-labelledby", "call-request-title");
+
+    callRequestController = (() => {
+      if (
+        !callRequestOverlay ||
+        !callRequestTitle ||
+        !callRequestText ||
+        !callRequestCancelBtn ||
+        !callRequestAcceptBtn ||
+        !callRequestRejectBtn
+      ) {
+        return {
+          startOutgoingRequest: () => {
+            startCallCooldown({ reset: true });
+            socket.emit("voice-call:request");
+          },
+          handleIncoming: () => {
+            socket.emit("voice-call:request-response", { accepted: false });
+          },
+          handleAccepted: () => {},
+          handleRejected: (payload) => {
+            if (payload?.recipientRole === "caller") {
+              appendMessage("Bu kişi aramanızı reddetti.", "system");
+              startCallCooldown({ reset: true });
+            }
+          },
+          handleCancelled: () => {},
+          handleError: () => {},
+          handleMatchStateChange: () => {},
+          handleDisconnect: () => {},
+          isActive: () => false,
+        };
+      }
+
+      const overlay = callRequestOverlay;
+      const titleEl = callRequestTitle;
+      const textEl = callRequestText;
+      const countdownEl = callRequestCountdown;
+      const cancelBtn = callRequestCancelBtn;
+      const acceptBtn = callRequestAcceptBtn;
+      const rejectBtn = callRequestRejectBtn;
+
+      let state = "idle";
+      let autoRejectTimer = null;
+      let autoRejectRemaining = 0;
+      let hasResponded = false;
+
+      function isOverlayOpen() {
+        return overlay.dataset.open === "true";
+      }
+
+      function openOverlay(mode) {
+        overlay.dataset.mode = mode;
+        overlay.hidden = false;
+        overlay.setAttribute("aria-hidden", "false");
+        requestAnimationFrame(() => {
+          overlay.dataset.open = "true";
+        });
+        updateControls();
+      }
+
+      function closeOverlay() {
+        overlay.dataset.open = "false";
+        overlay.setAttribute("aria-hidden", "true");
+        const handleTransitionEnd = (event) => {
+          if (event.target !== overlay) {
+            return;
+          }
+          overlay.removeEventListener("transitionend", handleTransitionEnd);
+          if (!isOverlayOpen()) {
+            overlay.hidden = true;
+          }
+        };
+        overlay.addEventListener("transitionend", handleTransitionEnd);
+        setTimeout(() => {
+          if (!isOverlayOpen()) {
+            overlay.hidden = true;
+          }
+        }, 220);
+        updateControls();
+      }
+
+      function clearAutoRejectTimer() {
+        if (autoRejectTimer) {
+          clearInterval(autoRejectTimer);
+          autoRejectTimer = null;
+        }
+      }
+
+      function resetState() {
+        clearAutoRejectTimer();
+        hasResponded = false;
+        state = "idle";
+        overlay.dataset.mode = "";
+        if (countdownEl) {
+          countdownEl.hidden = true;
+          countdownEl.textContent = "";
+        }
+        cancelBtn.disabled = false;
+        acceptBtn.disabled = false;
+        rejectBtn.disabled = false;
+      }
+
+      function closeAndResetOverlay() {
+        resetState();
+        closeOverlay();
+      }
+
+      function updateCountdownText() {
+        if (!countdownEl) {
+          return;
+        }
+        countdownEl.textContent = `${Math.max(autoRejectRemaining, 0)} sn içinde otomatik reddedilecek.`;
+      }
+
+      function scheduleAutoReject() {
+        clearAutoRejectTimer();
+        if (!countdownEl) {
+          autoRejectTimer = setTimeout(() => {
+            triggerAutoReject();
+          }, CALL_REQUEST_TIMEOUT_SECONDS * 1000);
+          return;
+        }
+        autoRejectRemaining = CALL_REQUEST_TIMEOUT_SECONDS;
+        countdownEl.hidden = false;
+        updateCountdownText();
+        autoRejectTimer = setInterval(() => {
+          autoRejectRemaining -= 1;
+          if (autoRejectRemaining <= 0) {
+            clearAutoRejectTimer();
+            triggerAutoReject();
+          } else {
+            updateCountdownText();
+          }
+        }, 1000);
+      }
+
+      function sendResponse(accepted, reason) {
+        if (hasResponded) {
+          return;
+        }
+        hasResponded = true;
+        clearAutoRejectTimer();
+        const payload = accepted ? { accepted: true } : { accepted: false };
+        if (!accepted && reason) {
+          payload.reason = reason;
+        }
+        socket.emit("voice-call:request-response", payload);
+      }
+
+      function triggerAutoReject() {
+        if (state !== "incoming" || hasResponded) {
+          return;
+        }
+        sendResponse(false, "timeout");
+        closeAndResetOverlay();
+      }
+
+      function startOutgoingRequest() {
+        if (!isMatched || state !== "idle" || voiceCallManager?.isBusy?.()) {
+          return;
+        }
+        startCallCooldown({ reset: true });
+        state = "outgoing";
+        titleEl.textContent = "Arama başlatılıyor…";
+        textEl.textContent = "Karşı tarafın yanıtı bekleniyor.";
+        if (countdownEl) {
+          countdownEl.hidden = true;
+          countdownEl.textContent = "";
+        }
+        cancelBtn.disabled = false;
+        openOverlay("outgoing");
+        socket.emit("voice-call:request");
+      }
+
+      function handleIncomingRequest() {
+        if (!isMatched || state !== "idle") {
+          socket.emit("voice-call:request-response", { accepted: false, reason: "busy" });
+          return;
+        }
+        if (voiceCallManager?.isBusy?.()) {
+          socket.emit("voice-call:request-response", { accepted: false, reason: "busy" });
+          return;
+        }
+        state = "incoming";
+        hasResponded = false;
+        titleEl.textContent = "Bu kişi sesinizi duymak istiyor.";
+        textEl.textContent = "Yanıtlamak için 10 saniyen var.";
+        if (countdownEl) {
+          countdownEl.hidden = false;
+        }
+        cancelBtn.disabled = false;
+        acceptBtn.disabled = false;
+        rejectBtn.disabled = false;
+        openOverlay("incoming");
+        scheduleAutoReject();
+      }
+
+      function handleRequestAccepted() {
+        if (state === "outgoing" || state === "incoming") {
+          closeAndResetOverlay();
+        } else {
+          resetState();
+        }
+        updateControls();
+      }
+
+      function handleRequestRejected(payload) {
+        if (state === "outgoing" || state === "incoming") {
+          closeAndResetOverlay();
+        } else {
+          resetState();
+        }
+        if (payload?.recipientRole === "caller") {
+          appendMessage("Bu kişi aramanızı reddetti.", "system");
+          startCallCooldown({ reset: true });
+        }
+        updateControls();
+      }
+
+      function handleRequestCancelled() {
+        if (state === "incoming") {
+          closeAndResetOverlay();
+        } else {
+          resetState();
+          if (!isOverlayOpen()) {
+            overlay.hidden = true;
+            overlay.setAttribute("aria-hidden", "true");
+          }
+        }
+        updateControls();
+      }
+
+      function handleRequestError() {
+        closeAndResetOverlay();
+        appendMessage("Arama başlatılamadı. Lütfen tekrar deneyin.", "system");
+        updateControls();
+      }
+
+      function handleMatchStateChange(isActive) {
+        if (!isActive && (state === "incoming" || state === "outgoing")) {
+          closeAndResetOverlay();
+        }
+      }
+
+      function handleDisconnect() {
+        if (state === "incoming" || state === "outgoing") {
+          closeAndResetOverlay();
+        }
+      }
+
+      cancelBtn.addEventListener("click", () => {
+        if (state !== "outgoing") {
+          return;
+        }
+        cancelBtn.disabled = true;
+        socket.emit("voice-call:cancel-request");
+        closeAndResetOverlay();
+      });
+
+      acceptBtn.addEventListener("click", () => {
+        if (state !== "incoming" || hasResponded) {
+          return;
+        }
+        acceptBtn.disabled = true;
+        rejectBtn.disabled = true;
+        sendResponse(true);
+        closeAndResetOverlay();
+      });
+
+      rejectBtn.addEventListener("click", () => {
+        if (state !== "incoming" || hasResponded) {
+          return;
+        }
+        acceptBtn.disabled = true;
+        rejectBtn.disabled = true;
+        sendResponse(false, "declined");
+        closeAndResetOverlay();
+      });
+
+      return {
+        startOutgoingRequest,
+        handleIncoming: handleIncomingRequest,
+        handleAccepted: handleRequestAccepted,
+        handleRejected: handleRequestRejected,
+        handleCancelled: handleRequestCancelled,
+        handleError: handleRequestError,
+        handleMatchStateChange,
+        handleDisconnect,
+        isActive: () => state === "incoming" || state === "outgoing",
+      };
+    })();
+
     function createMessageElement(txt, type, prefixText) {
       const bubble = document.createElement("div");
       bubble.classList.add("message", `message--${type}`);
@@ -2966,6 +3497,29 @@
       }
     });
 
+    socket.on("voice-call:request:incoming", () => {
+      callRequestController?.handleIncoming?.();
+    });
+
+    socket.on("voice-call:request:accepted", (payload) => {
+      callRequestController?.handleAccepted?.(payload);
+      if (payload?.role === "caller") {
+        voiceCallManager?.startOutgoingCall?.();
+      }
+    });
+
+    socket.on("voice-call:request:rejected", (payload) => {
+      callRequestController?.handleRejected?.(payload);
+    });
+
+    socket.on("voice-call:request:cancelled", (payload) => {
+      callRequestController?.handleCancelled?.(payload);
+    });
+
+    socket.on("voice-call:request:error", () => {
+      callRequestController?.handleError?.();
+    });
+
     socket.on("voice-call:offer", (payload) => {
       voiceCallManager?.handleOffer?.(payload);
     });
@@ -3010,6 +3564,7 @@
     socket.on("disconnect", () => {
       setMatchedState(false);
       voiceCallManager?.handleDisconnect?.();
+      callRequestController?.handleDisconnect?.();
     });
 
     if (callBtn) {
@@ -3017,7 +3572,7 @@
         if (callBtn.disabled) {
           return;
         }
-        voiceCallManager?.startOutgoingCall?.();
+        callRequestController?.startOutgoingRequest?.();
       });
     }
 
