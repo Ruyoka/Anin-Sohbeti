@@ -17,6 +17,53 @@ app.use(express.static("public"));
 let queue = [];
 const partners = new Map();
 const waitTimers = new Map();
+const callRequestsByCaller = new Map();
+const callRequestsByCallee = new Map();
+
+function removeCallRequestByCaller(callerId) {
+  const request = callRequestsByCaller.get(callerId);
+  if (!request) {
+    return null;
+  }
+  callRequestsByCaller.delete(callerId);
+  callRequestsByCallee.delete(request.calleeId);
+  return request;
+}
+
+function removeCallRequestByCallee(calleeId) {
+  const request = callRequestsByCallee.get(calleeId);
+  if (!request) {
+    return null;
+  }
+  callRequestsByCallee.delete(calleeId);
+  callRequestsByCaller.delete(request.callerId);
+  return request;
+}
+
+function clearCallRequestsForSocket(socketId, reason = "cancelled") {
+  const outgoing = removeCallRequestByCaller(socketId);
+  if (outgoing) {
+    io.to(outgoing.calleeId).emit("voice-call:request:cancelled", {
+      recipientRole: "callee",
+      reason,
+    });
+    io.to(outgoing.callerId).emit("voice-call:request:cancelled", {
+      recipientRole: "caller",
+      reason,
+    });
+  }
+  const incoming = removeCallRequestByCallee(socketId);
+  if (incoming) {
+    io.to(incoming.callerId).emit("voice-call:request:cancelled", {
+      recipientRole: "caller",
+      reason,
+    });
+    io.to(incoming.calleeId).emit("voice-call:request:cancelled", {
+      recipientRole: "callee",
+      reason,
+    });
+  }
+}
 
 function notifyWaitingStatus(socketId, active) {
   const socketExists = io.sockets.sockets.get(socketId);
@@ -65,6 +112,7 @@ function dequeueAvailable() {
 
 function endCurrentChat(socketId, options = {}) {
   const { skipNotifyPartner = false } = options;
+  clearCallRequestsForSocket(socketId, "ended");
   queue = queue.filter((id) => id !== socketId);
   clearWaitTimer(socketId);
   notifyWaitingStatus(socketId, false);
@@ -75,6 +123,8 @@ function endCurrentChat(socketId, options = {}) {
   if (!partnerId) {
     return;
   }
+
+  clearCallRequestsForSocket(partnerId, "ended");
 
   partners.delete(partnerId);
   queue = queue.filter((id) => id !== partnerId);
@@ -153,6 +203,72 @@ io.on("connection", (socket) => {
         : { text: (msg || "").toString().slice(0, 2000), nickname: "" };
 
     io.to(partnerId).emit("message", payload);
+  });
+
+  socket.on("voice-call:request", () => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) {
+      io.to(socket.id).emit("voice-call:request:error", { reason: "no-partner" });
+      return;
+    }
+    if (callRequestsByCaller.has(socket.id) || callRequestsByCallee.has(socket.id)) {
+      return;
+    }
+    if (callRequestsByCaller.has(partnerId) || callRequestsByCallee.has(partnerId)) {
+      io.to(socket.id).emit("voice-call:request:error", { reason: "busy" });
+      return;
+    }
+    const partnerSocket = io.sockets.sockets.get(partnerId);
+    if (!partnerSocket) {
+      io.to(socket.id).emit("voice-call:request:error", { reason: "unavailable" });
+      return;
+    }
+    const request = { callerId: socket.id, calleeId: partnerId };
+    callRequestsByCaller.set(socket.id, request);
+    callRequestsByCallee.set(partnerId, request);
+    io.to(partnerId).emit("voice-call:request:incoming");
+  });
+
+  socket.on("voice-call:cancel-request", () => {
+    const request = removeCallRequestByCaller(socket.id);
+    if (!request) {
+      return;
+    }
+    io.to(request.calleeId).emit("voice-call:request:cancelled", {
+      recipientRole: "callee",
+      reason: "cancelled",
+    });
+    io.to(request.callerId).emit("voice-call:request:cancelled", {
+      recipientRole: "caller",
+      reason: "cancelled",
+    });
+  });
+
+  socket.on("voice-call:request-response", (payload) => {
+    const request = removeCallRequestByCallee(socket.id);
+    if (!request) {
+      return;
+    }
+    const accepted = Boolean(payload && payload.accepted);
+    if (accepted) {
+      io.to(request.callerId).emit("voice-call:request:accepted", { role: "caller" });
+      io.to(request.calleeId).emit("voice-call:request:accepted", { role: "callee" });
+    } else {
+      const reason =
+        payload && typeof payload === "object" && typeof payload.reason === "string"
+          ? payload.reason
+          : "rejected";
+      io.to(request.callerId).emit("voice-call:request:rejected", {
+        reason,
+        initiatedBy: "caller",
+        recipientRole: "caller",
+      });
+      io.to(request.calleeId).emit("voice-call:request:rejected", {
+        reason,
+        initiatedBy: "caller",
+        recipientRole: "callee",
+      });
+    }
   });
 
   socket.on("voice-call:offer", (payload) => {
