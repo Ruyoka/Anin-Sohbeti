@@ -3239,7 +3239,7 @@
       }
 
       function handleRequestCancelled() {
-        if (state === "incoming") {
+        if (state === "incoming" || state === "outgoing") {
           closeAndResetOverlay();
         } else {
           resetState();
