@@ -190,7 +190,6 @@ io.on("connection", (socket) => {
 
     io.to(partnerId).emit("voice-call:candidate", data);
   });
-
   socket.on("voice-call:request", () => {
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;

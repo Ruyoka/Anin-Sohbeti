@@ -3361,6 +3361,7 @@
           console.error("Sesli arama yanıtı gönderilemedi:", error);
           handleEnd({ notifyPeer: true, showStatus: true });
         }
+
       }
 
       async function handleOffer(payload) {
@@ -3641,6 +3642,644 @@
         handleRequestAccepted,
         handleRequestRejected,
         handleRequestCancelled,
+        handleOffer,
+        handleAnswer,
+        handleCandidate,
+        handlePeerEnded,
+        handleMatchStateChange,
+        handleDisconnect,
+        isBusy,
+      };
+    })();
+
+    voiceCallManager = (() => {
+      if (!voiceCallOverlay || !voiceCallStatus || !voiceCallMuteBtn || !voiceCallEndBtn) {
+        return {
+          startOutgoingCall: () => {},
+          handleOffer: () => {},
+          handleAnswer: () => {},
+          handleCandidate: () => {},
+          handlePeerEnded: () => {},
+          handleMatchStateChange: () => {},
+          handleDisconnect: () => {},
+          isBusy: () => false,
+        };
+      }
+
+      const remotePulseDots = Array.from(
+        voiceCallRemotePulse ? voiceCallRemotePulse.querySelectorAll("span") : []
+      );
+      const ICE_SERVERS = [
+        { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+      ];
+
+      let state = "idle";
+      let role = null;
+      let peerConnection = null;
+      let localStream = null;
+      let remoteStream = null;
+      let hasAddedLocalTracks = false;
+      let analyserContext = null;
+      let localAnalyser = null;
+      let remoteAnalyser = null;
+      let localSource = null;
+      let remoteSource = null;
+      let levelAnimationFrame = null;
+      let pendingRemoteCandidates = [];
+      let pendingRemoteOffer = null;
+      let closeTimer = null;
+      let shouldNotifyPeerOnEnd = false;
+      let hasSentEndSignal = false;
+      let isCleaningUp = false;
+      let lastIntent = null;
+
+      function overlayVisible() {
+        return voiceCallOverlay?.dataset.open === "true";
+      }
+
+      function cleanupCloseTimer() {
+        if (closeTimer) {
+          clearTimeout(closeTimer);
+          closeTimer = null;
+        }
+      }
+
+      function showOverlay() {
+        if (!voiceCallOverlay) {
+          return;
+        }
+        cleanupCloseTimer();
+        voiceCallOverlay.hidden = false;
+        voiceCallOverlay.setAttribute("aria-hidden", "false");
+        requestAnimationFrame(() => {
+          voiceCallOverlay.dataset.open = "true";
+        });
+        updateControls();
+        setTimeout(() => {
+          voiceCallEndBtn?.focus({ preventScroll: true });
+        }, 220);
+      }
+
+      function hideOverlay() {
+        if (!voiceCallOverlay) {
+          return;
+        }
+        cleanupCloseTimer();
+        voiceCallOverlay.dataset.open = "false";
+        voiceCallOverlay.setAttribute("aria-hidden", "true");
+        const handleTransitionEnd = (event) => {
+          if (event.target !== voiceCallOverlay) {
+            return;
+          }
+          voiceCallOverlay.removeEventListener("transitionend", handleTransitionEnd);
+          if (voiceCallOverlay.dataset.open !== "true") {
+            voiceCallOverlay.hidden = true;
+          }
+        };
+        voiceCallOverlay.addEventListener("transitionend", handleTransitionEnd);
+        setTimeout(() => {
+          if (voiceCallOverlay.dataset.open !== "true") {
+            voiceCallOverlay.hidden = true;
+          }
+        }, 260);
+        updateControls();
+      }
+
+      function scheduleOverlayClose(delay = 1400) {
+        cleanupCloseTimer();
+        closeTimer = setTimeout(() => {
+          hideOverlay();
+        }, delay);
+      }
+
+      function setStatus(text, stateKey = "connecting") {
+        if (!voiceCallStatus) {
+          return;
+        }
+        voiceCallStatus.textContent = text;
+        voiceCallStatus.dataset.state = stateKey;
+      }
+
+      function updateLocalLevel(level) {
+        voiceCallLocalLevel?.style.setProperty("--level", level.toFixed(3));
+      }
+
+      function updateRemoteLevel(level) {
+        voiceCallRemotePulse?.style.setProperty("--level", level.toFixed(3));
+        remotePulseDots.forEach((dot, index) => {
+          const intensity = Math.min(1, level * (0.6 + index * 0.25));
+          dot.style.setProperty("--pulse-intensity", intensity.toFixed(3));
+          dot.style.setProperty("--pulse-alpha", (0.28 + intensity * 0.5).toFixed(3));
+        });
+      }
+
+      function resetCallUi() {
+        setStatus("Bağlanıyor…", "connecting");
+        if (voiceCallPermissionNotice) {
+          voiceCallPermissionNotice.hidden = true;
+        }
+        updateLocalLevel(0);
+        updateRemoteLevel(0);
+        updateMuteState(false, { applyTracks: false });
+        voiceCallMuteBtn.disabled = true;
+      }
+
+      function ensureAnalyserContext() {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) {
+          return null;
+        }
+        if (!analyserContext) {
+          analyserContext = new AudioContextCtor();
+        }
+        if (analyserContext.state === "suspended") {
+          analyserContext.resume().catch(() => {});
+        }
+        return analyserContext;
+      }
+
+      function computeLevel(analyser) {
+        if (!analyser) {
+          return 0;
+        }
+        const length = analyser.fftSize;
+        const data = new Uint8Array(length);
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < length; i += 1) {
+          const value = (data[i] - 128) / 128;
+          sum += value * value;
+        }
+        const rms = Math.sqrt(sum / length);
+        return Math.min(1, rms * 2.2);
+      }
+
+      function monitorLevels() {
+        const localLevel = localAnalyser ? computeLevel(localAnalyser) : 0;
+        const remoteLevel = remoteAnalyser ? computeLevel(remoteAnalyser) : 0;
+        updateLocalLevel(localLevel);
+        updateRemoteLevel(remoteLevel);
+        levelAnimationFrame = requestAnimationFrame(monitorLevels);
+      }
+
+      function startLevelMonitoring() {
+        if (levelAnimationFrame) {
+          cancelAnimationFrame(levelAnimationFrame);
+        }
+        levelAnimationFrame = requestAnimationFrame(monitorLevels);
+      }
+
+      function stopLevelMonitoring() {
+        if (levelAnimationFrame) {
+          cancelAnimationFrame(levelAnimationFrame);
+          levelAnimationFrame = null;
+        }
+        if (localSource) {
+          try {
+            localSource.disconnect();
+          } catch {
+            /* noop */
+          }
+          localSource = null;
+        }
+        if (remoteSource) {
+          try {
+            remoteSource.disconnect();
+          } catch {
+            /* noop */
+          }
+          remoteSource = null;
+        }
+        localAnalyser = null;
+        remoteAnalyser = null;
+        updateLocalLevel(0);
+        updateRemoteLevel(0);
+      }
+
+      function connectLocalAnalyser(stream) {
+        const context = ensureAnalyserContext();
+        if (!context) {
+          return;
+        }
+        if (localSource) {
+          try {
+            localSource.disconnect();
+          } catch {
+            /* noop */
+          }
+        }
+        localAnalyser = context.createAnalyser();
+        localAnalyser.fftSize = 512;
+        localSource = context.createMediaStreamSource(stream);
+        localSource.connect(localAnalyser);
+        startLevelMonitoring();
+      }
+
+      function connectRemoteAnalyser(stream) {
+        const context = ensureAnalyserContext();
+        if (!context) {
+          return;
+        }
+        if (remoteSource) {
+          try {
+            remoteSource.disconnect();
+          } catch {
+            /* noop */
+          }
+        }
+        remoteAnalyser = context.createAnalyser();
+        remoteAnalyser.fftSize = 512;
+        remoteSource = context.createMediaStreamSource(stream);
+        remoteSource.connect(remoteAnalyser);
+        startLevelMonitoring();
+      }
+
+      function updateMuteState(muted, { applyTracks = true } = {}) {
+        voiceCallMuteBtn.dataset.muted = muted ? "true" : "false";
+        if (voiceCallMuteLabel) {
+          voiceCallMuteLabel.textContent = muted ? "Sesi Aç" : "Sesi Kapat";
+        }
+        if (applyTracks && localStream) {
+          localStream.getAudioTracks().forEach((track) => {
+            track.enabled = !muted;
+          });
+        }
+      }
+
+      function toggleMute() {
+        const nextMuted = voiceCallMuteBtn.dataset.muted !== "true";
+        updateMuteState(nextMuted);
+      }
+
+      async function ensureLocalStream() {
+        if (localStream) {
+          return localStream;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true },
+          });
+          localStream = stream;
+          voiceCallMuteBtn.disabled = false;
+          updateMuteState(false);
+          connectLocalAnalyser(stream);
+          return stream;
+        } catch (error) {
+          handlePermissionDenied(error);
+          throw error;
+        }
+      }
+
+      function handlePermissionDenied(error) {
+        console.error("Mikrofon izni alınamadı:", error);
+        state = "permission-denied";
+        if (voiceCallPermissionNotice) {
+          voiceCallPermissionNotice.hidden = false;
+        }
+        setStatus("Mikrofon izni gerekli. Tekrar dene.", "permission");
+        voiceCallMuteBtn.disabled = true;
+        stopLevelMonitoring();
+        updateControls();
+      }
+
+      function createPeerConnection() {
+        if (peerConnection) {
+          return peerConnection;
+        }
+        peerConnection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        peerConnection.onicecandidate = (event) => {
+          if (event.candidate && socket.connected) {
+            socket.emit("voice-call:candidate", { candidate: event.candidate.toJSON() });
+          }
+        };
+        peerConnection.ontrack = (event) => {
+          const [stream] = event.streams;
+          if (!stream) {
+            return;
+          }
+          remoteStream = stream;
+          if (voiceCallRemoteAudio) {
+            voiceCallRemoteAudio.srcObject = stream;
+            voiceCallRemoteAudio.play?.().catch(() => {});
+          }
+          connectRemoteAnalyser(stream);
+        };
+        peerConnection.onconnectionstatechange = () => {
+          if (!peerConnection) {
+            return;
+          }
+          const connectionState = peerConnection.connectionState;
+          if (connectionState === "connected") {
+            state = "connected";
+            setStatus("Görüşme başladı", "connected");
+          } else if (
+            (connectionState === "failed" || connectionState === "disconnected") &&
+            !isCleaningUp
+          ) {
+            handlePeerEnded();
+          }
+        };
+        peerConnection.oniceconnectionstatechange = () => {
+          if (!peerConnection) {
+            return;
+          }
+          const iceState = peerConnection.iceConnectionState;
+          if ((iceState === "failed" || iceState === "disconnected") && !isCleaningUp) {
+            handlePeerEnded();
+          }
+        };
+        if (localStream && !hasAddedLocalTracks) {
+          addLocalTracks(peerConnection, localStream);
+        }
+        return peerConnection;
+      }
+
+      function addLocalTracks(pc, stream) {
+        if (hasAddedLocalTracks) {
+          return;
+        }
+        stream.getAudioTracks().forEach((track) => {
+          pc.addTrack(track, stream);
+        });
+        hasAddedLocalTracks = true;
+      }
+
+      async function flushPendingCandidates() {
+        if (!peerConnection || !peerConnection.remoteDescription) {
+          return;
+        }
+        const candidates = [...pendingRemoteCandidates];
+        pendingRemoteCandidates = [];
+        for (const candidateInit of candidates) {
+          try {
+            await peerConnection.addIceCandidate(candidateInit);
+          } catch (error) {
+            console.error("ICE adayı eklenemedi:", error);
+          }
+        }
+      }
+
+      async function startOutgoingCall({ fromRetry = false } = {}) {
+        if (!isMatched) {
+          return;
+        }
+        if (!fromRetry && state !== "idle") {
+          return;
+        }
+        if (fromRetry && state !== "permission-denied") {
+          return;
+        }
+        lastIntent = "outgoing";
+        if (!fromRetry) {
+          resetCallUi();
+          showOverlay();
+        } else {
+          if (voiceCallPermissionNotice) {
+            voiceCallPermissionNotice.hidden = true;
+          }
+          setStatus("Bağlanıyor…", "connecting");
+        }
+        state = "requesting-stream";
+        try {
+          const stream = await ensureLocalStream();
+          const pc = createPeerConnection();
+          addLocalTracks(pc, stream);
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          role = "caller";
+          shouldNotifyPeerOnEnd = true;
+          hasSentEndSignal = false;
+          state = "awaiting-answer";
+          socket.emit("voice-call:offer", { sdp: offer });
+        } catch (error) {
+          if (state !== "permission-denied") {
+            console.error("Sesli arama başlatılamadı:", error);
+            handleEnd({ notifyPeer: false, showStatus: true });
+          }
+        }
+      }
+
+      async function beginIncomingCall() {
+        if (!pendingRemoteOffer) {
+          return;
+        }
+        state = "requesting-stream";
+        try {
+          const stream = await ensureLocalStream();
+          const pc = createPeerConnection();
+          addLocalTracks(pc, stream);
+          await pc.setRemoteDescription(pendingRemoteOffer);
+          pendingRemoteOffer = null;
+          await flushPendingCandidates();
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          role = "callee";
+          state = "connecting";
+          socket.emit("voice-call:answer", { sdp: answer });
+        } catch (error) {
+          if (state === "permission-denied") {
+            return;
+          }
+          console.error("Sesli arama yanıtı gönderilemedi:", error);
+          handleEnd({ notifyPeer: true, showStatus: true });
+        }
+      }
+
+      async function handleOffer(payload) {
+        if (!payload || !payload.sdp) {
+          return;
+        }
+        if (!isMatched) {
+          socket.emit("voice-call:end");
+          return;
+        }
+        if (overlayVisible() && state !== "permission-denied") {
+          socket.emit("voice-call:end");
+          return;
+        }
+        pendingRemoteOffer = payload.sdp;
+        lastIntent = "incoming";
+        shouldNotifyPeerOnEnd = true;
+        hasSentEndSignal = false;
+        resetCallUi();
+        showOverlay();
+        state = "incoming";
+        await beginIncomingCall();
+      }
+
+      async function handleAnswer(payload) {
+        if (!payload || !payload.sdp) {
+          return;
+        }
+        if (!peerConnection || role !== "caller") {
+          return;
+        }
+        try {
+          await peerConnection.setRemoteDescription(payload.sdp);
+          await flushPendingCandidates();
+        } catch (error) {
+          console.error("Sesli arama cevabı uygulanamadı:", error);
+          handleEnd({ notifyPeer: false, showStatus: true });
+        }
+      }
+
+      async function handleCandidate(payload) {
+        if (!payload || !payload.candidate) {
+          return;
+        }
+        if (!peerConnection || !peerConnection.remoteDescription) {
+          pendingRemoteCandidates.push(payload.candidate);
+          return;
+        }
+        try {
+          await peerConnection.addIceCandidate(payload.candidate);
+        } catch (error) {
+          console.error("ICE adayı eklenemedi:", error);
+        }
+      }
+
+      function handleRetry() {
+        if (state !== "permission-denied") {
+          return;
+        }
+        if (voiceCallPermissionNotice) {
+          voiceCallPermissionNotice.hidden = true;
+        }
+        setStatus("Bağlanıyor…", "connecting");
+        if (lastIntent === "outgoing") {
+          startOutgoingCall({ fromRetry: true });
+        } else if (lastIntent === "incoming") {
+          beginIncomingCall();
+        }
+      }
+
+      function handlePeerEnded() {
+        if (isCleaningUp) {
+          return;
+        }
+        shouldNotifyPeerOnEnd = false;
+        hasSentEndSignal = true;
+        setStatus("Bağlantı koptu", "ended");
+        teardown({ keepOverlay: true });
+        scheduleOverlayClose();
+      }
+
+      function handleEnd({ notifyPeer = true, showStatus = true } = {}) {
+        if (!overlayVisible() && state === "idle" && !peerConnection) {
+          hideOverlay();
+          return;
+        }
+        const permissionBlocked = state === "permission-denied";
+        if (notifyPeer && shouldNotifyPeerOnEnd && !hasSentEndSignal && socket.connected) {
+          socket.emit("voice-call:end");
+          hasSentEndSignal = true;
+        }
+        if (showStatus && !permissionBlocked) {
+          setStatus("Bağlantı koptu", "ended");
+        }
+        const keepOverlay = showStatus && !permissionBlocked;
+        teardown({ keepOverlay });
+        if (showStatus && !permissionBlocked) {
+          scheduleOverlayClose();
+        }
+      }
+
+      function teardown({ keepOverlay = false } = {}) {
+        isCleaningUp = true;
+        cleanupCloseTimer();
+        stopLevelMonitoring();
+        if (localStream) {
+          localStream.getTracks().forEach((track) => track.stop());
+          localStream = null;
+        }
+        if (remoteStream) {
+          remoteStream.getTracks().forEach((track) => track.stop());
+          remoteStream = null;
+        }
+        if (voiceCallRemoteAudio) {
+          voiceCallRemoteAudio.srcObject = null;
+        }
+        if (peerConnection) {
+          try {
+            peerConnection.close();
+          } catch {
+            /* noop */
+          }
+        }
+        if (peerConnection) {
+          peerConnection.onicecandidate = null;
+          peerConnection.ontrack = null;
+          peerConnection.onconnectionstatechange = null;
+          peerConnection.oniceconnectionstatechange = null;
+        }
+        peerConnection = null;
+        hasAddedLocalTracks = false;
+        pendingRemoteCandidates = [];
+        pendingRemoteOffer = null;
+        updateMuteState(false, { applyTracks: false });
+        voiceCallMuteBtn.disabled = true;
+        if (voiceCallPermissionNotice) {
+          voiceCallPermissionNotice.hidden = true;
+        }
+        shouldNotifyPeerOnEnd = false;
+        hasSentEndSignal = false;
+        role = null;
+        lastIntent = null;
+        state = "idle";
+        isCleaningUp = false;
+        updateControls();
+        if (!keepOverlay) {
+          hideOverlay();
+        }
+      }
+
+      function handleMatchStateChange(isActive) {
+        if (!isActive && (overlayVisible() || state !== "idle")) {
+          handleEnd({ notifyPeer: true, showStatus: false });
+        }
+      }
+
+      function handleDisconnect() {
+        if (overlayVisible() || state !== "idle") {
+          shouldNotifyPeerOnEnd = false;
+          hasSentEndSignal = true;
+          handleEnd({ notifyPeer: false, showStatus: false });
+        }
+      }
+
+      function isBusy() {
+        return overlayVisible() || state !== "idle";
+      }
+
+      voiceCallMuteBtn.addEventListener("click", () => {
+        if (voiceCallMuteBtn.disabled) {
+          return;
+        }
+        toggleMute();
+      });
+
+      voiceCallEndBtn.addEventListener("click", () => {
+        const shouldShowStatus = state !== "permission-denied";
+        handleEnd({ notifyPeer: true, showStatus: shouldShowStatus });
+      });
+
+      voiceCallCloseBtn?.addEventListener("click", () => {
+        const shouldShowStatus = state !== "permission-denied";
+        handleEnd({ notifyPeer: true, showStatus: shouldShowStatus });
+      });
+
+      voiceCallRetryBtn?.addEventListener("click", () => {
+        handleRetry();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && overlayVisible()) {
+          handleEnd({ notifyPeer: true, showStatus: false });
+        }
+      });
+
+      return {
+        startOutgoingCall,
         handleOffer,
         handleAnswer,
         handleCandidate,
