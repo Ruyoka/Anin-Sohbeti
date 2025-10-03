@@ -76,6 +76,8 @@
     }
 
     body {
+      --body-padding-block: clamp(20px, 6vh, 32px);
+      --body-padding-inline: clamp(16px, 5vw, 24px);
       margin: 0;
       background: radial-gradient(circle at top, rgba(196, 219, 196, 0.55), transparent 55%) var(--bg-body);
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -83,7 +85,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 32px 24px;
+      padding: var(--body-padding-block) var(--body-padding-inline);
     }
 
     .app-shell {
@@ -93,7 +95,7 @@
       box-shadow: var(--shadow-soft);
       display: flex;
       flex-direction: column;
-      min-height: calc(100dvh - 64px);
+      min-height: calc(100dvh - (var(--body-padding-block) * 2));
       max-height: 100dvh;
       overflow: hidden;
       position: relative;
@@ -147,26 +149,26 @@
     }
 
     .call-request-overlay {
-      position: absolute;
-      inset: 0;
+      position: sticky;
+      bottom: calc(var(--controls-padding-block-end) + var(--call-request-gap));
       display: flex;
-      align-items: center;
       justify-content: center;
-      padding: 32px 20px;
-      background: rgba(18, 34, 24, 0.35);
-      z-index: 5;
+      padding: 0 clamp(18px, 5vw, 28px);
       pointer-events: none;
       opacity: 0;
-      transition: opacity 180ms ease;
+      transform: translateY(12px);
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 2;
     }
 
     .call-request-overlay[data-open="true"] {
       opacity: 1;
+      transform: translateY(0);
       pointer-events: auto;
     }
 
     .call-request-overlay__card {
-      width: min(400px, 80vw);
+      width: min(440px, 100%);
       background: #ffffff;
       border-radius: 24px;
       box-shadow: 0 32px 60px -34px rgba(33, 64, 41, 0.55);
@@ -174,14 +176,16 @@
       display: flex;
       flex-direction: column;
       gap: 18px;
-      transform: translateY(12px);
+      transform: translateY(8px);
       opacity: 0;
+      pointer-events: none;
       transition: transform 180ms ease, opacity 180ms ease;
     }
 
     .call-request-overlay[data-open="true"] .call-request-overlay__card {
       transform: translateY(0);
       opacity: 1;
+      pointer-events: auto;
     }
 
     .call-request-overlay__title {
@@ -718,6 +722,8 @@
     }
 
     #chat {
+      --controls-padding-block-end: calc(18px + env(safe-area-inset-bottom));
+      --call-request-gap: clamp(12px, 2.5vh, 24px);
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -737,13 +743,13 @@
 
     #log {
       flex: 1;
-      padding: 28px 28px 32px;
+      padding: 28px 28px calc(32px + var(--call-request-gap));
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 14px;
       scroll-behavior: smooth;
-      scroll-padding-bottom: 32px;
+      scroll-padding-bottom: calc(32px + var(--call-request-gap));
     }
 
     #log::-webkit-scrollbar {
@@ -982,8 +988,8 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 14px;
-      padding: 18px 24px calc(18px + env(safe-area-inset-bottom));
+      gap: clamp(12px, 3vw, 18px);
+      padding: clamp(14px, 3vw, 18px) clamp(18px, 5vw, 24px) var(--controls-padding-block-end);
       background: rgba(255, 255, 255, 0.98);
       position: sticky;
       bottom: 0;
@@ -1174,7 +1180,9 @@
 
     @media (max-width: 768px) {
       body {
-        padding: 0;
+        --body-padding-block: max(16px, env(safe-area-inset-top), env(safe-area-inset-bottom));
+        --body-padding-inline: clamp(12px, 5vw, 20px);
+        justify-content: flex-start;
         align-items: stretch;
         background: var(--bg-panel);
       }
@@ -1183,25 +1191,30 @@
         width: 100%;
         border-radius: 0;
         box-shadow: none;
-        min-height: 100dvh;
+        min-height: calc(100dvh - (var(--body-padding-block) * 2));
         max-height: none;
       }
 
       header {
-        padding: 24px 20px 12px;
+        padding: 24px var(--body-padding-inline) 12px;
       }
 
       header h1 {
         font-size: 24px;
       }
 
+      #chat {
+        --controls-padding-block-end: calc(16px + env(safe-area-inset-bottom));
+        --call-request-gap: clamp(10px, 5vw, 18px);
+      }
+
       #log {
-        padding: 22px 18px 28px;
+        padding: 22px var(--body-padding-inline) calc(24px + var(--call-request-gap));
       }
 
       #controls {
-        padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
-        gap: 12px;
+        padding: clamp(14px, 4vw, 18px) var(--body-padding-inline) var(--controls-padding-block-end);
+        gap: clamp(10px, 4vw, 16px);
       }
 
     }
@@ -1230,11 +1243,11 @@
       }
 
       .call-request-overlay {
-        padding: 24px 16px;
+        padding: 0 var(--body-padding-inline, 16px);
       }
 
       .call-request-overlay__card {
-        width: 80%;
+        width: 100%;
       }
 
       .voice-call-overlay {
@@ -1306,48 +1319,6 @@
         <div class="confirm-modal-actions">
           <button id="skip-confirm-cancel" type="button" class="confirm-cancel">Vazgeç</button>
           <button id="skip-confirm-confirm" type="button" class="confirm-accept">Devam Et</button>
-        </div>
-      </div>
-    </div>
-    <div
-      id="call-request-overlay"
-      class="call-request-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-hidden="true"
-      hidden
-    >
-      <div class="call-request-overlay__card">
-        <h2 class="call-request-overlay__title" id="call-request-title"></h2>
-        <p class="call-request-overlay__text" id="call-request-text"></p>
-        <p class="call-request-overlay__countdown" id="call-request-countdown" hidden></p>
-        <div class="call-request-overlay__actions" id="call-request-actions-outgoing">
-          <button
-            type="button"
-            class="call-request-button call-request-button--danger"
-            id="call-request-cancel"
-          >
-            İptal Et
-          </button>
-        </div>
-        <div
-          class="call-request-overlay__actions call-request-overlay__actions--incoming"
-          id="call-request-actions-incoming"
-        >
-          <button
-            type="button"
-            class="call-request-button call-request-button--accept"
-            id="call-request-accept"
-          >
-            Olur
-          </button>
-          <button
-            type="button"
-            class="call-request-button call-request-button--danger"
-            id="call-request-reject"
-          >
-            İstemem
-          </button>
         </div>
       </div>
     </div>
@@ -1472,6 +1443,48 @@
     <div id="chat">
       <div class="chat-window">
         <div id="log"></div>
+        <div
+          id="call-request-overlay"
+          class="call-request-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-hidden="true"
+          hidden
+        >
+          <div class="call-request-overlay__card">
+            <h2 class="call-request-overlay__title" id="call-request-title"></h2>
+            <p class="call-request-overlay__text" id="call-request-text"></p>
+            <p class="call-request-overlay__countdown" id="call-request-countdown" hidden></p>
+            <div class="call-request-overlay__actions" id="call-request-actions-outgoing">
+              <button
+                type="button"
+                class="call-request-button call-request-button--danger"
+                id="call-request-cancel"
+              >
+                İptal Et
+              </button>
+            </div>
+            <div
+              class="call-request-overlay__actions call-request-overlay__actions--incoming"
+              id="call-request-actions-incoming"
+            >
+              <button
+                type="button"
+                class="call-request-button call-request-button--accept"
+                id="call-request-accept"
+              >
+                Olur
+              </button>
+              <button
+                type="button"
+                class="call-request-button call-request-button--danger"
+                id="call-request-reject"
+              >
+                İstemem
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="controls">
         <div class="controls__composer">
