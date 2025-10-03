@@ -1,0 +1,29 @@
+# Node dependencies
+node_modules/
+
+# Environment files
+.env
+
+# macOS
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+
+# Android Studio
+android-app/.idea/
+android-app/.gradle/
+android-app/local.properties
+
+# Gradle wrapper binaries will be downloaded on demand
+android-app/gradle/wrapper/gradle-wrapper.jar
+android-app/gradle/wrapper/gradle-wrapper-*.jar
+
+# Archive artifacts
+*.zip
+

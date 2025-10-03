@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Anın Sohbeti</string>
+    <string name="exit_confirmation_message">Sayfadan ayrılmak istediğinize emin misiniz?</string>
+    <string name="yes">Evet</string>
+    <string name="no">Hayır</string>
+    <string name="offline_message">Bağlantı yok. Lütfen internetinizi kontrol edin.</string>
+    <string name="retry">Yenile</string>
+</resources>
