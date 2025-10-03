@@ -38,6 +38,16 @@ Gerçek zamanlı, rastgele eşleştirmeli sohbet uygulaması.
 
 Testler; eşleşme, mesajlaşma, "Sonraki" akışı, bağlantı kopmaları ve 2000 karakter sınırı gibi temel sohbet işlevlerini doğrular.
 
+## Android WebView uygulamasını arşivleme
+
+Android projesinin tamamını tek bir `.zip` arşivi haline getirmek için depo kökünden aşağıdaki komutu çalıştırabilirsiniz:
+
+```bash
+scripts/make-zip.sh
+```
+
+Komut `dist/anin-sohbeti-android.zip` dosyasını üretir. Arşiv, Gradle'ın indireceği geçici dosyalar ve makineye özel ayarları içermez.
+
 ## Docker ile çalışma
 
 Uygulamayı Docker içerisinde çalıştırmak için:
