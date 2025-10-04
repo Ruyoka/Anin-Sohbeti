@@ -1531,6 +1531,7 @@
     const callBtn = document.getElementById("call");
     const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
     const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
+    const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
     const voiceCallStatus = document.getElementById("voice-call-status");
     const voiceCallPermissionNotice = document.getElementById("voice-call-permission");
@@ -3376,10 +3377,26 @@
       return bubble;
     }
 
+    function scrollChatToBottom() {
+      log.scrollTop = log.scrollHeight;
+
+      if (!mobileViewportMatcher.matches) {
+        return;
+      }
+
+      window.requestAnimationFrame(() => {
+        const scrollElement = document.scrollingElement || document.documentElement;
+        if (!scrollElement) {
+          return;
+        }
+        scrollElement.scrollTop = scrollElement.scrollHeight;
+      });
+    }
+
     function appendMessage(txt, type = "system", prefixText) {
       const bubble = createMessageElement(txt, type, prefixText);
       log.appendChild(bubble);
-      log.scrollTop = log.scrollHeight;
+      scrollChatToBottom();
       return bubble;
     }
 
