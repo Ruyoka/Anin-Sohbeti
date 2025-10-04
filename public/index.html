@@ -1182,6 +1182,12 @@
     }
 
     @media (max-width: 768px) {
+      html,
+      body {
+        height: 100dvh;
+        overflow: hidden;
+      }
+
       body {
         padding: 0;
         align-items: stretch;
@@ -1194,23 +1200,59 @@
         box-shadow: none;
         min-height: 100dvh;
         max-height: none;
+        height: 100dvh;
+        overflow: hidden;
       }
 
       header {
         padding: 24px 20px 12px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
       }
 
       header h1 {
         font-size: 24px;
       }
 
+      #chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding-top: var(--header-offset, 0px);
+      }
+
+      .chat-window {
+        flex: 1 1 auto;
+      }
+
       #log {
         padding: 22px 18px 28px;
+        height: calc(100dvh - var(--header-offset, 0px) - var(--controls-offset, 0px));
+        flex: none;
       }
 
       #controls {
         padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
         gap: 12px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 2;
+      }
+
+      .modal-overlay {
+        bottom: 0;
+        align-items: flex-end;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom) + var(--controls-offset, 0px));
+      }
+
+      .call-request-overlay {
+        bottom: 0;
+        align-items: flex-end;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom) + var(--controls-offset, 0px));
       }
 
     }
@@ -1550,6 +1592,7 @@
     const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
     const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
     const controls = document.getElementById("controls");
+    const headerEl = document.querySelector("header");
     const updateControlsOffset = () => {
       if (!controls) {
         return;
@@ -1558,6 +1601,16 @@
       document.documentElement.style.setProperty(
         "--controls-offset",
         `${controls.offsetHeight}px`,
+      );
+    };
+    const updateHeaderOffset = () => {
+      if (!headerEl) {
+        return;
+      }
+
+      document.documentElement.style.setProperty(
+        "--header-offset",
+        `${headerEl.offsetHeight}px`,
       );
     };
 
@@ -1570,6 +1623,17 @@
       }
 
       window.addEventListener("resize", updateControlsOffset);
+    }
+
+    if (headerEl) {
+      updateHeaderOffset();
+
+      if ("ResizeObserver" in window) {
+        const headerObserver = new ResizeObserver(() => updateHeaderOffset());
+        headerObserver.observe(headerEl);
+      }
+
+      window.addEventListener("resize", updateHeaderOffset);
     }
 
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
