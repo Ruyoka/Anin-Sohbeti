@@ -64,6 +64,7 @@
       --shadow-soft: 0 32px 62px -40px rgba(34, 72, 41, 0.55);
       --radius-lg: 28px;
       --radius-md: 20px;
+      --controls-offset: 0px;
     }
 
     *, *::before, *::after {
@@ -128,8 +129,12 @@
     }
 
     .modal-overlay {
-      position: absolute;
-      inset: 0;
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -147,8 +152,12 @@
     }
 
     .call-request-overlay {
-      position: absolute;
-      inset: 0;
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1230,11 +1239,13 @@
       }
 
       .modal-overlay {
+        bottom: var(--controls-offset, 0px);
         align-items: flex-end;
         padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
       }
 
       .call-request-overlay {
+        bottom: var(--controls-offset, 0px);
         align-items: flex-end;
         padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
       }
@@ -1538,6 +1549,29 @@
     const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
     const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
     const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
+    const controls = document.getElementById("controls");
+    const updateControlsOffset = () => {
+      if (!controls) {
+        return;
+      }
+
+      document.documentElement.style.setProperty(
+        "--controls-offset",
+        `${controls.offsetHeight}px`,
+      );
+    };
+
+    if (controls) {
+      updateControlsOffset();
+
+      if ("ResizeObserver" in window) {
+        const controlsObserver = new ResizeObserver(() => updateControlsOffset());
+        controlsObserver.observe(controls);
+      }
+
+      window.addEventListener("resize", updateControlsOffset);
+    }
+
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
     const voiceCallStatus = document.getElementById("voice-call-status");
     const voiceCallPermissionNotice = document.getElementById("voice-call-permission");
