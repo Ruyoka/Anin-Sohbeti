@@ -64,6 +64,7 @@
       --shadow-soft: 0 32px 62px -40px rgba(34, 72, 41, 0.55);
       --radius-lg: 28px;
       --radius-md: 20px;
+      --log-bottom-offset: 32px;
     }
 
     *, *::before, *::after {
@@ -737,13 +738,13 @@
 
     #log {
       flex: 1;
-      padding: 28px 28px 32px;
+      padding: 28px 28px var(--log-bottom-offset);
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 14px;
       scroll-behavior: smooth;
-      scroll-padding-bottom: 32px;
+      scroll-padding-bottom: var(--log-bottom-offset);
     }
 
     #log::-webkit-scrollbar {
@@ -1221,12 +1222,50 @@
     }
 
     @media (max-width: 767px) {
+      body {
+        display: block;
+        padding: 0;
+        justify-content: flex-start;
+        align-items: stretch;
+      }
+
+      .app-shell {
+        width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 100dvh;
+        max-height: none;
+      }
+
+      header {
+        padding: 24px 20px 12px;
+      }
+
       .controls__composer {
         padding: 6px 12px 6px 16px;
       }
 
       .controls__actions {
         gap: 10px;
+      }
+
+      #log {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      #controls {
+        position: fixed;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        bottom: max(env(safe-area-inset-bottom), 0px);
+        width: min(520px, 100%);
+        margin: 0 auto;
+        padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -16px 34px -28px rgba(34, 72, 41, 0.55);
+        z-index: 10;
       }
 
       .call-request-overlay {
@@ -1531,6 +1570,12 @@
     const callBtn = document.getElementById("call");
     const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
     const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
+    const controls = document.getElementById("controls");
+    const rootElement = document.documentElement;
+    const defaultLogBottomOffset =
+      getComputedStyle(rootElement).getPropertyValue("--log-bottom-offset") || "32px";
+    const normalizedDefaultLogBottomOffset = defaultLogBottomOffset.trim() || "32px";
+    const mobileLayoutQuery = window.matchMedia("(max-width: 767px)");
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
     const voiceCallStatus = document.getElementById("voice-call-status");
     const voiceCallPermissionNotice = document.getElementById("voice-call-permission");
@@ -1590,6 +1635,48 @@
     let isCallCoolingDown = false;
     let callCooldownTimer = null;
     let callCooldownRemaining = 0;
+
+    function updateLogBottomOffset() {
+      if (!log) {
+        return;
+      }
+
+      if (!mobileLayoutQuery.matches || !controls) {
+        rootElement.style.setProperty("--log-bottom-offset", normalizedDefaultLogBottomOffset);
+        return;
+      }
+
+      const offset = Math.max(controls.offsetHeight + 24, 32);
+      rootElement.style.setProperty("--log-bottom-offset", `${offset}px`);
+    }
+
+    if (typeof ResizeObserver !== "undefined" && controls) {
+      const controlsResizeObserver = new ResizeObserver(() => {
+        updateLogBottomOffset();
+      });
+      controlsResizeObserver.observe(controls);
+    }
+
+    if (mobileLayoutQuery.addEventListener) {
+      mobileLayoutQuery.addEventListener("change", () => {
+        updateLogBottomOffset();
+      });
+    } else if (mobileLayoutQuery.addListener) {
+      mobileLayoutQuery.addListener(updateLogBottomOffset);
+    }
+
+    window.addEventListener("resize", updateLogBottomOffset);
+    window.addEventListener("orientationchange", updateLogBottomOffset);
+
+    if (msg) {
+      ["focus", "blur", "input"].forEach((eventName) => {
+        msg.addEventListener(eventName, () => {
+          setTimeout(updateLogBottomOffset, 0);
+        });
+      });
+    }
+
+    updateLogBottomOffset();
 
     function createWaitingMiniGame(container, startButton) {
       const GAME_DURATION_SECONDS = 60;
