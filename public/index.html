@@ -269,7 +269,7 @@
     }
 
     .voice-call-overlay {
-      position: absolute;
+      position: fixed;
       inset: 0;
       display: flex;
       align-items: center;
@@ -1205,10 +1205,15 @@
       }
 
       #log {
-        padding: 22px 18px 28px;
+        padding: 22px 18px calc(28px + var(--controls-offset, 0px));
+        scroll-padding-bottom: calc(28px + var(--controls-offset, 0px));
       }
 
       #controls {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
         padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
         gap: 12px;
       }
@@ -1240,22 +1245,38 @@
 
       .modal-overlay {
         bottom: var(--controls-offset, 0px);
-        align-items: flex-end;
-        padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+        display: block;
+        padding: 0;
+      }
+
+      .modal-overlay > .confirm-modal {
+        position: absolute;
+        left: 0;
+        right: 0;
+        margin: 0 auto;
+        bottom: calc(env(safe-area-inset-bottom) + 24px);
+        width: min(360px, calc(100% - 32px));
       }
 
       .call-request-overlay {
         bottom: var(--controls-offset, 0px);
-        align-items: flex-end;
-        padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+        display: block;
+        padding: 0;
       }
 
       .call-request-overlay__card {
-        width: 80%;
+        position: absolute;
+        left: 0;
+        right: 0;
+        margin: 0 auto;
+        bottom: calc(env(safe-area-inset-bottom) + 24px);
+        width: min(400px, calc(100% - 32px));
       }
 
       .voice-call-overlay {
         padding: 0;
+        bottom: var(--controls-offset, 0px);
+        display: block;
       }
 
       .voice-call-overlay__panel {
@@ -1263,6 +1284,11 @@
         width: 100%;
         max-width: none;
         min-height: 100%;
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
       }
 
       .voice-call-overlay__actions {
