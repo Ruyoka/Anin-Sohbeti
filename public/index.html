@@ -20,6 +20,12 @@
 
     <section class="chat-panel" aria-live="polite">
       <div id="log" class="message-feed" role="log"></div>
+      <div
+        id="overlayPortal"
+        class="overlay-portal"
+        aria-live="assertive"
+        aria-atomic="true"
+      ></div>
       <form id="controls" class="controls" autocomplete="off">
         <label class="sr-only" for="msg">Mesaj yaz</label>
         <input id="msg" class="controls__input" placeholder="Mesaj yaz..." aria-label="Mesaj yaz" required>
@@ -54,6 +60,182 @@
     let isQueued = false;
     let partnerNickname = "Yabancı";
 
+    const overlayPortal = document.getElementById("overlayPortal");
+    const chatPanel = document.querySelector(".chat-panel");
+    const rootElement = document.documentElement;
+    const mobileLayoutQuery = window.matchMedia("(max-width: 768px)");
+
+    const overlayOrigins = new Map();
+    const overlaySelectors = [
+      "[data-overlay]",
+      "[data-role=\"call-overlay\"]",
+      "[data-role=\"next-overlay\"]",
+      ".call-overlay",
+      ".incoming-call-overlay",
+      "#callOverlay",
+      ".next-overlay",
+      ".sonraki-overlay",
+      "#nextOverlay",
+    ];
+
+    function scrollToBottom({ smooth = true } = {}) {
+      const behavior = smooth && typeof log.scrollTo === "function" ? "smooth" : "auto";
+
+      requestAnimationFrame(() => {
+        if (typeof log.scrollTo === "function") {
+          log.scrollTo({ top: log.scrollHeight, behavior });
+        } else {
+          log.scrollTop = log.scrollHeight;
+        }
+      });
+    }
+
+    function updateStickyMetrics() {
+      if (!mobileLayoutQuery.matches) {
+        rootElement.style.removeProperty("--controls-height");
+        rootElement.style.removeProperty("--feed-bottom-gap");
+        return;
+      }
+
+      const controlsHeight = controls?.offsetHeight || 0;
+      const overlayHeight =
+        overlayPortal && overlayPortal.childElementCount
+          ? overlayPortal.offsetHeight
+          : 0;
+
+      rootElement.style.setProperty("--controls-height", `${controlsHeight}px`);
+      rootElement.style.setProperty(
+        "--feed-bottom-gap",
+        `${controlsHeight + overlayHeight}px`
+      );
+    }
+
+    function restoreOverlay(overlay) {
+      const origin = overlayOrigins.get(overlay);
+      if (!origin || !origin.parent) {
+        return;
+      }
+
+      if (overlay.parentElement === origin.parent) {
+        return;
+      }
+
+      if (origin.nextSibling && origin.nextSibling.parentNode === origin.parent) {
+        origin.parent.insertBefore(overlay, origin.nextSibling);
+        return;
+      }
+
+      origin.parent.appendChild(overlay);
+    }
+
+    function relocateOverlays() {
+      if (!chatPanel || !overlayPortal) {
+        updateStickyMetrics();
+        return;
+      }
+
+      const overlays = new Set();
+      overlaySelectors.forEach((selector) => {
+        chatPanel.querySelectorAll(selector).forEach((node) => overlays.add(node));
+      });
+
+      overlayOrigins.forEach((_value, overlay) => {
+        if (!document.contains(overlay)) {
+          overlayOrigins.delete(overlay);
+        }
+      });
+
+      let moved = false;
+
+      overlays.forEach((overlay) => {
+        if (!overlayOrigins.has(overlay)) {
+          overlayOrigins.set(overlay, {
+            parent: overlay.parentElement,
+            nextSibling: overlay.nextElementSibling,
+          });
+        }
+
+        if (mobileLayoutQuery.matches) {
+          if (overlay.parentElement !== overlayPortal) {
+            overlayPortal.appendChild(overlay);
+            moved = true;
+          }
+        } else {
+          restoreOverlay(overlay);
+        }
+      });
+
+      overlayPortal.classList.toggle(
+        "overlay-portal--active",
+        mobileLayoutQuery.matches && overlayPortal.childElementCount > 0
+      );
+
+      updateStickyMetrics();
+
+      if (moved) {
+        scrollToBottom({ smooth: true });
+      }
+    }
+
+    const handleLayoutChange = () => {
+      relocateOverlays();
+      scrollToBottom({ smooth: mobileLayoutQuery.matches });
+    };
+
+    if (typeof mobileLayoutQuery.addEventListener === "function") {
+      mobileLayoutQuery.addEventListener("change", handleLayoutChange);
+    } else if (typeof mobileLayoutQuery.addListener === "function") {
+      mobileLayoutQuery.addListener(handleLayoutChange);
+    }
+
+    if (chatPanel) {
+      const chatMutationObserver = new MutationObserver((mutations) => {
+        const shouldRelocate = mutations.some((mutation) => {
+          if (mutation.type !== "childList") {
+            return false;
+          }
+
+          if (mutation.addedNodes.length || mutation.removedNodes.length) {
+            return true;
+          }
+
+          return false;
+        });
+
+        if (shouldRelocate) {
+          relocateOverlays();
+        }
+      });
+
+      chatMutationObserver.observe(chatPanel, { childList: true, subtree: true });
+    }
+
+    if ("ResizeObserver" in window) {
+      const resizeObserver = new ResizeObserver(() => {
+        updateStickyMetrics();
+      });
+
+      resizeObserver.observe(controls);
+
+      if (overlayPortal) {
+        resizeObserver.observe(overlayPortal);
+      }
+    }
+
+    window.addEventListener("resize", () => {
+      updateStickyMetrics();
+      relocateOverlays();
+    });
+
+    window.addEventListener("orientationchange", () => {
+      updateStickyMetrics();
+      relocateOverlays();
+      scrollToBottom({ smooth: mobileLayoutQuery.matches });
+    });
+
+    relocateOverlays();
+    scrollToBottom({ smooth: false });
+    updateStickyMetrics();
 
     function setStatus(text, state = "idle") {
       statusBadge.textContent = text;
@@ -67,6 +249,7 @@
         sendButton.disabled = false;
         nextButton.disabled = false;
         controls.classList.remove("controls--disabled", "controls--waiting");
+        updateStickyMetrics();
         return;
       }
 
@@ -77,12 +260,14 @@
         nextButton.disabled = false;
         controls.classList.add("controls--waiting");
         controls.classList.remove("controls--disabled");
+        updateStickyMetrics();
         return;
       }
 
       nextButton.disabled = true;
       controls.classList.add("controls--disabled");
       controls.classList.remove("controls--waiting");
+      updateStickyMetrics();
     }
 
     function queueForMatch({ message, statusText = "Eşleşme bekleniyor" } = {}) {
@@ -141,7 +326,7 @@
       }
 
       log.appendChild(article);
-      log.scrollTop = log.scrollHeight;
+      scrollToBottom({ smooth: true });
     }
 
     socket.on("connect", () => {
