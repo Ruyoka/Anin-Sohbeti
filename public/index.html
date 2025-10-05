@@ -758,6 +758,8 @@
     .app-header__action {
       width: 44px;
       height: 44px;
+      min-height: 0;
+      padding: 0;
       border-radius: 999px;
       border: 1px solid rgba(46, 125, 82, 0.12);
       background: #ffffff;
@@ -770,10 +772,33 @@
       transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
     }
 
+    .app-header__action-icon {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+    }
+
     .app-header__action svg {
       width: 20px;
       height: 20px;
       fill: currentColor;
+    }
+
+    .app-header__action-label {
+      display: none;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+      color: var(--accent);
+    }
+
+    .app-header__action[data-countdown="true"] .app-header__action-icon {
+      display: none;
+    }
+
+    .app-header__action[data-countdown="true"] .app-header__action-label {
+      display: inline;
     }
 
     .app-header__action:hover,
@@ -1136,33 +1161,6 @@
       transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
     }
 
-    .control-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      min-height: 52px;
-      padding: 14px 22px;
-      font-size: 15px;
-      border-radius: 999px;
-    }
-
-    .control-button__icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .control-button__label {
-      font-weight: 600;
-    }
-
-    #controls .control-button {
-      flex: 1 1 0;
-      min-width: 0;
-      white-space: nowrap;
-    }
-
     #send {
       width: 44px;
       height: 44px;
@@ -1194,66 +1192,6 @@
       transform: none;
       box-shadow: none;
       cursor: not-allowed;
-    }
-
-    .controls__actions {
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
-      gap: 12px;
-      width: 100%;
-    }
-
-    #call.control-button {
-      background: #eff7ee;
-      color: var(--accent);
-      padding: 14px 20px;
-      font-size: 15px;
-      box-shadow: 0 16px 32px -28px rgba(34, 72, 41, 0.5);
-      border: 1px solid rgba(47, 123, 69, 0.14);
-    }
-
-    #call.control-button svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    #call.control-button:not(:disabled):hover,
-    #call.control-button:not(:disabled):focus-visible {
-      background: #e6f3e5;
-      transform: translateY(-1px);
-    }
-
-    #call.control-button:disabled {
-      opacity: 0.5;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    #next.control-button {
-      background: #eff7ee;
-      color: var(--accent);
-      border: 1px solid var(--bubble-border);
-      box-shadow: 0 18px 34px -28px rgba(34, 72, 41, 0.6);
-    }
-
-    #next.control-button svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    #next.control-button:disabled {
-      opacity: 0.5;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    #call.control-button:not(:disabled):hover,
-    #call.control-button:not(:disabled):focus-visible,
-    #next.control-button:not(:disabled):hover,
-    #next.control-button:not(:disabled):focus-visible {
-      background: #e6f3e5;
-      transform: translateY(-1px);
     }
 
     button:disabled {
@@ -1436,12 +1374,15 @@
             id="header-call"
             aria-label="Arama (Call)"
           >
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path
-                d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
-                fill="currentColor"
-              />
-            </svg>
+            <span class="app-header__action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span class="app-header__action-label" aria-hidden="true">Ara</span>
           </button>
           <button
             type="button"
@@ -1449,16 +1390,19 @@
             id="header-next"
             aria-label="Sonraki (Next)"
           >
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path
-                d="M4.94 4.44a.75.75 0 0 1 1.06 0l5.78 5.78a.75.75 0 0 1 0 1.06l-5.78 5.78a.75.75 0 1 1-1.06-1.06L9.73 11 4.94 6.2a.75.75 0 0 1 0-1.06Z"
-                fill="currentColor"
-              />
-              <path
-                d="M11.94 4.44a.75.75 0 0 1 1.06 0l5.78 5.78a.75.75 0 0 1 0 1.06l-5.78 5.78a.75.75 0 1 1-1.06-1.06L16.73 11l-4.79-4.8a.75.75 0 0 1 0-1.06Z"
-                fill="currentColor"
-              />
-            </svg>
+            <span class="app-header__action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M4.94 4.44a.75.75 0 0 1 1.06 0l5.78 5.78a.75.75 0 0 1 0 1.06l-5.78 5.78a.75.75 0 1 1-1.06-1.06L9.73 11 4.94 6.2a.75.75 0 0 1 0-1.06Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M11.94 4.44a.75.75 0 0 1 1.06 0l5.78 5.78a.75.75 0 0 1 0 1.06l-5.78 5.78a.75.75 0 1 1-1.06-1.06L16.73 11l-4.79-4.8a.75.75 0 0 1 0-1.06Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span class="app-header__action-label" aria-hidden="true">Sonraki</span>
           </button>
         </div>
       </div>
@@ -1687,30 +1631,6 @@
             <span class="visually-hidden">Gönder</span>
           </button>
         </div>
-        <div class="controls__actions">
-          <button id="call" type="button" class="control-button control-button--call">
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span class="control-button__label">Ara</span>
-          </button>
-          <button id="next" type="button" class="control-button control-button--next">
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M6.02 4.22a.75.75 0 0 1 1.06 0l6.22 6.22h-5.3a.75.75 0 0 0 0 1.5h5.3l-6.22 6.22a.75.75 0 1 0 1.06 1.06l7.5-7.5a.75.75 0 0 0 0-1.06l-7.5-7.5a.75.75 0 0 1 0-1.06Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span class="control-button__label">Sonraki</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -1721,13 +1641,11 @@
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
-    const nextBtn = document.getElementById("next");
-    const callBtn = document.getElementById("call");
-    const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
-    const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
+    const callBtn = document.getElementById("header-call");
+    const callBtnIcon = callBtn ? callBtn.querySelector(".app-header__action-icon") : null;
+    const callBtnLabel = callBtn ? callBtn.querySelector(".app-header__action-label") : null;
+    const nextBtn = document.getElementById("header-next");
     const headerNicknameEl = document.getElementById("header-nickname");
-    const headerCallBtn = document.getElementById("header-call");
-    const headerNextBtn = document.getElementById("header-next");
     const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
     const controls = document.getElementById("controls");
     const headerEl = document.querySelector("header");
@@ -1772,26 +1690,6 @@
       }
 
       window.addEventListener("resize", updateHeaderOffset);
-    }
-
-    if (headerCallBtn) {
-      headerCallBtn.addEventListener("click", () => {
-        if (headerCallBtn.disabled) {
-          return;
-        }
-
-        callBtn?.click();
-      });
-    }
-
-    if (headerNextBtn) {
-      headerNextBtn.addEventListener("click", () => {
-        if (headerNextBtn.disabled) {
-          return;
-        }
-
-        nextBtn?.click();
-      });
     }
 
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
@@ -2581,7 +2479,7 @@
     }
 
     function updateCallButtonVisualState() {
-      if (!callBtn || !callBtnLabel) {
+      if (!callBtn) {
         return;
       }
       if (isCallCoolingDown) {
@@ -2589,20 +2487,20 @@
         if (callBtnIcon) {
           callBtnIcon.hidden = true;
         }
-        callBtnLabel.textContent = `${safeRemaining} sn`;
-        callBtn.dataset.countdown = "true";
-        if (headerCallBtn) {
-          headerCallBtn.dataset.countdown = "true";
+        if (callBtnLabel) {
+          callBtnLabel.textContent = `${safeRemaining} sn`;
         }
+        callBtn.dataset.countdown = "true";
+        callBtn.setAttribute("aria-label", `Arama (Call) - ${safeRemaining} saniye`);
       } else {
         if (callBtnIcon) {
           callBtnIcon.hidden = false;
         }
-        callBtnLabel.textContent = "Ara";
-        delete callBtn.dataset.countdown;
-        if (headerCallBtn) {
-          delete headerCallBtn.dataset.countdown;
+        if (callBtnLabel) {
+          callBtnLabel.textContent = "Ara";
         }
+        delete callBtn.dataset.countdown;
+        callBtn.setAttribute("aria-label", "Arama (Call)");
       }
     }
 
@@ -2658,9 +2556,8 @@
       msg.disabled = !isMatched;
       sendBtn.disabled = !isMatched || !hasMessage || isCoolingDown;
       const isNextDisabled = !isMatched || isSearchCountdownActive;
-      nextBtn.disabled = isNextDisabled;
-      if (headerNextBtn) {
-        headerNextBtn.disabled = isNextDisabled;
+      if (nextBtn) {
+        nextBtn.disabled = isNextDisabled;
       }
 
       const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
@@ -2672,10 +2569,6 @@
         callBtn.disabled = isCallDisabled;
         updateCallButtonVisualState();
       }
-
-      if (headerCallBtn) {
-        headerCallBtn.disabled = isCallDisabled;
-      }
     }
 
     function setMatchedState(state) {
@@ -2685,10 +2578,10 @@
       } else {
         hideWaitingStatus();
       }
-    voiceCallManager?.handleMatchStateChange?.(state);
-    callRequestController?.handleMatchStateChange?.(state);
-    updateControls();
-  }
+      voiceCallManager?.handleMatchStateChange?.(state);
+      callRequestController?.handleMatchStateChange?.(state);
+      updateControls();
+    }
 
     voiceCallManager = (() => {
       if (!voiceCallOverlay || !voiceCallStatus || !voiceCallMuteBtn || !voiceCallEndBtn) {
