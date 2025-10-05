@@ -64,6 +64,7 @@
       --shadow-soft: 0 32px 62px -40px rgba(34, 72, 41, 0.55);
       --radius-lg: 28px;
       --radius-md: 20px;
+      --controls-offset: 0px;
     }
 
     *, *::before, *::after {
@@ -128,8 +129,12 @@
     }
 
     .modal-overlay {
-      position: absolute;
-      inset: 0;
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -147,8 +152,12 @@
     }
 
     .call-request-overlay {
-      position: absolute;
-      inset: 0;
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1173,6 +1182,12 @@
     }
 
     @media (max-width: 768px) {
+      html,
+      body {
+        height: 100dvh;
+        overflow: hidden;
+      }
+
       body {
         padding: 0;
         align-items: stretch;
@@ -1185,23 +1200,59 @@
         box-shadow: none;
         min-height: 100dvh;
         max-height: none;
+        height: 100dvh;
+        overflow: hidden;
       }
 
       header {
         padding: 24px 20px 12px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
       }
 
       header h1 {
         font-size: 24px;
       }
 
+      #chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding-top: var(--header-offset, 0px);
+      }
+
+      .chat-window {
+        flex: 1 1 auto;
+      }
+
       #log {
         padding: 22px 18px 28px;
+        height: calc(100dvh - var(--header-offset, 0px) - var(--controls-offset, 0px));
+        flex: none;
       }
 
       #controls {
         padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
         gap: 12px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 2;
+      }
+
+      .modal-overlay {
+        bottom: 0;
+        align-items: flex-end;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom) + var(--controls-offset, 0px));
+      }
+
+      .call-request-overlay {
+        bottom: 0;
+        align-items: flex-end;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom) + var(--controls-offset, 0px));
       }
 
     }
@@ -1229,8 +1280,16 @@
         gap: 10px;
       }
 
+      .modal-overlay {
+        bottom: var(--controls-offset, 0px);
+        align-items: flex-end;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+      }
+
       .call-request-overlay {
-        padding: 24px 16px;
+        bottom: var(--controls-offset, 0px);
+        align-items: flex-end;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
       }
 
       .call-request-overlay__card {
@@ -1531,6 +1590,52 @@
     const callBtn = document.getElementById("call");
     const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
     const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
+    const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
+    const controls = document.getElementById("controls");
+    const headerEl = document.querySelector("header");
+    const updateControlsOffset = () => {
+      if (!controls) {
+        return;
+      }
+
+      document.documentElement.style.setProperty(
+        "--controls-offset",
+        `${controls.offsetHeight}px`,
+      );
+    };
+    const updateHeaderOffset = () => {
+      if (!headerEl) {
+        return;
+      }
+
+      document.documentElement.style.setProperty(
+        "--header-offset",
+        `${headerEl.offsetHeight}px`,
+      );
+    };
+
+    if (controls) {
+      updateControlsOffset();
+
+      if ("ResizeObserver" in window) {
+        const controlsObserver = new ResizeObserver(() => updateControlsOffset());
+        controlsObserver.observe(controls);
+      }
+
+      window.addEventListener("resize", updateControlsOffset);
+    }
+
+    if (headerEl) {
+      updateHeaderOffset();
+
+      if ("ResizeObserver" in window) {
+        const headerObserver = new ResizeObserver(() => updateHeaderOffset());
+        headerObserver.observe(headerEl);
+      }
+
+      window.addEventListener("resize", updateHeaderOffset);
+    }
+
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
     const voiceCallStatus = document.getElementById("voice-call-status");
     const voiceCallPermissionNotice = document.getElementById("voice-call-permission");
@@ -3376,10 +3481,26 @@
       return bubble;
     }
 
+    function scrollChatToBottom() {
+      log.scrollTop = log.scrollHeight;
+
+      if (!mobileViewportMatcher.matches) {
+        return;
+      }
+
+      window.requestAnimationFrame(() => {
+        const scrollElement = document.scrollingElement || document.documentElement;
+        if (!scrollElement) {
+          return;
+        }
+        scrollElement.scrollTop = scrollElement.scrollHeight;
+      });
+    }
+
     function appendMessage(txt, type = "system", prefixText) {
       const bubble = createMessageElement(txt, type, prefixText);
       log.appendChild(bubble);
-      log.scrollTop = log.scrollHeight;
+      scrollChatToBottom();
       return bubble;
     }
 
