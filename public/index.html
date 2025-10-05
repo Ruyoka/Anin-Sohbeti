@@ -659,7 +659,8 @@
     .nickname-form {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
+      text-align: left;
     }
 
     .nickname-form input {
@@ -668,12 +669,20 @@
       padding: 14px 18px;
       font-size: 16px;
       background: #f7fbf6;
+      letter-spacing: 0.08em;
     }
 
     .nickname-form input:focus {
       outline: none;
       border-color: rgba(47, 123, 69, 0.45);
       box-shadow: 0 0 0 3px rgba(47, 123, 69, 0.18);
+    }
+
+    .nickname-form__helper {
+      margin: 0;
+      font-size: 13px;
+      color: var(--accent-strong);
+      min-height: 18px;
     }
 
     .nickname-form button {
@@ -684,12 +693,18 @@
       font-weight: 600;
       border: none;
       cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, opacity 180ms ease;
       box-shadow: 0 16px 34px -26px rgba(34, 72, 41, 0.7);
     }
 
-    .nickname-form button:hover,
-    .nickname-form button:focus-visible {
+    .nickname-form button[disabled] {
+      cursor: not-allowed;
+      opacity: 0.55;
+      box-shadow: none;
+    }
+
+    .nickname-form button:hover:not([disabled]),
+    .nickname-form button:focus-visible:not([disabled]) {
       background: var(--accent-strong);
       transform: translateY(-1px);
     }
@@ -722,8 +737,9 @@
 
     .app-header__nickname {
       justify-self: start;
-      display: flex;
+      display: inline-flex;
       align-items: center;
+      gap: 8px;
       min-width: 0;
       max-width: min(42vw, 200px);
       font-weight: 600;
@@ -736,7 +752,13 @@
     }
 
     .app-header__avatar {
-      display: none;
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid rgba(46, 125, 82, 0.18);
+      background: #ffffff;
+      object-fit: cover;
     }
 
     .app-header__logo {
@@ -1515,8 +1537,18 @@
         <p id="nickname-description">Sohbete katılmadan önce seni tanıyabileceğimiz bir rumuz belirle.</p>
         <div class="nickname-form">
           <label class="visually-hidden" for="nickname">Rumuz</label>
-          <input id="nickname" type="text" maxlength="24" autocomplete="off" placeholder="Örn. Pesimist">
-          <button id="nickname-submit" type="button">Sohbete Başla</button>
+          <input
+            id="nickname"
+            type="text"
+            maxlength="12"
+            autocomplete="off"
+            placeholder="Örn. PESIMIST"
+            aria-describedby="nickname-helper"
+            inputmode="latin"
+            autocapitalize="characters"
+          >
+          <p class="nickname-form__helper" id="nickname-helper" role="status" aria-live="polite"></p>
+          <button id="nickname-submit" type="button" disabled>Sohbete Başla</button>
         </div>
       </div>
     </div>
@@ -1796,6 +1828,7 @@
     const nicknameOverlay = document.getElementById("nickname-overlay");
     const nicknameInput = document.getElementById("nickname");
     const nicknameSubmit = document.getElementById("nickname-submit");
+    const nicknameHelper = document.getElementById("nickname-helper");
     const skipConfirmOverlay = document.getElementById("skip-confirm-overlay");
     const skipConfirmCancel = document.getElementById("skip-confirm-cancel");
     const skipConfirmConfirm = document.getElementById("skip-confirm-confirm");
@@ -2533,7 +2566,67 @@
     }
 
     function sanitizeNickname(value) {
-      return value.replace(/\s+/g, " ").trim();
+      if (typeof value !== "string") {
+        return "";
+      }
+
+      return value
+        .toLocaleUpperCase("tr-TR")
+        .replace(/[^\p{L}]/gu, "");
+    }
+
+    function isNicknameValid(value) {
+      return /^[\p{L}]{1,12}$/u.test(value);
+    }
+
+    function normalizeNicknameInput(preserveCaret = false) {
+      if (!nicknameInput) {
+        return "";
+      }
+
+      const rawValue = nicknameInput.value ?? "";
+      const sanitized = sanitizeNickname(rawValue).slice(0, 12);
+
+      if (preserveCaret) {
+        const selectionStart = nicknameInput.selectionStart ?? rawValue.length;
+        const caretTarget = sanitizeNickname(rawValue.slice(0, selectionStart))
+          .slice(0, 12)
+          .length;
+        if (rawValue !== sanitized) {
+          nicknameInput.value = sanitized;
+        }
+        if (document.activeElement === nicknameInput) {
+          nicknameInput.setSelectionRange(caretTarget, caretTarget);
+        }
+      } else if (rawValue !== sanitized) {
+        nicknameInput.value = sanitized;
+      }
+
+      return sanitized;
+    }
+
+    function updateNicknameValidity(options = {}) {
+      if (!nicknameInput || !nicknameSubmit) {
+        return false;
+      }
+
+      const preserveCaret = Boolean(options.preserveCaret);
+      const sanitized = normalizeNicknameInput(preserveCaret);
+      const valid = isNicknameValid(sanitized);
+      nicknameSubmit.disabled = !valid;
+
+      if (nicknameHelper) {
+        if (valid) {
+          nicknameHelper.textContent = "";
+          nicknameHelper.hidden = true;
+        } else {
+          nicknameHelper.hidden = false;
+          nicknameHelper.textContent =
+            "Rumuzun 1-12 harften oluşmalı. Rakam veya sembol kullanma.";
+        }
+      }
+
+      return valid;
     }
 
     function updateHeaderNicknameDisplay(value) {
@@ -2541,18 +2634,20 @@
         return;
       }
 
-      const cleaned = sanitizeNickname(value ?? "").slice(0, 24);
+      const cleaned = sanitizeNickname(value ?? "").slice(0, 12);
       const displayValue = cleaned || "Sen";
       headerNicknameEl.textContent = displayValue;
       headerNicknameEl.title = displayValue;
     }
 
     updateHeaderNicknameDisplay(document.body?.dataset?.nickname || "");
+    updateNicknameValidity();
 
     function showNicknameOverlay() {
       nicknameOverlay.hidden = false;
       nicknameOverlay.setAttribute("aria-hidden", "false");
       document.body.classList.add("nickname-overlay-open");
+      updateNicknameValidity({ preserveCaret: true });
       requestAnimationFrame(() => nicknameInput.focus());
     }
 
@@ -3749,14 +3844,16 @@
     }
 
     function handleNicknameSubmit() {
-      const cleaned = sanitizeNickname(nicknameInput.value).slice(0, 24);
-      if (!cleaned) {
+      const isValid = updateNicknameValidity();
+      const cleaned = sanitizeNickname(nicknameInput.value).slice(0, 12);
+      if (!isValid) {
         nicknameInput.focus();
         return;
       }
 
       nickname = cleaned;
       nicknameInput.value = cleaned;
+      updateNicknameValidity();
       updateHeaderNicknameDisplay(nickname);
       sessionStorage.setItem("nickname", nickname);
       hideNicknameOverlay();
@@ -3766,19 +3863,27 @@
 
     const storedNickname = sessionStorage.getItem("nickname");
     if (storedNickname) {
-      const cleanedStored = sanitizeNickname(storedNickname).slice(0, 24);
+      const cleanedStored = sanitizeNickname(storedNickname).slice(0, 12);
       if (cleanedStored) {
         nickname = cleanedStored;
         sessionStorage.setItem("nickname", nickname);
         updateHeaderNicknameDisplay(nickname);
         hideNicknameOverlay();
+        if (nicknameInput) {
+          nicknameInput.value = nickname;
+          updateNicknameValidity();
+        }
       } else {
         sessionStorage.removeItem("nickname");
         updateHeaderNicknameDisplay("");
+        nicknameInput.value = sanitizeNickname(storedNickname).slice(0, 12);
+        updateNicknameValidity({ preserveCaret: true });
         showNicknameOverlay();
       }
     } else {
       updateHeaderNicknameDisplay("");
+      nicknameInput.value = "";
+      updateNicknameValidity();
       showNicknameOverlay();
     }
 
@@ -3955,10 +4060,38 @@
     });
 
     nicknameSubmit.addEventListener("click", handleNicknameSubmit);
-    nicknameInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleNicknameSubmit();
+
+    nicknameInput.addEventListener("input", () => {
+      updateNicknameValidity({ preserveCaret: true });
+    });
+
+    nicknameInput.addEventListener("paste", (event) => {
+      event.preventDefault();
+      const pasteData =
+        (event.clipboardData || window.clipboardData)?.getData("text") ?? "";
+      const selectionStart = nicknameInput.selectionStart ?? nicknameInput.value.length;
+      const selectionEnd = nicknameInput.selectionEnd ?? selectionStart;
+      const rawValue = nicknameInput.value ?? "";
+      const before = rawValue.slice(0, selectionStart);
+      const after = rawValue.slice(selectionEnd);
+      nicknameInput.value = `${before}${sanitizeNickname(pasteData)}${after}`;
+      const caretTarget = (before + sanitizeNickname(pasteData)).length;
+      nicknameInput.setSelectionRange(caretTarget, caretTarget);
+      updateNicknameValidity({ preserveCaret: true });
+    });
+
+    nicknameInput.addEventListener("keydown", (event) => {
+      if (!event.altKey && !event.metaKey && !event.ctrlKey && /^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        updateNicknameValidity({ preserveCaret: true });
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (!nicknameSubmit.disabled) {
+          handleNicknameSubmit();
+        }
       }
     });
   </script>
