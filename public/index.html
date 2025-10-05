@@ -731,6 +731,10 @@
       text-overflow: ellipsis;
     }
 
+    .app-header__avatar {
+      display: none;
+    }
+
     .app-header__logo {
       justify-self: center;
       width: clamp(48px, 12vw, 64px);
@@ -830,6 +834,110 @@
 
       .app-header__nickname {
         font-size: 16px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .app-header {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        padding: 16px 28px;
+        border-bottom: none;
+      }
+
+      .app-header::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: rgba(46, 125, 82, 0.14);
+        pointer-events: none;
+      }
+
+      .nickname-overlay {
+        position: relative;
+        inset: auto;
+        background: transparent;
+        padding: 28px 28px 0;
+        z-index: 1;
+        backdrop-filter: none;
+        display: flex;
+        justify-content: center;
+      }
+
+      .nickname-overlay[hidden] {
+        display: none !important;
+      }
+
+      .nickname-overlay:not([hidden]) ~ #skip-confirm-overlay,
+      .nickname-overlay:not([hidden]) ~ #call-request-overlay {
+        pointer-events: none;
+      }
+
+      .nickname-overlay:not([hidden]) ~ #chat {
+        display: none;
+      }
+
+      .nickname-modal {
+        margin: 0;
+      }
+
+      .app-header__container {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 18px;
+        min-height: 64px;
+      }
+
+      .app-header__logo {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .app-header__nickname {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 220px;
+      }
+
+      .app-header__avatar {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid rgba(46, 125, 82, 0.18);
+        background: #ffffff;
+        object-fit: cover;
+      }
+
+      .app-header__actions {
+        margin-left: auto;
+      }
+
+      .app-shell #chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .app-shell .chat-window {
+        flex: 1;
+        min-height: 0;
+        border-top: none;
+      }
+
+      .app-shell #log {
+        height: calc(100dvh - var(--header-offset, 0px) - var(--controls-offset, 0px));
+        max-height: calc(100dvh - var(--header-offset, 0px) - var(--controls-offset, 0px));
+        overflow-y: auto;
+        scroll-padding-bottom: 32px;
       }
     }
 
@@ -1362,6 +1470,12 @@
     <header class="app-header">
       <div class="app-header__container">
         <div class="app-header__nickname" aria-live="polite">
+          <img
+            src="/assets/avatar.png"
+            alt=""
+            class="app-header__avatar"
+            aria-hidden="true"
+          >
           <span id="header-nickname">Sen</span>
         </div>
         <div class="app-header__logo">
