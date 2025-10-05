@@ -695,24 +695,117 @@
     }
 
     header {
-      padding: 28px 32px 16px;
-      text-align: center;
-      background: linear-gradient(180deg, rgba(230, 243, 228, 0.75) 0%, rgba(255, 255, 255, 0) 100%);
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      padding: 12px 24px;
+      background: linear-gradient(180deg, #f3faf4 0%, #e5f2e8 100%);
+      border-bottom: 1px solid rgba(46, 125, 82, 0.14);
+      box-shadow: 0 18px 42px -28px rgba(46, 125, 82, 0.55);
     }
 
-    header h1 {
-      margin: 0;
-      font-size: clamp(26px, 3vw, 34px);
+    .app-header__container {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 16px;
+    }
+
+    .app-header__nickname {
+      justify-self: start;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      max-width: min(42vw, 200px);
       font-weight: 600;
+      font-size: 15px;
       letter-spacing: -0.01em;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    header p {
-      margin: 10px auto 0;
-      max-width: 360px;
-      font-size: 16px;
-      line-height: 1.5;
-      color: var(--text-muted);
+    .app-header__logo {
+      justify-self: center;
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: #ffffff;
+      border: 2px solid rgba(46, 125, 82, 0.16);
+      box-shadow: 0 18px 36px -26px rgba(46, 125, 82, 0.6);
+    }
+
+    .app-header__logo img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .app-header__actions {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .app-header__action {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(46, 125, 82, 0.18);
+      background: #ffffff;
+      color: #2e7d52;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 10px 24px -18px rgba(46, 125, 82, 0.55);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .app-header__action svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .app-header__action:hover,
+    .app-header__action:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 32px -18px rgba(46, 125, 82, 0.55);
+      background: #f8fcf9;
+    }
+
+    .app-header__action:focus-visible {
+      outline: 3px solid rgba(46, 125, 82, 0.38);
+      outline-offset: 2px;
+    }
+
+    .app-header__action:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: 0 4px 12px -10px rgba(46, 125, 82, 0.4);
+      transform: none;
+      background: #f2f7f3;
+      color: rgba(46, 125, 82, 0.55);
+    }
+
+    @media (min-width: 768px) {
+      header {
+        min-height: 56px;
+      }
+
+      .app-header__nickname {
+        font-size: 16px;
+      }
     }
 
     #chat {
@@ -1194,15 +1287,30 @@
       }
 
       header {
-        padding: 24px 20px 12px;
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
+        padding: 0 16px 12px;
+        padding-top: 10px;
+        padding-top: calc(10px + env(safe-area-inset-top));
+        min-height: 48px;
+        box-shadow: 0 16px 40px -28px rgba(46, 125, 82, 0.55);
+        border-bottom: 1px solid rgba(46, 125, 82, 0.16);
       }
 
-      header h1 {
-        font-size: 24px;
+      .app-header__container {
+        gap: 12px;
+      }
+
+      .app-header__nickname {
+        max-width: min(48vw, 168px);
+        font-size: 14px;
+      }
+
+      .app-header__logo {
+        width: 56px;
+        height: 56px;
       }
 
       #chat {
@@ -1313,9 +1421,43 @@
 </head>
 <body>
   <div class="app-shell">
-    <header>
-      <h1>Ekşi Anın Sohbeti</h1>
-      <p>Anlık eşleş, sohbet et ve yeni insanlarla tanış.</p>
+    <header class="app-header">
+      <div class="app-header__container">
+        <div class="app-header__nickname" aria-live="polite">
+          <span id="header-nickname">Sen</span>
+        </div>
+        <div class="app-header__logo">
+          <img src="/assets/icon.png" alt="Anın Sohbeti logosu">
+        </div>
+        <div class="app-header__actions">
+          <button
+            type="button"
+            class="app-header__action"
+            id="header-call"
+            aria-label="Call"
+          >
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path
+                d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="app-header__action"
+            id="header-next"
+            aria-label="Next"
+          >
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path
+                d="M6.02 4.22a.75.75 0 0 1 1.06 0l6.22 6.22h-5.3a.75.75 0 0 0 0 1.5h5.3l-6.22 6.22a.75.75 0 1 0 1.06 1.06l7.5-7.5a.75.75 0 0 0 0-1.06l-7.5-7.5a.75.75 0 0 1 0-1.06Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
     </header>
     <div
       class="nickname-overlay"
@@ -1579,6 +1721,9 @@
     const callBtn = document.getElementById("call");
     const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
     const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
+    const headerNicknameEl = document.getElementById("header-nickname");
+    const headerCallBtn = document.getElementById("header-call");
+    const headerNextBtn = document.getElementById("header-next");
     const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
     const controls = document.getElementById("controls");
     const headerEl = document.querySelector("header");
@@ -1623,6 +1768,26 @@
       }
 
       window.addEventListener("resize", updateHeaderOffset);
+    }
+
+    if (headerCallBtn) {
+      headerCallBtn.addEventListener("click", () => {
+        if (headerCallBtn.disabled) {
+          return;
+        }
+
+        callBtn?.click();
+      });
+    }
+
+    if (headerNextBtn) {
+      headerNextBtn.addEventListener("click", () => {
+        if (headerNextBtn.disabled) {
+          return;
+        }
+
+        nextBtn?.click();
+      });
     }
 
     const voiceCallOverlay = document.getElementById("voice-call-overlay");
@@ -2379,6 +2544,19 @@
       return value.replace(/\s+/g, " ").trim();
     }
 
+    function updateHeaderNicknameDisplay(value) {
+      if (!headerNicknameEl) {
+        return;
+      }
+
+      const cleaned = sanitizeNickname(value ?? "").slice(0, 24);
+      const displayValue = cleaned || "Sen";
+      headerNicknameEl.textContent = displayValue;
+      headerNicknameEl.title = displayValue;
+    }
+
+    updateHeaderNicknameDisplay(document.body?.dataset?.nickname || "");
+
     function showNicknameOverlay() {
       nicknameOverlay.hidden = false;
       nicknameOverlay.setAttribute("aria-hidden", "false");
@@ -2409,12 +2587,18 @@
         }
         callBtnLabel.textContent = `${safeRemaining} sn`;
         callBtn.dataset.countdown = "true";
+        if (headerCallBtn) {
+          headerCallBtn.dataset.countdown = "true";
+        }
       } else {
         if (callBtnIcon) {
           callBtnIcon.hidden = false;
         }
         callBtnLabel.textContent = "Ara";
         delete callBtn.dataset.countdown;
+        if (headerCallBtn) {
+          delete headerCallBtn.dataset.countdown;
+        }
       }
     }
 
@@ -2469,13 +2653,24 @@
       const hasMessage = Boolean(msg.value.trim());
       msg.disabled = !isMatched;
       sendBtn.disabled = !isMatched || !hasMessage || isCoolingDown;
-      nextBtn.disabled = !isMatched || isSearchCountdownActive;
+      const isNextDisabled = !isMatched || isSearchCountdownActive;
+      nextBtn.disabled = isNextDisabled;
+      if (headerNextBtn) {
+        headerNextBtn.disabled = isNextDisabled;
+      }
+
+      const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
+      const hasActiveRequest = callRequestController?.isActive?.() ?? false;
+      const isCallDisabled =
+        !isMatched || isCallBusy || hasActiveRequest || isCallCoolingDown;
+
       if (callBtn) {
-        const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
-        const hasActiveRequest = callRequestController?.isActive?.() ?? false;
-        callBtn.disabled =
-          !isMatched || isCallBusy || hasActiveRequest || isCallCoolingDown;
+        callBtn.disabled = isCallDisabled;
         updateCallButtonVisualState();
+      }
+
+      if (headerCallBtn) {
+        headerCallBtn.disabled = isCallDisabled;
       }
     }
 
@@ -3573,6 +3768,7 @@
 
       nickname = cleaned;
       nicknameInput.value = cleaned;
+      updateHeaderNicknameDisplay(nickname);
       sessionStorage.setItem("nickname", nickname);
       hideNicknameOverlay();
       requestNotificationPermission();
@@ -3585,12 +3781,15 @@
       if (cleanedStored) {
         nickname = cleanedStored;
         sessionStorage.setItem("nickname", nickname);
+        updateHeaderNicknameDisplay(nickname);
         hideNicknameOverlay();
       } else {
         sessionStorage.removeItem("nickname");
+        updateHeaderNicknameDisplay("");
         showNicknameOverlay();
       }
     } else {
+      updateHeaderNicknameDisplay("");
       showNicknameOverlay();
     }
 
