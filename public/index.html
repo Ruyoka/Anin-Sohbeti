@@ -700,17 +700,20 @@
       left: 0;
       right: 0;
       z-index: 3;
-      padding: 12px 24px;
+      padding: 8px 20px;
+      min-height: 48px;
       background: linear-gradient(180deg, #f3faf4 0%, #e5f2e8 100%);
       border-bottom: 1px solid rgba(46, 125, 82, 0.14);
       box-shadow: 0 18px 42px -28px rgba(46, 125, 82, 0.55);
     }
 
     .app-header__container {
+      position: relative;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) clamp(48px, 12vw, 64px) minmax(0, 1fr);
       align-items: center;
       gap: 16px;
+      min-height: 56px;
     }
 
     .app-header__nickname {
@@ -730,23 +733,19 @@
 
     .app-header__logo {
       justify-self: center;
-      width: 64px;
-      height: 64px;
-      border-radius: 999px;
-      overflow: hidden;
-      display: grid;
-      place-items: center;
-      background: #ffffff;
-      border: 2px solid rgba(46, 125, 82, 0.16);
-      box-shadow: 0 18px 36px -26px rgba(46, 125, 82, 0.6);
+      width: clamp(48px, 12vw, 64px);
+      height: clamp(48px, 12vw, 64px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .app-header__logo img {
       display: block;
       width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
+      height: auto;
+      max-height: 100%;
+      object-fit: contain;
     }
 
     .app-header__actions {
@@ -760,12 +759,12 @@
       width: 44px;
       height: 44px;
       border-radius: 999px;
-      border: 1px solid rgba(46, 125, 82, 0.18);
+      border: 1px solid rgba(46, 125, 82, 0.12);
       background: #ffffff;
       color: #2e7d52;
       display: grid;
       place-items: center;
-      box-shadow: 0 10px 24px -18px rgba(46, 125, 82, 0.55);
+      box-shadow: 0 10px 24px -20px rgba(46, 125, 82, 0.35);
       cursor: pointer;
       touch-action: manipulation;
       transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
@@ -780,7 +779,7 @@
     .app-header__action:hover,
     .app-header__action:focus-visible {
       transform: translateY(-1px);
-      box-shadow: 0 14px 32px -18px rgba(46, 125, 82, 0.55);
+      box-shadow: 0 14px 32px -18px rgba(46, 125, 82, 0.45);
       background: #f8fcf9;
     }
 
@@ -800,6 +799,7 @@
 
     @media (min-width: 768px) {
       header {
+        padding: 12px 24px;
         min-height: 56px;
       }
 
@@ -1434,7 +1434,7 @@
             type="button"
             class="app-header__action"
             id="header-call"
-            aria-label="Call"
+            aria-label="Arama (Call)"
           >
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path
@@ -1447,11 +1447,15 @@
             type="button"
             class="app-header__action"
             id="header-next"
-            aria-label="Next"
+            aria-label="Sonraki (Next)"
           >
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path
-                d="M6.02 4.22a.75.75 0 0 1 1.06 0l6.22 6.22h-5.3a.75.75 0 0 0 0 1.5h5.3l-6.22 6.22a.75.75 0 1 0 1.06 1.06l7.5-7.5a.75.75 0 0 0 0-1.06l-7.5-7.5a.75.75 0 0 1 0-1.06Z"
+                d="M4.94 4.44a.75.75 0 0 1 1.06 0l5.78 5.78a.75.75 0 0 1 0 1.06l-5.78 5.78a.75.75 0 1 1-1.06-1.06L9.73 11 4.94 6.2a.75.75 0 0 1 0-1.06Z"
+                fill="currentColor"
+              />
+              <path
+                d="M11.94 4.44a.75.75 0 0 1 1.06 0l5.78 5.78a.75.75 0 0 1 0 1.06l-5.78 5.78a.75.75 0 1 1-1.06-1.06L16.73 11l-4.79-4.8a.75.75 0 0 1 0-1.06Z"
                 fill="currentColor"
               />
             </svg>
