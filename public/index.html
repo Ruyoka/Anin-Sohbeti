@@ -857,36 +857,6 @@
         pointer-events: none;
       }
 
-
-      .nickname-overlay {
-        position: relative;
-        inset: auto;
-        background: transparent;
-        padding: 28px 28px 0;
-        z-index: 1;
-        backdrop-filter: none;
-        display: flex;
-        justify-content: center;
-      }
-
-      .nickname-overlay[hidden] {
-        display: none !important;
-      }
-
-      .nickname-overlay:not([hidden]) ~ #skip-confirm-overlay,
-      .nickname-overlay:not([hidden]) ~ #call-request-overlay {
-        pointer-events: none;
-      }
-
-      .nickname-overlay:not([hidden]) ~ #chat {
-        display: none;
-      }
-
-      .nickname-modal {
-        margin: 0;
-      }
-
-
       .app-header__container {
         display: flex;
         align-items: center;
