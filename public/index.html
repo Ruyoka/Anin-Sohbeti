@@ -700,17 +700,17 @@
       left: 0;
       right: 0;
       z-index: 3;
-      padding: 12px 24px;
-      background: linear-gradient(180deg, #f3faf4 0%, #e5f2e8 100%);
-      border-bottom: 1px solid rgba(46, 125, 82, 0.14);
-      box-shadow: 0 18px 42px -28px rgba(46, 125, 82, 0.55);
+      padding: 10px 20px;
+      background: linear-gradient(180deg, #f4fbf6 0%, #e6f3ea 100%);
+      border-bottom: 1px solid rgba(46, 125, 82, 0.18);
+      box-shadow: 0 10px 30px rgba(13, 20, 16, 0.08);
     }
 
     .app-header__container {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }
 
     .app-header__nickname {
@@ -718,7 +718,7 @@
       display: flex;
       align-items: center;
       min-width: 0;
-      max-width: min(42vw, 200px);
+      max-width: clamp(140px, 28vw, 220px);
       font-weight: 600;
       font-size: 15px;
       letter-spacing: -0.01em;
@@ -731,76 +731,216 @@
     .app-header__logo {
       justify-self: center;
       width: 64px;
-      height: 64px;
-      border-radius: 999px;
-      overflow: hidden;
-      display: grid;
-      place-items: center;
-      background: #ffffff;
-      border: 2px solid rgba(46, 125, 82, 0.16);
-      box-shadow: 0 18px 36px -26px rgba(46, 125, 82, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .app-header__logo img {
       display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
+      max-width: 100%;
+      height: auto;
     }
 
     .app-header__actions {
+      position: relative;
       justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      padding: 0;
+      border: none;
+      background: none;
+      font: inherit;
+    }
+
+    .app-header__actions-list {
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
-    .app-header__action {
-      width: 44px;
-      height: 44px;
+    .app-header__overflow-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      min-height: 0;
+      padding: 0;
       border-radius: 999px;
-      border: 1px solid rgba(46, 125, 82, 0.18);
+      border: 1px solid rgba(46, 125, 82, 0.14);
       background: #ffffff;
       color: #2e7d52;
-      display: grid;
-      place-items: center;
-      box-shadow: 0 10px 24px -18px rgba(46, 125, 82, 0.55);
+      box-shadow: 0 6px 14px rgba(13, 20, 16, 0.06);
       cursor: pointer;
-      touch-action: manipulation;
       transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
     }
 
-    .app-header__action svg {
+    .app-header__overflow-toggle:focus-visible,
+    .app-header__overflow-toggle:hover {
+      outline: 3px solid rgba(46, 125, 82, 0.3);
+      outline-offset: 2px;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(13, 20, 16, 0.08);
+      background: #f8fcf9;
+    }
+
+    .app-header__overflow-toggle::after {
+      content: "";
+    }
+
+    .app-header__overflow-toggle-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .app-header__actions-list button {
+      width: 44px;
+      height: 44px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 999px;
+      border: 1px solid rgba(46, 125, 82, 0.14);
+      background: #ffffff;
+      color: #2e7d52;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 14px rgba(13, 20, 16, 0.06);
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      position: relative;
+    }
+
+    .app-header__action-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-header__action-icon svg {
       width: 20px;
       height: 20px;
       fill: currentColor;
     }
 
-    .app-header__action:hover,
-    .app-header__action:focus-visible {
+    .app-header__actions-list button:hover,
+    .app-header__actions-list button:focus-visible {
       transform: translateY(-1px);
-      box-shadow: 0 14px 32px -18px rgba(46, 125, 82, 0.55);
+      box-shadow: 0 10px 24px rgba(13, 20, 16, 0.08);
       background: #f8fcf9;
     }
 
-    .app-header__action:focus-visible {
+    .app-header__actions-list button:focus-visible {
       outline: 3px solid rgba(46, 125, 82, 0.38);
       outline-offset: 2px;
     }
 
-    .app-header__action:disabled {
+    .app-header__actions-list button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
-      box-shadow: 0 4px 12px -10px rgba(46, 125, 82, 0.4);
       transform: none;
       background: #f2f7f3;
       color: rgba(46, 125, 82, 0.55);
+      box-shadow: 0 4px 12px rgba(13, 20, 16, 0.05);
+    }
+
+    .app-header__actions summary {
+      list-style: none;
+    }
+
+    .app-header__actions summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .app-header__actions-list button[data-countdown]::after {
+      content: attr(data-countdown);
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 22px;
+      height: 22px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #2e7d52;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 14px rgba(13, 20, 16, 0.1);
+    }
+
+    @media (max-width: 767px) {
+      header {
+        padding: 8px 16px;
+        min-height: 48px;
+      }
+
+      .app-header__nickname {
+        font-size: 14px;
+      }
+
+      .app-header__actions-list button {
+        width: 40px;
+        height: 40px;
+      }
+    }
+
+    @media (max-width: 359px) {
+      .app-header__actions {
+        display: inline-flex;
+      }
+
+      .app-header__overflow-toggle {
+        display: inline-flex;
+      }
+
+      .app-header__actions-list {
+        display: none;
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        padding: 12px;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid rgba(46, 125, 82, 0.14);
+        box-shadow: 0 18px 42px -18px rgba(13, 20, 16, 0.18);
+        flex-direction: column;
+        gap: 10px;
+        min-width: 160px;
+        z-index: 4;
+      }
+
+      .app-header__actions-list button {
+        width: 100%;
+      }
+
+      .app-header__actions[open] .app-header__actions-list {
+        display: flex;
+      }
+    }
+
+    @media (min-width: 360px) {
+      .app-header__overflow-toggle {
+        display: none;
+      }
+
+      .app-header__actions {
+        display: flex;
+      }
+
+      .app-header__actions-list {
+        display: flex;
+        position: static;
+      }
     }
 
     @media (min-width: 768px) {
       header {
         min-height: 56px;
+        padding: 12px 24px;
       }
 
       .app-header__nickname {
@@ -1073,7 +1213,6 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 14px;
       padding: 18px 24px calc(18px + env(safe-area-inset-bottom));
       background: rgba(255, 255, 255, 0.98);
       position: sticky;
@@ -1136,33 +1275,6 @@
       transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
     }
 
-    .control-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      min-height: 52px;
-      padding: 14px 22px;
-      font-size: 15px;
-      border-radius: 999px;
-    }
-
-    .control-button__icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .control-button__label {
-      font-weight: 600;
-    }
-
-    #controls .control-button {
-      flex: 1 1 0;
-      min-width: 0;
-      white-space: nowrap;
-    }
-
     #send {
       width: 44px;
       height: 44px;
@@ -1194,66 +1306,6 @@
       transform: none;
       box-shadow: none;
       cursor: not-allowed;
-    }
-
-    .controls__actions {
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
-      gap: 12px;
-      width: 100%;
-    }
-
-    #call.control-button {
-      background: #eff7ee;
-      color: var(--accent);
-      padding: 14px 20px;
-      font-size: 15px;
-      box-shadow: 0 16px 32px -28px rgba(34, 72, 41, 0.5);
-      border: 1px solid rgba(47, 123, 69, 0.14);
-    }
-
-    #call.control-button svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    #call.control-button:not(:disabled):hover,
-    #call.control-button:not(:disabled):focus-visible {
-      background: #e6f3e5;
-      transform: translateY(-1px);
-    }
-
-    #call.control-button:disabled {
-      opacity: 0.5;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    #next.control-button {
-      background: #eff7ee;
-      color: var(--accent);
-      border: 1px solid var(--bubble-border);
-      box-shadow: 0 18px 34px -28px rgba(34, 72, 41, 0.6);
-    }
-
-    #next.control-button svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    #next.control-button:disabled {
-      opacity: 0.5;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    #call.control-button:not(:disabled):hover,
-    #call.control-button:not(:disabled):focus-visible,
-    #next.control-button:not(:disabled):hover,
-    #next.control-button:not(:disabled):focus-visible {
-      background: #e6f3e5;
-      transform: translateY(-1px);
     }
 
     button:disabled {
@@ -1373,10 +1425,6 @@
         padding: 6px 12px 6px 16px;
       }
 
-      .controls__actions {
-        gap: 10px;
-      }
-
       .modal-overlay {
         bottom: var(--controls-offset, 0px);
         align-items: flex-end;
@@ -1424,39 +1472,46 @@
     <header class="app-header">
       <div class="app-header__container">
         <div class="app-header__nickname" aria-live="polite">
-          <span id="header-nickname">Sen</span>
+          <span id="header-nickname">Nickname</span>
         </div>
         <div class="app-header__logo">
           <img src="/assets/icon.png" alt="Anın Sohbeti logosu">
         </div>
-        <div class="app-header__actions">
-          <button
-            type="button"
-            class="app-header__action"
-            id="header-call"
-            aria-label="Call"
+        <details class="app-header__actions">
+          <summary
+            class="app-header__overflow-toggle"
+            aria-label="Menüyü aç"
+            aria-haspopup="true"
+            aria-expanded="false"
           >
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path
-                d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            class="app-header__action"
-            id="header-next"
-            aria-label="Next"
-          >
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path
-                d="M6.02 4.22a.75.75 0 0 1 1.06 0l6.22 6.22h-5.3a.75.75 0 0 0 0 1.5h5.3l-6.22 6.22a.75.75 0 1 0 1.06 1.06l7.5-7.5a.75.75 0 0 0 0-1.06l-7.5-7.5a.75.75 0 0 1 0-1.06Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
-        </div>
+            <span class="app-header__overflow-toggle-icon" aria-hidden="true">⋯</span>
+            <span class="visually-hidden">Diğer eylemler</span>
+          </summary>
+          <div class="app-header__actions-list" role="group" aria-label="Sohbet eylemleri">
+            <button id="call" type="button" aria-label="Arama (Call)">
+              <span class="app-header__action-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path
+                    d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+              <span class="visually-hidden" id="call-action-label" aria-live="polite">Arama (Call)</span>
+            </button>
+            <button id="next" type="button" aria-label="Sonraki (Next)">
+              <span class="app-header__action-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path
+                    d="M6.02 4.22a.75.75 0 0 1 1.06 0l6.22 6.22h-5.3a.75.75 0 0 0 0 1.5h5.3l-6.22 6.22a.75.75 0 1 0 1.06 1.06l7.5-7.5a.75.75 0 0 0 0-1.06l-7.5-7.5a.75.75 0 0 1 0-1.06Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+              <span class="visually-hidden">Sonraki (Next)</span>
+            </button>
+          </div>
+        </details>
       </div>
     </header>
     <div
@@ -1683,30 +1738,6 @@
             <span class="visually-hidden">Gönder</span>
           </button>
         </div>
-        <div class="controls__actions">
-          <button id="call" type="button" class="control-button control-button--call">
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span class="control-button__label">Ara</span>
-          </button>
-          <button id="next" type="button" class="control-button control-button--next">
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M6.02 4.22a.75.75 0 0 1 1.06 0l6.22 6.22h-5.3a.75.75 0 0 0 0 1.5h5.3l-6.22 6.22a.75.75 0 1 0 1.06 1.06l7.5-7.5a.75.75 0 0 0 0-1.06l-7.5-7.5a.75.75 0 0 1 0-1.06Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span class="control-button__label">Sonraki</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -1719,11 +1750,12 @@
     const sendBtn = document.getElementById("send");
     const nextBtn = document.getElementById("next");
     const callBtn = document.getElementById("call");
-    const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
-    const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
+    const callBtnLabel = document.getElementById("call-action-label");
     const headerNicknameEl = document.getElementById("header-nickname");
-    const headerCallBtn = document.getElementById("header-call");
-    const headerNextBtn = document.getElementById("header-next");
+    const headerActionsMenu = document.querySelector(".app-header__actions");
+    const headerActionsToggle = headerActionsMenu
+      ? headerActionsMenu.querySelector(".app-header__overflow-toggle")
+      : null;
     const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
     const controls = document.getElementById("controls");
     const headerEl = document.querySelector("header");
@@ -1748,6 +1780,15 @@
       );
     };
 
+    const closeHeaderActionsMenu = () => {
+      if (headerActionsMenu && headerActionsMenu.hasAttribute("open")) {
+        headerActionsMenu.removeAttribute("open");
+        if (headerActionsToggle) {
+          headerActionsToggle.setAttribute("aria-expanded", "false");
+        }
+      }
+    };
+
     if (controls) {
       updateControlsOffset();
 
@@ -1770,23 +1811,12 @@
       window.addEventListener("resize", updateHeaderOffset);
     }
 
-    if (headerCallBtn) {
-      headerCallBtn.addEventListener("click", () => {
-        if (headerCallBtn.disabled) {
-          return;
-        }
-
-        callBtn?.click();
-      });
-    }
-
-    if (headerNextBtn) {
-      headerNextBtn.addEventListener("click", () => {
-        if (headerNextBtn.disabled) {
-          return;
-        }
-
-        nextBtn?.click();
+    if (headerActionsMenu && headerActionsToggle) {
+      headerActionsMenu.addEventListener("toggle", () => {
+        headerActionsToggle.setAttribute(
+          "aria-expanded",
+          headerActionsMenu.hasAttribute("open") ? "true" : "false",
+        );
       });
     }
 
@@ -2544,18 +2574,36 @@
       return value.replace(/\s+/g, " ").trim();
     }
 
+    function resolveInitialNickname() {
+      const appNickname = window?.app?.currentNickname;
+      if (typeof appNickname === "string" && appNickname.trim()) {
+        return appNickname;
+      }
+
+      try {
+        const storedNickname = localStorage.getItem("nickname");
+        if (storedNickname && storedNickname.trim()) {
+          return storedNickname;
+        }
+      } catch (error) {
+        // localStorage erişilemezse sessizce devam et.
+      }
+
+      return document.body?.dataset?.nickname || "";
+    }
+
     function updateHeaderNicknameDisplay(value) {
       if (!headerNicknameEl) {
         return;
       }
 
       const cleaned = sanitizeNickname(value ?? "").slice(0, 24);
-      const displayValue = cleaned || "Sen";
+      const displayValue = cleaned || "Nickname";
       headerNicknameEl.textContent = displayValue;
       headerNicknameEl.title = displayValue;
     }
 
-    updateHeaderNicknameDisplay(document.body?.dataset?.nickname || "");
+    updateHeaderNicknameDisplay(resolveInitialNickname());
 
     function showNicknameOverlay() {
       nicknameOverlay.hidden = false;
@@ -2577,28 +2625,26 @@
     }
 
     function updateCallButtonVisualState() {
-      if (!callBtn || !callBtnLabel) {
+      if (!callBtn) {
         return;
       }
+
       if (isCallCoolingDown) {
         const safeRemaining = Math.max(callCooldownRemaining, 0);
-        if (callBtnIcon) {
-          callBtnIcon.hidden = true;
+        callBtn.dataset.countdown = `${safeRemaining}`;
+        if (callBtnLabel) {
+          callBtnLabel.textContent = `Arama (Call) - ${safeRemaining} saniye kaldı`;
         }
-        callBtnLabel.textContent = `${safeRemaining} sn`;
-        callBtn.dataset.countdown = "true";
-        if (headerCallBtn) {
-          headerCallBtn.dataset.countdown = "true";
-        }
+        callBtn.setAttribute(
+          "aria-label",
+          `Arama (Call) - ${safeRemaining} saniye kaldı`,
+        );
       } else {
-        if (callBtnIcon) {
-          callBtnIcon.hidden = false;
+        callBtn.removeAttribute("data-countdown");
+        if (callBtnLabel) {
+          callBtnLabel.textContent = "Arama (Call)";
         }
-        callBtnLabel.textContent = "Ara";
-        delete callBtn.dataset.countdown;
-        if (headerCallBtn) {
-          delete headerCallBtn.dataset.countdown;
-        }
+        callBtn.setAttribute("aria-label", "Arama (Call)");
       }
     }
 
@@ -2654,9 +2700,8 @@
       msg.disabled = !isMatched;
       sendBtn.disabled = !isMatched || !hasMessage || isCoolingDown;
       const isNextDisabled = !isMatched || isSearchCountdownActive;
-      nextBtn.disabled = isNextDisabled;
-      if (headerNextBtn) {
-        headerNextBtn.disabled = isNextDisabled;
+      if (nextBtn) {
+        nextBtn.disabled = isNextDisabled;
       }
 
       const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
@@ -2669,9 +2714,6 @@
         updateCallButtonVisualState();
       }
 
-      if (headerCallBtn) {
-        headerCallBtn.disabled = isCallDisabled;
-      }
     }
 
     function setMatchedState(state) {
@@ -3923,6 +3965,7 @@
         if (callBtn.disabled) {
           return;
         }
+        closeHeaderActionsMenu();
         callRequestController?.startOutgoingRequest?.();
       });
     }
@@ -3939,21 +3982,24 @@
       msg.focus();
     };
 
-    nextBtn.onclick = async () => {
-      if (!isMatched || isSearchCountdownActive) {
-        return;
-      }
+    if (nextBtn) {
+      nextBtn.onclick = async () => {
+        closeHeaderActionsMenu();
+        if (!isMatched || isSearchCountdownActive) {
+          return;
+        }
 
-      const shouldSkip = await openSkipConfirmModal();
+        const shouldSkip = await openSkipConfirmModal();
 
-      if (!shouldSkip) {
-        return;
-      }
+        if (!shouldSkip) {
+          return;
+        }
 
-      setMatchedState(false);
-      beginMatchSearch({ countdownSeconds: SKIP_SEARCH_COUNTDOWN_SECONDS });
-      socket.emit("next");
-    };
+        setMatchedState(false);
+        beginMatchSearch({ countdownSeconds: SKIP_SEARCH_COUNTDOWN_SECONDS });
+        socket.emit("next");
+      };
+    }
 
     msg.addEventListener("input", updateControls);
     msg.addEventListener("keydown", (e) => {
