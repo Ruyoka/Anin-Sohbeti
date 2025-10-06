@@ -3840,7 +3840,7 @@
         return;
       }
       beginMatchSearch({ countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS });
-      socket.emit("join");
+      socket.emit("join", { nickname });
     }
 
     function handleNicknameSubmit() {
@@ -3900,11 +3900,17 @@
       }
     });
 
-    socket.on("matched", () => {
-      resetChat("✓ Bir yabancı ile eşleştiniz!");
+    socket.on("matched", (payload) => {
+      const partnerNickname =
+        payload && typeof payload === "object"
+          ? sanitizeNickname(payload.partnerNickname).slice(0, 50)
+          : "";
+      const displayNickname = partnerNickname || "YABANCI";
+      const matchText = `${displayNickname} İLE EŞLEŞTİN`;
+      resetChat(`✓ ${matchText}`);
       setMatchedState(true);
       playMatchSound();
-      triggerChatNotification("Yeni eşleşme!", "Bir yabancı ile eşleştiniz.");
+      triggerChatNotification("Yeni eşleşme!", matchText);
       if (!isCoolingDown) {
         msg.focus();
       }
@@ -3934,7 +3940,7 @@
             }
           : { text: (payload ?? "").toString(), nickname: "" };
 
-      const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "Yabancı";
+      const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "YABANCI";
       appendMessage(data.text, "stranger", senderName);
       if (data.text) {
         const previewText = data.text.length > 120 ? `${data.text.slice(0, 117)}...` : data.text;
@@ -4000,7 +4006,7 @@
         },
         onCountdownFinished: () => {
           if (nickname) {
-            socket.emit("join");
+            socket.emit("join", { nickname });
           }
         },
       });

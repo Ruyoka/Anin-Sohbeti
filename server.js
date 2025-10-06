@@ -18,6 +18,7 @@ app.use(express.static("public"));
 
 let queue = [];
 const partners = new Map();
+const nicknames = new Map();
 const waitTimers = new Map();
 const recentMatches = new Map();
 let scheduledTryMatchHandle = null;
@@ -190,6 +191,16 @@ function enqueueSocketId(socketId) {
   startWaitTimer(socketId);
 }
 
+function sanitizeNickname(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value
+    .toLocaleUpperCase("tr-TR")
+    .replace(/[^\p{L}]/gu, "");
+}
+
 function tryMatch() {
   clearScheduledTryMatch();
   while (queue.length >= 2) {
@@ -218,8 +229,10 @@ function tryMatch() {
     notifyWaitingStatus(first, false);
     notifyWaitingStatus(second, false);
     recordRecentMatch(first, second);
-    io.to(first).emit("matched");
-    io.to(second).emit("matched");
+    const firstNickname = nicknames.get(first) || "";
+    const secondNickname = nicknames.get(second) || "";
+    io.to(first).emit("matched", { partnerNickname: secondNickname });
+    io.to(second).emit("matched", { partnerNickname: firstNickname });
   }
 }
 
@@ -271,7 +284,13 @@ function findNextPair() {
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı:", socket.id);
 
-  socket.on("join", () => {
+  socket.on("join", (payload) => {
+    const rawNickname =
+      payload && typeof payload === "object" && typeof payload.nickname === "string"
+        ? payload.nickname
+        : "";
+    const cleanedNickname = sanitizeNickname(rawNickname).slice(0, 12);
+    nicknames.set(socket.id, cleanedNickname);
     if (partners.has(socket.id)) return;
     enqueueSocketId(socket.id);
     tryMatch();
@@ -281,7 +300,8 @@ io.on("connection", (socket) => {
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
-    const payload =
+    const storedNickname = nicknames.get(socket.id) || "";
+    const incoming =
       msg && typeof msg === "object"
         ? {
             text: (msg.text || "").toString().slice(0, 2000),
@@ -289,7 +309,14 @@ io.on("connection", (socket) => {
           }
         : { text: (msg || "").toString().slice(0, 2000), nickname: "" };
 
-    io.to(partnerId).emit("message", payload);
+    const providedNickname = sanitizeNickname(incoming.nickname).slice(0, 50);
+    const effectiveNickname = providedNickname || storedNickname;
+    const cleanedNickname = sanitizeNickname(effectiveNickname).slice(0, 50);
+
+    io.to(partnerId).emit("message", {
+      text: incoming.text,
+      nickname: cleanedNickname,
+    });
   });
 
   socket.on("voice-call:request", () => {
@@ -411,6 +438,7 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     endCurrentChat(socket.id);
+    nicknames.delete(socket.id);
   });
 });
 
