@@ -1,3 +1,7 @@
+const USER_NICKNAME = "CYPRESSUSER";
+const PARTNER_NICKNAME = "CYPRESSPARTNER";
+const MATCH_NOTICE = `✓ ${PARTNER_NICKNAME} İLE EŞLEŞTİN`;
+
 const connectPartner = (win) =>
   new Cypress.Promise((resolve) => {
     const context = {
@@ -7,11 +11,12 @@ const connectPartner = (win) =>
     };
 
     context.socket.on("connect", () => {
-      context.socket.emit("join");
+      context.socket.emit("join", { nickname: PARTNER_NICKNAME });
     });
 
-    context.socket.on("matched", () => {
+    context.socket.on("matched", (payload) => {
       context.events.matchedCount += 1;
+      expect(payload?.partnerNickname).to.eq(USER_NICKNAME);
       if (!context.resolved) {
         context.resolved = true;
         resolve(context);
@@ -19,7 +24,11 @@ const connectPartner = (win) =>
     });
 
     context.socket.on("message", (msg) => {
-      context.events.messages.push(msg);
+      if (msg && typeof msg === "object") {
+        context.events.messages.push(msg.text);
+      } else {
+        context.events.messages.push(msg);
+      }
     });
 
     context.socket.on("ended", () => {
@@ -29,7 +38,11 @@ const connectPartner = (win) =>
 
 describe("Anın Sohbeti", () => {
   beforeEach(() => {
-    cy.visit("/");
+    cy.visit("/", {
+      onBeforeLoad(win) {
+        win.sessionStorage.setItem("nickname", USER_NICKNAME);
+      },
+    });
     cy.get("#log", { timeout: 10000 }).should(
       "contain.text",
       "Eşleşme bekleniyor..."
@@ -43,22 +56,16 @@ describe("Anın Sohbeti", () => {
       .then((win) => connectPartner(win))
       .as("partner1");
 
-    cy.get("#log", { timeout: 10000 }).should(
-      "contain.text",
-      "✓ Bir yabancı ile eşleştiniz!"
-    );
+    cy.get("#log", { timeout: 10000 }).should("contain.text", MATCH_NOTICE);
     cy.get("#send").should("not.be.disabled");
     cy.get("#msg").should("not.be.disabled");
 
-    cy.get("@partner1").then(({ socket }) => socket.emit("join"));
+    cy.get("@partner1").then(({ socket }) => socket.emit("join", { nickname: PARTNER_NICKNAME }));
     cy.get("#log div").last().should("have.text", "— Bağlantı sonlandı.");
     cy.get("#send").should("be.disabled");
     cy.get("#msg").should("be.disabled");
 
-    cy.get("#log", { timeout: 10000 }).should(
-      "contain.text",
-      "✓ Bir yabancı ile eşleştiniz!"
-    );
+    cy.get("#log", { timeout: 10000 }).should("contain.text", MATCH_NOTICE);
     cy.get("#send").should("not.be.disabled");
     cy.get("#msg").should("not.be.disabled");
 
@@ -71,14 +78,16 @@ describe("Anın Sohbeti", () => {
     });
 
     cy.get("@partner1").then(({ socket }) => socket.emit("message", "Selam!"));
-    cy.get("#log div").last().should("have.text", "Yabancı: Selam!");
+    cy.get("#log div")
+      .last()
+      .should("have.text", `${PARTNER_NICKNAME}: Selam!`);
 
     const longMessage = "x".repeat(2100);
     const truncatedMessage = "x".repeat(2000);
     cy.get("@partner1").then(({ socket }) => socket.emit("message", longMessage));
     cy.get("#log div")
       .last()
-      .should("have.text", `Yabancı: ${truncatedMessage}`);
+      .should("have.text", `${PARTNER_NICKNAME}: ${truncatedMessage}`);
 
     cy.get("#next").click();
     cy.get('[data-waiting-status="true"] .waiting-status__message')
@@ -95,10 +104,7 @@ describe("Anın Sohbeti", () => {
       .then((win) => connectPartner(win))
       .as("partner2");
 
-    cy.get("#log", { timeout: 10000 }).should(
-      "contain.text",
-      "✓ Bir yabancı ile eşleştiniz!"
-    );
+    cy.get("#log", { timeout: 10000 }).should("contain.text", MATCH_NOTICE);
 
     cy.get("#msg").type("Tekrar merhaba!");
     cy.get("#send").click();
@@ -117,10 +123,7 @@ describe("Anın Sohbeti", () => {
       .then((win) => connectPartner(win))
       .as("partner3");
 
-    cy.get("#log", { timeout: 10000 }).should(
-      "contain.text",
-      "✓ Bir yabancı ile eşleştiniz!"
-    );
+    cy.get("#log", { timeout: 10000 }).should("contain.text", MATCH_NOTICE);
 
     cy.get("@partner3").then(({ socket }) => socket.disconnect());
     cy.get("#log div")
