@@ -1,24 +1,30 @@
 package online.aninfotografi.app
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.DialogInterface
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
-import android.net.http.SslError
+import android.webkit.PermissionRequest
 import android.webkit.SslErrorHandler
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import online.aninfotografi.app.databinding.ActivityMainBinding
@@ -27,6 +33,29 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val baseHost by lazy { Uri.parse(DEFAULT_URL).host }
+    private var pendingPermissionRequest: PermissionRequest? = null
+
+    private val mediaPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            val request = pendingPermissionRequest
+            if (request == null) {
+                return@registerForActivityResult
+            }
+
+            val requiredPermissions = mapResourcesToPermissions(request.resources)
+            val allGranted = requiredPermissions.all { permission ->
+                result[permission] == true || hasPermission(permission)
+            }
+
+            if (allGranted) {
+                request.grant(request.resources)
+            } else {
+                request.deny()
+                showPermissionDeniedDialog()
+            }
+
+            pendingPermissionRequest = null
+        }
 
     private val exitConfirmationCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -126,6 +155,12 @@ class MainActivity : AppCompatActivity() {
                     showOfflineState()
                 }
             }
+            webChromeClient = object : WebChromeClient() {
+                override fun onPermissionRequest(request: PermissionRequest?) {
+                    request ?: return
+                    handlePermissionRequest(request)
+                }
+            }
         }
 
         CookieManager.getInstance().apply {
@@ -134,6 +169,12 @@ class MainActivity : AppCompatActivity() {
                 setAcceptThirdPartyCookies(binding.webView, true)
             }
         }
+    }
+
+    override fun onDestroy() {
+        pendingPermissionRequest?.deny()
+        pendingPermissionRequest = null
+        super.onDestroy()
     }
 
     private fun loadContent() {
@@ -193,6 +234,49 @@ class MainActivity : AppCompatActivity() {
         return uri.buildUpon()
             .appendQueryParameter(THEME_QUERY_KEY, theme)
             .build()
+    }
+
+    private fun handlePermissionRequest(request: PermissionRequest) {
+        val requiredPermissions = mapResourcesToPermissions(request.resources)
+        if (requiredPermissions.isEmpty()) {
+            request.deny()
+            return
+        }
+
+        if (requiredPermissions.all(::hasPermission)) {
+            request.grant(request.resources)
+            return
+        }
+
+        pendingPermissionRequest?.deny()
+        pendingPermissionRequest = request
+        mediaPermissionLauncher.launch(requiredPermissions.toTypedArray())
+    }
+
+    private fun hasPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun mapResourcesToPermissions(resources: Array<String>): List<String> {
+        return resources.mapNotNull { resource ->
+            when (resource) {
+                PermissionRequest.RESOURCE_AUDIO_CAPTURE -> Manifest.permission.RECORD_AUDIO
+                PermissionRequest.RESOURCE_VIDEO_CAPTURE -> Manifest.permission.CAMERA
+                else -> null
+            }
+        }.distinct()
+    }
+
+    private fun showPermissionDeniedDialog() {
+        if (isFinishing || isDestroyed) {
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.permission_required_title)
+            .setMessage(R.string.permission_required_message)
+            .setPositiveButton(R.string.ok) { dialog, _ -> dialog.dismiss() }
+            .setCancelable(true)
+            .show()
     }
 
     private fun currentTheme(): String {
