@@ -5,4 +5,7 @@
     <string name="no">Hayır</string>
     <string name="offline_message">Bağlantı yok. Lütfen internetinizi kontrol edin.</string>
     <string name="retry">Yenile</string>
+    <string name="permission_required_title">İzin gerekli</string>
+    <string name="permission_required_message">Sesli ve görüntülü sohbetler için mikrofon ve kamera izinlerini vermelisiniz.</string>
+    <string name="ok">Tamam</string>
 </resources>
