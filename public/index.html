@@ -871,12 +871,12 @@
       justify-self: end;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .app-header__action {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       min-height: 0;
       padding: 0;
       border-radius: 999px;
@@ -899,8 +899,8 @@
     }
 
     .app-header__action svg {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       fill: currentColor;
     }
 
@@ -1996,6 +1996,7 @@
       "Bağlantı sonlandı, yeni eşleşme aranıyor…";
     const WAITING_STATUS_TEXT =
       "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
+    const BLOCK_SEARCH_TEXT = "Kullanıcı engellendi, yeni eşleşme aranıyor...";
     const MATCH_SEARCH_COUNTDOWN_SECONDS = 5;
     const DISCONNECT_SEARCH_COUNTDOWN_SECONDS = 3;
     const SKIP_SEARCH_COUNTDOWN_SECONDS = 5;
@@ -2041,6 +2042,7 @@
     let audioContext = null;
     let searchCountdownTimer = null;
     let searchCountdownRemaining = 0;
+    let searchCountdownReason = null;
     let isSearchCountdownActive = false;
     let notificationsEnabled =
       SUPPORTS_NOTIFICATIONS && Notification.permission === "granted";
@@ -2513,6 +2515,7 @@
     function clearSearchCountdown() {
       stopSearchCountdownTimer();
       searchCountdownRemaining = 0;
+      searchCountdownReason = null;
       if (isSearchCountdownActive) {
         isSearchCountdownActive = false;
         updateControls();
@@ -2527,6 +2530,7 @@
         finalText = WAITING_STATUS_TEXT,
         countdownFormatter,
         onCountdownFinished,
+        reason = null,
       } = {}
     ) {
       clearSearchCountdown();
@@ -2543,6 +2547,7 @@
 
       isSearchCountdownActive = true;
       searchCountdownRemaining = seconds;
+      searchCountdownReason = reason;
       setWaitingStatusText(formatCountdown(searchCountdownRemaining));
       updateControls();
       updateMiniGameInvitationVisibility();
@@ -2560,11 +2565,13 @@
         stopSearchCountdownTimer();
         searchCountdownRemaining = 0;
         isSearchCountdownActive = false;
+        const finishedReason = searchCountdownReason;
+        searchCountdownReason = null;
         updateControls();
         updateMiniGameInvitationVisibility();
 
         if (typeof onCountdownFinished === "function") {
-          onCountdownFinished();
+          onCountdownFinished(finishedReason);
         }
 
         if (finalText) {
@@ -4104,6 +4111,7 @@
       const onCountdownFinished = options.onCountdownFinished;
       const countdownFormatter = options.countdownFormatter;
       const initialMessage = options.initialMessage;
+      const reason = options.reason || null;
 
       hideWaitingStatus();
       log.replaceChildren();
@@ -4119,11 +4127,28 @@
         finalText,
         countdownFormatter,
         onCountdownFinished,
+        reason,
       });
     }
 
     function showWaitingStatus(text) {
       setWaitingStatusText(text);
+    }
+
+    function beginReportCountdown(messageText) {
+      const sanitizedMessage = (messageText || BLOCK_SEARCH_TEXT).toString();
+      beginMatchSearch({
+        countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS,
+        messagePrefix: sanitizedMessage,
+        countdownFormatter: (remainingSeconds) =>
+          `${sanitizedMessage} ${Math.max(remainingSeconds, 0)}`,
+        reason: "report",
+        onCountdownFinished: () => {
+          if (nickname) {
+            socket.emit("join", getJoinPayload());
+          }
+        },
+      });
     }
 
     function hideWaitingStatus() {
@@ -4318,23 +4343,20 @@
       const message =
         payload && typeof payload === "object" && typeof payload.message === "string"
           ? payload.message
-          : "Kullanıcı raporlandı, yeni eşleşme aranıyor...";
-      beginMatchSearch({
-        countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS,
-        messagePrefix: message,
-        initialMessage: message,
-        onCountdownFinished: () => {
-          if (nickname) {
-            socket.emit("join", getJoinPayload());
-          }
-        },
-      });
+          : BLOCK_SEARCH_TEXT;
+      if (searchCountdownReason !== "report") {
+        beginReportCountdown(message);
+      }
     });
 
     socket.on("report:error", () => {
       closeReportOverlay({ immediate: true });
-      appendMessage("Raporlama gerçekleştirilemedi. Lütfen tekrar dene.", "system");
-      updateControls();
+      if (searchCountdownReason === "report" || isSearchCountdownActive) {
+        resetChat("Raporlama gerçekleştirilemedi. Lütfen tekrar dene.");
+      } else {
+        appendMessage("Raporlama gerçekleştirilemedi. Lütfen tekrar dene.", "system");
+        updateControls();
+      }
     });
 
     socket.on("ended", () => {
@@ -4401,6 +4423,7 @@
         }
         blockedUsers.add(currentPartnerId);
         persistBlockedUsers();
+        beginReportCountdown(BLOCK_SEARCH_TEXT);
         socket.emit("report", { partnerId: currentPartnerId });
         closeReportOverlay();
       });
