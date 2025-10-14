@@ -8,6 +8,7 @@ const { Server } = require("socket.io");
 const PORT = process.env.PORT || 6000;
 const WAITING_STATUS_TEXT =
   "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
+const POST_REPORT_REQUEUE_DELAY_MS = 5000;
 
 const app = express();
 const server = http.createServer(app);
@@ -499,11 +500,13 @@ io.on("connection", (socket) => {
     endCurrentChat(socket.id);
 
     socket.emit("reported", {
-      message: "Kullanıcı raporlandı, yeni eşleşme aranıyor...",
+      message: "Kullanıcı engellendi, yeni eşleşme aranıyor...",
     });
 
-    enqueueSocketId(socket.id);
-    tryMatch();
+    setTimeout(() => {
+      enqueueSocketId(socket.id);
+      tryMatch();
+    }, POST_REPORT_REQUEUE_DELAY_MS);
   });
 
   socket.on("next", () => {
