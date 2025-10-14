@@ -1893,7 +1893,75 @@
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
-    const socket = io();
+    const CLIENT_ID_STORAGE_KEY = "aninSohbetiClientId";
+
+    function generateClientId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      const charset = "abcdefghijklmnopqrstuvwxyz0123456789";
+      let result = "";
+      for (let index = 0; index < 32; index += 1) {
+        const randomIndex = Math.floor(Math.random() * charset.length);
+        result += charset.charAt(randomIndex);
+      }
+      return result;
+    }
+
+    function readStoredClientId() {
+      try {
+        const stored = localStorage.getItem(CLIENT_ID_STORAGE_KEY);
+        if (typeof stored === "string" && stored.trim()) {
+          return stored.trim();
+        }
+      } catch (error) {
+        // ignore storage errors
+      }
+      try {
+        const sessionStored = sessionStorage.getItem(CLIENT_ID_STORAGE_KEY);
+        if (typeof sessionStored === "string" && sessionStored.trim()) {
+          return sessionStored.trim();
+        }
+      } catch (error) {
+        // ignore storage errors
+      }
+      return null;
+    }
+
+    function persistClientId(id) {
+      if (!id) {
+        return;
+      }
+      try {
+        localStorage.setItem(CLIENT_ID_STORAGE_KEY, id);
+        return;
+      } catch (error) {
+        // ignore storage errors
+      }
+      try {
+        sessionStorage.setItem(CLIENT_ID_STORAGE_KEY, id);
+      } catch (error) {
+        // ignore storage errors
+      }
+    }
+
+    function getOrCreateClientId() {
+      const stored = readStoredClientId();
+      if (stored) {
+        return stored;
+      }
+      const newId = generateClientId();
+      persistClientId(newId);
+      return newId;
+    }
+
+    const clientId = getOrCreateClientId();
+    const socket = io({
+      auth: {
+        clientId,
+      },
+    });
+    socket.auth = { clientId };
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
@@ -2000,7 +2068,10 @@
         if (Array.isArray(parsed)) {
           parsed.forEach((value) => {
             if (typeof value === "string" && value) {
-              blockedUsers.add(value);
+              const sanitizedValue = value.trim();
+              if (sanitizedValue) {
+                blockedUsers.add(sanitizedValue);
+              }
             }
           });
         }
