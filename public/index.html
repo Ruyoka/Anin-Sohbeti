@@ -140,6 +140,86 @@
       pointer-events: auto;
     }
 
+    .report-overlay {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--controls-offset, 0px) + 16px);
+      transform: translate(-50%, 12px);
+      width: min(440px, calc(100% - 32px));
+      background: rgba(252, 255, 252, 0.98);
+      border: 1px solid rgba(46, 125, 82, 0.18);
+      border-radius: 20px;
+      box-shadow: 0 24px 52px -32px rgba(34, 72, 41, 0.45);
+      padding: 18px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+      z-index: 4;
+      color: var(--text-primary);
+    }
+
+    .report-overlay[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, 0);
+    }
+
+    .report-overlay__message {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.5;
+      text-align: center;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .report-overlay__actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .report-overlay__button {
+      flex: 1 1 50%;
+      min-height: 44px;
+      border-radius: 999px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #ffffff;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .report-overlay__button:focus-visible {
+      outline: 3px solid rgba(46, 125, 82, 0.3);
+      outline-offset: 2px;
+    }
+
+    .report-overlay__button--confirm {
+      background: #45a263;
+      box-shadow: 0 18px 40px -30px rgba(69, 162, 99, 0.55);
+    }
+
+    .report-overlay__button--confirm:hover,
+    .report-overlay__button--confirm:focus-visible {
+      background: #3c8e56;
+      transform: translateY(-1px);
+    }
+
+    .report-overlay__button--cancel {
+      background: #f55b5b;
+      box-shadow: 0 18px 40px -30px rgba(245, 91, 91, 0.55);
+    }
+
+    .report-overlay__button--cancel:hover,
+    .report-overlay__button--cancel:focus-visible {
+      background: #e04c4c;
+      transform: translateY(-1px);
+    }
+
     .call-request-overlay {
       position: fixed;
       top: 0;
@@ -791,12 +871,12 @@
       justify-self: end;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .app-header__action {
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
       min-height: 0;
       padding: 0;
       border-radius: 999px;
@@ -819,8 +899,8 @@
     }
 
     .app-header__action svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       fill: currentColor;
     }
 
@@ -1371,6 +1451,11 @@
         padding-top: var(--header-offset, 0px);
       }
 
+      .report-overlay {
+        width: calc(100% - 24px);
+        bottom: calc(var(--controls-offset, 0px) + 12px);
+      }
+
       .chat-window {
         flex: 1 1 auto;
       }
@@ -1522,6 +1607,22 @@
               </svg>
             </span>
             <span class="app-header__action-label" aria-hidden="true">Sonraki</span>
+          </button>
+          <button
+            type="button"
+            class="app-header__action"
+            id="header-report"
+            aria-label="Raporla (Report)"
+          >
+            <span class="app-header__action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M6 3.75a.75.75 0 0 1 .75-.75h9.25a.75.75 0 0 1 .6 1.2l-2.18 3.05 2.18 3.05a.75.75 0 0 1-.6 1.2H7.5v6.55a.75.75 0 0 1-1.5 0Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span class="app-header__action-label" aria-hidden="true">Raporla</span>
           </button>
         </div>
       </div>
@@ -1740,6 +1841,32 @@
       <div class="chat-window">
         <div id="log"></div>
       </div>
+      <div
+        id="report-overlay"
+        class="report-overlay"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="report-overlay-message"
+        hidden
+      >
+        <p class="report-overlay__message" id="report-overlay-message"></p>
+        <div class="report-overlay__actions">
+          <button
+            type="button"
+            class="report-overlay__button report-overlay__button--confirm"
+            id="report-overlay-confirm"
+          >
+            Evet
+          </button>
+          <button
+            type="button"
+            class="report-overlay__button report-overlay__button--cancel"
+            id="report-overlay-cancel"
+          >
+            Hayır
+          </button>
+        </div>
+      </div>
       <div id="controls">
         <div class="controls__composer">
           <input id="msg" placeholder="Mesaj yaz...">
@@ -1774,6 +1901,7 @@
     const callBtnIcon = callBtn ? callBtn.querySelector(".app-header__action-icon") : null;
     const callBtnLabel = callBtn ? callBtn.querySelector(".app-header__action-label") : null;
     const nextBtn = document.getElementById("header-next");
+    const reportBtn = document.getElementById("header-report");
     const headerNicknameEl = document.getElementById("header-nickname");
     const headerNicknameContainer =
       headerNicknameEl && headerNicknameEl.closest(".app-header__nickname");
@@ -1848,6 +1976,10 @@
     const callRequestCancelBtn = document.getElementById("call-request-cancel");
     const callRequestAcceptBtn = document.getElementById("call-request-accept");
     const callRequestRejectBtn = document.getElementById("call-request-reject");
+    const reportOverlay = document.getElementById("report-overlay");
+    const reportOverlayMessage = document.getElementById("report-overlay-message");
+    const reportConfirmBtn = document.getElementById("report-overlay-confirm");
+    const reportCancelBtn = document.getElementById("report-overlay-cancel");
     const MATCH_SEARCH_TEXT = "Yeni eşleşme aranıyor...";
     const DISCONNECT_SEARCH_MESSAGE =
       "Bağlantı sonlandı, yeni eşleşme aranıyor…";
@@ -1860,8 +1992,28 @@
     const CALL_REQUEST_TIMEOUT_SECONDS = 10;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
 
+    const blockedUsers = new Set();
+    try {
+      const storedBlockedUsers = sessionStorage.getItem("blockedUsers");
+      if (storedBlockedUsers) {
+        const parsed = JSON.parse(storedBlockedUsers);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((value) => {
+            if (typeof value === "string" && value) {
+              blockedUsers.add(value);
+            }
+          });
+        }
+      }
+    } catch (error) {
+      blockedUsers.clear();
+    }
+
     let isMatched = false;
     let nickname = "";
+    let currentPartnerId = null;
+    let currentPartnerNickname = "";
+    let reportOverlayOpen = false;
 
     window.addEventListener("resize", () => {
       updateHeaderNicknameDisplay(nickname);
@@ -1887,6 +2039,17 @@
     let isCallCoolingDown = false;
     let callCooldownTimer = null;
     let callCooldownRemaining = 0;
+
+    function persistBlockedUsers() {
+      try {
+        sessionStorage.setItem(
+          "blockedUsers",
+          JSON.stringify(Array.from(blockedUsers))
+        );
+      } catch (error) {
+        // ignore storage errors
+      }
+    }
 
     function createWaitingMiniGame(container, startButton) {
       const GAME_DURATION_SECONDS = 60;
@@ -2791,6 +2954,10 @@
         nextBtn.disabled = isNextDisabled;
       }
 
+      if (reportBtn) {
+        reportBtn.disabled = !isMatched || isSearchCountdownActive;
+      }
+
       const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
       const hasActiveRequest = callRequestController?.isActive?.() ?? false;
       const isCallDisabled =
@@ -2806,12 +2973,96 @@
       isMatched = state;
       if (!state) {
         clearCooldown();
+        currentPartnerId = null;
+        currentPartnerNickname = "";
+        closeReportOverlay({ immediate: true });
       } else {
         hideWaitingStatus();
+        closeReportOverlay({ immediate: true });
       }
       voiceCallManager?.handleMatchStateChange?.(state);
       callRequestController?.handleMatchStateChange?.(state);
       updateControls();
+    }
+
+    function resetReportOverlayButtons() {
+      if (reportConfirmBtn) {
+        reportConfirmBtn.disabled = false;
+      }
+      if (reportCancelBtn) {
+        reportCancelBtn.disabled = false;
+      }
+    }
+
+    function updateReportOverlayMessage() {
+      if (!reportOverlayMessage) {
+        return;
+      }
+      const displayName = currentPartnerNickname || "YABANCI";
+      reportOverlayMessage.textContent = "";
+      const firstLine = document.createTextNode(
+        `${displayName} adlı kişiyi raporlamak istediğine emin misin?`
+      );
+      const lineBreak = document.createElement("br");
+      const secondLine = document.createTextNode(
+        "Eğer evet dersen bir daha senin karşına çıkmayacak ve muhabbeti keseceksiniz."
+      );
+      reportOverlayMessage.append(firstLine, lineBreak, secondLine);
+    }
+
+    function openReportOverlay() {
+      if (!reportOverlay || reportOverlayOpen || !isMatched || !currentPartnerId) {
+        return;
+      }
+      updateReportOverlayMessage();
+      resetReportOverlayButtons();
+      reportOverlay.hidden = false;
+      reportOverlay.dataset.open = "false";
+      reportOverlayOpen = true;
+      requestAnimationFrame(() => {
+        if (reportOverlayOpen) {
+          reportOverlay.dataset.open = "true";
+        }
+      });
+      if (reportConfirmBtn) {
+        setTimeout(() => {
+          reportConfirmBtn.focus({ preventScroll: true });
+        }, 0);
+      }
+    }
+
+    function closeReportOverlay({ immediate = false } = {}) {
+      if (!reportOverlay) {
+        return;
+      }
+      const wasOpen = reportOverlayOpen;
+      reportOverlayOpen = false;
+      resetReportOverlayButtons();
+
+      if (immediate || !wasOpen) {
+        delete reportOverlay.dataset.open;
+        reportOverlay.hidden = true;
+        return;
+      }
+
+      reportOverlay.dataset.open = "false";
+      const handleTransitionEnd = (event) => {
+        if (event.target !== reportOverlay) {
+          return;
+        }
+        reportOverlay.removeEventListener("transitionend", handleTransitionEnd);
+        if (!reportOverlayOpen) {
+          reportOverlay.hidden = true;
+          delete reportOverlay.dataset.open;
+        }
+      };
+      reportOverlay.addEventListener("transitionend", handleTransitionEnd);
+      setTimeout(() => {
+        if (!reportOverlayOpen) {
+          reportOverlay.hidden = true;
+          delete reportOverlay.dataset.open;
+        }
+      }, 220);
     }
 
     voiceCallManager = (() => {
@@ -3841,6 +4092,7 @@
       const finalText = options.finalText || WAITING_STATUS_TEXT;
       const onCountdownFinished = options.onCountdownFinished;
       const countdownFormatter = options.countdownFormatter;
+      const initialMessage = options.initialMessage;
 
       hideWaitingStatus();
       log.replaceChildren();
@@ -3848,6 +4100,9 @@
       clearCooldown();
       setMatchedState(false);
       updateControls();
+      if (initialMessage) {
+        appendMessage(initialMessage, "system");
+      }
       startSearchCountdown(countdownSeconds, {
         prefix: messagePrefix,
         finalText,
@@ -3879,12 +4134,19 @@
       updateControls();
     }
 
+    function getJoinPayload() {
+      return {
+        nickname,
+        blockedUsers: Array.from(blockedUsers),
+      };
+    }
+
     function joinQueue() {
       if (!nickname || !socket.connected) {
         return;
       }
       beginMatchSearch({ countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS });
-      socket.emit("join", { nickname });
+      socket.emit("join", getJoinPayload());
     }
 
     function handleNicknameSubmit() {
@@ -3945,11 +4207,17 @@
     });
 
     socket.on("matched", (payload) => {
+      currentPartnerId =
+        payload && typeof payload === "object" && typeof payload.partnerId === "string"
+          ? payload.partnerId
+          : null;
       const partnerNickname =
         payload && typeof payload === "object"
           ? sanitizeNickname(payload.partnerNickname).slice(0, 50)
           : "";
       const displayNickname = partnerNickname || "YABANCI";
+      currentPartnerNickname = displayNickname;
+      updateReportOverlayMessage();
       const matchText = `${displayNickname} İLE EŞLEŞTİN`;
       resetChat(`✓ ${matchText}`);
       setMatchedState(true);
@@ -4035,6 +4303,29 @@
       voiceCallManager?.handlePeerEnded?.();
     });
 
+    socket.on("reported", (payload) => {
+      const message =
+        payload && typeof payload === "object" && typeof payload.message === "string"
+          ? payload.message
+          : "Kullanıcı raporlandı, yeni eşleşme aranıyor...";
+      beginMatchSearch({
+        countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS,
+        messagePrefix: message,
+        initialMessage: message,
+        onCountdownFinished: () => {
+          if (nickname) {
+            socket.emit("join", getJoinPayload());
+          }
+        },
+      });
+    });
+
+    socket.on("report:error", () => {
+      closeReportOverlay({ immediate: true });
+      appendMessage("Raporlama gerçekleştirilemedi. Lütfen tekrar dene.", "system");
+      updateControls();
+    });
+
     socket.on("ended", () => {
       beginMatchSearch({
         countdownSeconds: DISCONNECT_SEARCH_COUNTDOWN_SECONDS,
@@ -4050,7 +4341,7 @@
         },
         onCountdownFinished: () => {
           if (nickname) {
-            socket.emit("join", { nickname });
+            socket.emit("join", getJoinPayload());
           }
         },
       });
@@ -4070,6 +4361,47 @@
         callRequestController?.startOutgoingRequest?.();
       });
     }
+
+    if (reportBtn) {
+      reportBtn.addEventListener("click", () => {
+        if (reportBtn.disabled) {
+          return;
+        }
+        openReportOverlay();
+      });
+    }
+
+    if (reportCancelBtn) {
+      reportCancelBtn.addEventListener("click", () => {
+        closeReportOverlay();
+        reportBtn?.focus({ preventScroll: true });
+      });
+    }
+
+    if (reportConfirmBtn) {
+      reportConfirmBtn.addEventListener("click", () => {
+        if (!isMatched || !currentPartnerId) {
+          closeReportOverlay({ immediate: true });
+          return;
+        }
+        reportConfirmBtn.disabled = true;
+        if (reportCancelBtn) {
+          reportCancelBtn.disabled = true;
+        }
+        blockedUsers.add(currentPartnerId);
+        persistBlockedUsers();
+        socket.emit("report", { partnerId: currentPartnerId });
+        closeReportOverlay();
+      });
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && reportOverlayOpen) {
+        event.preventDefault();
+        closeReportOverlay();
+        reportBtn?.focus({ preventScroll: true });
+      }
+    });
 
     sendBtn.onclick = () => {
       if (!isMatched || !nickname || !msg.value.trim() || isCoolingDown) return;
