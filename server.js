@@ -27,10 +27,14 @@ const nicknames = new Map();
 const waitTimers = new Map();
 const recentMatches = new Map();
 const blockedUsers = new Map();
+const socketUserIds = new Map();
+const socketsByUserId = new Map();
 let scheduledTryMatchHandle = null;
 let scheduledTryMatchTime = 0;
 const callRequestsByCaller = new Map();
 const callRequestsByCallee = new Map();
+
+const MAX_USER_ID_LENGTH = 100;
 
 function getPairKey(firstId, secondId) {
   return [firstId, secondId].sort().join(":");
@@ -84,6 +88,66 @@ function scheduleTryMatchAfter(delayMs) {
   scheduledTryMatchTime = targetTime;
 }
 
+function sanitizeUserId(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const cleaned = trimmed.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, MAX_USER_ID_LENGTH);
+  if (!cleaned) {
+    return null;
+  }
+  return cleaned;
+}
+
+function resolveUserId(socket) {
+  const fromAuth = sanitizeUserId(socket.handshake?.auth?.clientId);
+  if (fromAuth) {
+    return fromAuth;
+  }
+  const fromQuery = sanitizeUserId(socket.handshake?.query?.clientId);
+  if (fromQuery) {
+    return fromQuery;
+  }
+  return sanitizeUserId(socket.id) || socket.id;
+}
+
+function registerSocketUserId(socket) {
+  const userId = resolveUserId(socket);
+  socketUserIds.set(socket.id, userId);
+  let sockets = socketsByUserId.get(userId);
+  if (!sockets) {
+    sockets = new Set();
+    socketsByUserId.set(userId, sockets);
+  }
+  sockets.add(socket.id);
+  return userId;
+}
+
+function unregisterSocketUserId(socketId) {
+  const userId = socketUserIds.get(socketId);
+  if (!userId) {
+    return null;
+  }
+  socketUserIds.delete(socketId);
+  const sockets = socketsByUserId.get(userId);
+  if (sockets) {
+    sockets.delete(socketId);
+    if (sockets.size === 0) {
+      socketsByUserId.delete(userId);
+      blockedUsers.delete(userId);
+    }
+  }
+  return userId;
+}
+
+function getUserIdForSocket(socketId) {
+  return socketUserIds.get(socketId) || null;
+}
+
 function removeCallRequestByCaller(callerId) {
   const request = callRequestsByCaller.get(callerId);
   if (!request) {
@@ -129,30 +193,38 @@ function clearCallRequestsForSocket(socketId, reason = "cancelled") {
   }
 }
 
-function getBlockedSet(socketId) {
-  let set = blockedUsers.get(socketId);
+function getBlockedSetForUser(userId) {
+  if (!userId) {
+    return new Set();
+  }
+  let set = blockedUsers.get(userId);
   if (!set) {
     set = new Set();
-    blockedUsers.set(socketId, set);
+    blockedUsers.set(userId, set);
   }
   return set;
 }
 
 function addBlockedUser(reporterId, blockedId) {
-  if (!blockedId) {
+  if (!reporterId || !blockedId) {
     return;
   }
-  const blockedSet = getBlockedSet(reporterId);
+  const blockedSet = getBlockedSetForUser(reporterId);
   blockedSet.add(blockedId);
 }
 
-function isPairBlocked(firstId, secondId) {
-  const firstBlocked = blockedUsers.get(firstId);
-  if (firstBlocked && firstBlocked.has(secondId)) {
+function isPairBlocked(firstSocketId, secondSocketId) {
+  const firstUserId = getUserIdForSocket(firstSocketId);
+  const secondUserId = getUserIdForSocket(secondSocketId);
+  if (!firstUserId || !secondUserId) {
+    return false;
+  }
+  const firstBlocked = blockedUsers.get(firstUserId);
+  if (firstBlocked && firstBlocked.has(secondUserId)) {
     return true;
   }
-  const secondBlocked = blockedUsers.get(secondId);
-  if (secondBlocked && secondBlocked.has(firstId)) {
+  const secondBlocked = blockedUsers.get(secondUserId);
+  if (secondBlocked && secondBlocked.has(firstUserId)) {
     return true;
   }
   return false;
@@ -266,13 +338,15 @@ function tryMatch() {
     recordRecentMatch(first, second);
     const firstNickname = nicknames.get(first) || "";
     const secondNickname = nicknames.get(second) || "";
+    const firstUserId = getUserIdForSocket(first) || first;
+    const secondUserId = getUserIdForSocket(second) || second;
     io.to(first).emit("matched", {
       partnerNickname: secondNickname,
-      partnerId: second,
+      partnerId: secondUserId,
     });
     io.to(second).emit("matched", {
       partnerNickname: firstNickname,
-      partnerId: first,
+      partnerId: firstUserId,
     });
   }
 }
@@ -328,9 +402,13 @@ function findNextPair() {
 
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı:", socket.id);
-  blockedUsers.set(socket.id, new Set());
+  const userId = registerSocketUserId(socket);
+  socket.data.userId = userId;
+  getBlockedSetForUser(userId);
 
   socket.on("join", (payload) => {
+    const userId = socket.data.userId || getUserIdForSocket(socket.id);
+    socket.data.userId = userId;
     const rawNickname =
       payload && typeof payload === "object" && typeof payload.nickname === "string"
         ? payload.nickname
@@ -339,9 +417,9 @@ io.on("connection", (socket) => {
     nicknames.set(socket.id, cleanedNickname);
 
     if (payload && typeof payload === "object" && Array.isArray(payload.blockedUsers)) {
-      const blockedSet = getBlockedSet(socket.id);
+      const blockedSet = getBlockedSetForUser(userId);
       payload.blockedUsers
-        .map((value) => value && value.toString())
+        .map((value) => sanitizeUserId(value && value.toString()))
         .filter((value) => typeof value === "string" && value)
         .forEach((value) => blockedSet.add(value));
     }
@@ -483,18 +561,29 @@ io.on("connection", (socket) => {
   });
 
   socket.on("report", (payload) => {
-    const partnerId = partners.get(socket.id);
-    const reportedId =
+    const partnerSocketId = partners.get(socket.id);
+    const reportedIdFromPayload = sanitizeUserId(
       payload && typeof payload === "object" && typeof payload.partnerId === "string"
         ? payload.partnerId
-        : partnerId;
+        : ""
+    );
+    const reporterUserId = socket.data.userId || getUserIdForSocket(socket.id);
+    const partnerUserId = partnerSocketId
+      ? getUserIdForSocket(partnerSocketId)
+      : null;
 
-    if (!partnerId || !reportedId || reportedId !== partnerId) {
+    if (
+      !partnerSocketId ||
+      !partnerUserId ||
+      !reporterUserId ||
+      !reportedIdFromPayload ||
+      reportedIdFromPayload !== partnerUserId
+    ) {
       socket.emit("report:error", { reason: "no-partner" });
       return;
     }
 
-    addBlockedUser(socket.id, reportedId);
+    addBlockedUser(reporterUserId, partnerUserId);
 
     endCurrentChat(socket.id);
 
@@ -517,7 +606,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     endCurrentChat(socket.id);
     nicknames.delete(socket.id);
-    blockedUsers.delete(socket.id);
+    unregisterSocketUserId(socket.id);
   });
 });
 
