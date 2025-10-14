@@ -26,6 +26,7 @@ const partners = new Map();
 const nicknames = new Map();
 const waitTimers = new Map();
 const recentMatches = new Map();
+const blockedUsers = new Map();
 let scheduledTryMatchHandle = null;
 let scheduledTryMatchTime = 0;
 const callRequestsByCaller = new Map();
@@ -126,6 +127,35 @@ function clearCallRequestsForSocket(socketId, reason = "cancelled") {
       reason,
     });
   }
+}
+
+function getBlockedSet(socketId) {
+  let set = blockedUsers.get(socketId);
+  if (!set) {
+    set = new Set();
+    blockedUsers.set(socketId, set);
+  }
+  return set;
+}
+
+function addBlockedUser(reporterId, blockedId) {
+  if (!blockedId) {
+    return;
+  }
+  const blockedSet = getBlockedSet(reporterId);
+  blockedSet.add(blockedId);
+}
+
+function isPairBlocked(firstId, secondId) {
+  const firstBlocked = blockedUsers.get(firstId);
+  if (firstBlocked && firstBlocked.has(secondId)) {
+    return true;
+  }
+  const secondBlocked = blockedUsers.get(secondId);
+  if (secondBlocked && secondBlocked.has(firstId)) {
+    return true;
+  }
+  return false;
 }
 
 function notifyWaitingStatus(socketId, active) {
@@ -236,8 +266,14 @@ function tryMatch() {
     recordRecentMatch(first, second);
     const firstNickname = nicknames.get(first) || "";
     const secondNickname = nicknames.get(second) || "";
-    io.to(first).emit("matched", { partnerNickname: secondNickname });
-    io.to(second).emit("matched", { partnerNickname: firstNickname });
+    io.to(first).emit("matched", {
+      partnerNickname: secondNickname,
+      partnerId: second,
+    });
+    io.to(second).emit("matched", {
+      partnerNickname: firstNickname,
+      partnerId: first,
+    });
   }
 }
 
@@ -273,6 +309,10 @@ function findNextPair() {
         continue;
       }
 
+      if (isPairBlocked(first, second)) {
+        continue;
+      }
+
       queue.splice(j, 1);
       queue.splice(i, 1);
       return { first, second };
@@ -288,6 +328,7 @@ function findNextPair() {
 
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı:", socket.id);
+  blockedUsers.set(socket.id, new Set());
 
   socket.on("join", (payload) => {
     const rawNickname =
@@ -296,6 +337,14 @@ io.on("connection", (socket) => {
         : "";
     const cleanedNickname = sanitizeNickname(rawNickname).slice(0, 12);
     nicknames.set(socket.id, cleanedNickname);
+
+    if (payload && typeof payload === "object" && Array.isArray(payload.blockedUsers)) {
+      const blockedSet = getBlockedSet(socket.id);
+      payload.blockedUsers
+        .map((value) => value && value.toString())
+        .filter((value) => typeof value === "string" && value)
+        .forEach((value) => blockedSet.add(value));
+    }
     if (partners.has(socket.id)) return;
     enqueueSocketId(socket.id);
     tryMatch();
@@ -433,6 +482,30 @@ io.on("connection", (socket) => {
     io.to(partnerId).emit("voice-call:ended");
   });
 
+  socket.on("report", (payload) => {
+    const partnerId = partners.get(socket.id);
+    const reportedId =
+      payload && typeof payload === "object" && typeof payload.partnerId === "string"
+        ? payload.partnerId
+        : partnerId;
+
+    if (!partnerId || !reportedId || reportedId !== partnerId) {
+      socket.emit("report:error", { reason: "no-partner" });
+      return;
+    }
+
+    addBlockedUser(socket.id, reportedId);
+
+    endCurrentChat(socket.id);
+
+    socket.emit("reported", {
+      message: "Kullanıcı raporlandı, yeni eşleşme aranıyor...",
+    });
+
+    enqueueSocketId(socket.id);
+    tryMatch();
+  });
+
   socket.on("next", () => {
     endCurrentChat(socket.id);
     setTimeout(() => {
@@ -444,6 +517,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     endCurrentChat(socket.id);
     nicknames.delete(socket.id);
+    blockedUsers.delete(socket.id);
   });
 });
 
