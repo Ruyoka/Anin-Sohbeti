@@ -904,6 +904,10 @@
       fill: currentColor;
     }
 
+    #header-report .app-header__action-icon {
+      color: #e35b5b;
+    }
+
     .app-header__action-label {
       display: none;
       font-weight: 600;
@@ -1046,13 +1050,14 @@
 
     #log {
       flex: 1;
-      padding: 28px 28px 32px;
+      padding: clamp(1.75rem, 5vh, 2.25rem) clamp(1.4rem, 5vw, 2rem)
+        clamp(2rem, 6vh, 2.5rem);
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: clamp(0.9rem, 3vh, 1.6rem);
       scroll-behavior: smooth;
-      scroll-padding-bottom: 32px;
+      scroll-padding-bottom: clamp(2rem, 6vh, 2.75rem);
     }
 
     #log::-webkit-scrollbar {
@@ -1066,14 +1071,14 @@
 
     .message {
       max-width: 86%;
-      padding: 12px 16px;
+      padding: clamp(0.95rem, 2.8vh, 1.35rem) clamp(1.1rem, 4vw, 1.6rem);
       border-radius: 20px;
       font-size: 16px;
       line-height: 1.5;
       word-break: break-word;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: clamp(0.35rem, 1.2vh, 0.6rem);
       box-shadow: none;
     }
 
@@ -1125,9 +1130,9 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 12px;
+      gap: clamp(1.1rem, 3.6vh, 1.8rem);
       text-align: center;
-      padding: 18px 20px;
+      padding: clamp(1.75rem, 5vh, 2.5rem) clamp(1.5rem, 6vw, 2.5rem);
       border-radius: 24px;
       max-width: 100%;
       box-shadow: 0 26px 48px -34px rgba(34, 72, 41, 0.55);
@@ -1145,8 +1150,8 @@
       align-self: center;
       background: var(--accent);
       color: #ffffff;
-      min-height: 0;
-      padding: 10px 22px;
+      min-height: clamp(2.5rem, 7vh, 3rem);
+      padding: clamp(0.85rem, 2.5vh, 1rem) clamp(1.8rem, 7vw, 2.6rem);
       font-size: 15px;
       border-radius: 999px;
       box-shadow: 0 18px 34px -28px rgba(34, 72, 41, 0.65);
