@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const { Server } = require("socket.io");
 
 const PORT = process.env.PORT || 6000;
@@ -14,7 +15,11 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
 
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get(["/privacy", "/privacy.html"], (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "privacy", "index.html"));
+});
 
 let queue = [];
 const partners = new Map();
