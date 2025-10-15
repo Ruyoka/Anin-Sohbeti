@@ -14,7 +14,7 @@ const WAITING_STATUS_TEXT =
 const POST_REPORT_REQUEUE_DELAY_MS = 5000;
 
 const app = express();
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" }));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
@@ -38,6 +38,8 @@ const r2Client = hasR2Credentials
       },
     })
   : null;
+
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -130,11 +132,24 @@ app.post("/api/uploads/presign", async (req, res) => {
       return;
     }
 
-    const { contentType, fileName, nickname: rawNickname } = req.body || {};
+    const { contentType, fileName, nickname: rawNickname, fileSize } = req.body || {};
     const mime = typeof contentType === "string" ? contentType.toLowerCase() : "";
+    const sizeValue = Number(fileSize);
+    const sizeInBytes =
+      Number.isFinite(sizeValue) && sizeValue > 0 ? Math.round(sizeValue) : NaN;
 
     if (!ALLOWED_IMAGE_TYPES.has(mime)) {
       res.status(400).json({ error: "unsupported_type" });
+      return;
+    }
+
+    if (!Number.isFinite(sizeInBytes)) {
+      res.status(400).json({ error: "invalid_size" });
+      return;
+    }
+
+    if (sizeInBytes > MAX_UPLOAD_SIZE_BYTES) {
+      res.status(413).json({ error: "file_too_large", limit: MAX_UPLOAD_SIZE_BYTES });
       return;
     }
 
@@ -148,12 +163,19 @@ app.post("/api/uploads/presign", async (req, res) => {
       Bucket: R2_BUCKET,
       Key: key,
       ContentType: mime,
+      ContentLength: sizeInBytes,
     });
 
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 60 });
     const assetUrl = `${normalizedPublicUrl}/${key}`;
 
-    res.json({ uploadUrl, key, assetUrl, contentType: mime });
+    res.json({
+      uploadUrl,
+      key,
+      assetUrl,
+      contentType: mime,
+      maxSize: MAX_UPLOAD_SIZE_BYTES,
+    });
   } catch (error) {
     console.error("Failed to create presigned URL", error);
     res.status(500).json({ error: "presign_failed" });
