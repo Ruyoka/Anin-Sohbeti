@@ -2346,7 +2346,7 @@
     const SKIP_SEARCH_COUNTDOWN_SECONDS = 5;
     const CALL_COOLDOWN_SECONDS = 15;
     const CALL_REQUEST_TIMEOUT_SECONDS = 10;
-    const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
+    let maxImageUploadBytes = 5 * 1024 * 1024;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
     const USER_TYPING_IDLE_MS = 3500;
     const PARTNER_TYPING_TIMEOUT_MS = 4000;
@@ -2378,6 +2378,7 @@
     let partnerTypingTimer = null;
     let lastTypingState = false;
     let typingResetTimer = null;
+    let presignToken = null;
 
     window.addEventListener("resize", () => {
       updateHeaderNicknameDisplay(nickname);
@@ -3501,7 +3502,12 @@
         return;
       }
 
-      if (Number.isFinite(MAX_IMAGE_UPLOAD_BYTES) && file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      if (!presignToken) {
+        appendMessage("Görsel yükleme izni alınamadı. Lütfen bağlantıyı yenile.", "system");
+        return;
+      }
+
+      if (Number.isFinite(maxImageUploadBytes) && file.size > maxImageUploadBytes) {
         appendMessage("Görseller en fazla 5 MB olabilir.", "system");
         return;
       }
@@ -3534,8 +3540,8 @@
             contentType: file.type || "image/jpeg",
             fileName: file.name,
             nickname,
-            socketId: socket.id,
             fileSize: file.size,
+            presignToken,
           }),
         });
 
@@ -3574,7 +3580,11 @@
       } catch (error) {
         console.error("Görsel yüklenemedi", error);
         updateImageMessageState(bubble, "error");
-        appendMessage("Görsel gönderilemedi. Lütfen tekrar dene.", "system");
+        let errorMessage = "Görsel gönderilemedi. Lütfen tekrar dene.";
+        if (error instanceof Error && error.message === "presign-401") {
+          errorMessage = "Görsel yükleme iznin sona erdi. Lütfen bağlantıyı yenile.";
+        }
+        appendMessage(errorMessage, "system");
       } finally {
         URL.revokeObjectURL(objectUrl);
       }
@@ -4945,12 +4955,27 @@
     setupNotificationPermissionWatcher();
 
     socket.on("connect", () => {
+      presignToken = null;
       setMatchedState(false);
       if (nickname) {
         joinQueue();
       } else {
         resetChat("Sohbete katılmak için bir rumuz seç.");
         showNicknameOverlay();
+      }
+    });
+
+    socket.on("uploads:token", (payload) => {
+      const token =
+        payload && typeof payload === "object" && typeof payload.token === "string"
+          ? payload.token.trim()
+          : "";
+      presignToken = token || null;
+
+      const maxBytes =
+        payload && typeof payload === "object" ? Number(payload.maxBytes) : NaN;
+      if (Number.isFinite(maxBytes) && maxBytes > 0) {
+        maxImageUploadBytes = maxBytes;
       }
     });
 
@@ -5142,6 +5167,7 @@
     });
 
     socket.on("disconnect", () => {
+      presignToken = null;
       setMatchedState(false);
       voiceCallManager?.handleDisconnect?.();
       callRequestController?.handleDisconnect?.();
