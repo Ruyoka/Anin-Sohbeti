@@ -2346,6 +2346,7 @@
     const SKIP_SEARCH_COUNTDOWN_SECONDS = 5;
     const CALL_COOLDOWN_SECONDS = 15;
     const CALL_REQUEST_TIMEOUT_SECONDS = 10;
+    const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
     const USER_TYPING_IDLE_MS = 3500;
     const PARTNER_TYPING_TIMEOUT_MS = 4000;
@@ -3495,6 +3496,16 @@
         return;
       }
 
+      if (!socket || !socket.id) {
+        appendMessage("Bağlantı kurulmadan görsel gönderemezsin.", "system");
+        return;
+      }
+
+      if (Number.isFinite(MAX_IMAGE_UPLOAD_BYTES) && file.size > MAX_IMAGE_UPLOAD_BYTES) {
+        appendMessage("Görseller en fazla 5 MB olabilir.", "system");
+        return;
+      }
+
       setUserTypingState(false);
 
       const objectUrl = URL.createObjectURL(file);
@@ -3523,6 +3534,8 @@
             contentType: file.type || "image/jpeg",
             fileName: file.name,
             nickname,
+            socketId: socket.id,
+            fileSize: file.size,
           }),
         });
 
