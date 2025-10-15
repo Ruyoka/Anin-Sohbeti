@@ -53,6 +53,7 @@
       --shadow-soft: 0 32px 62px -40px rgba(34, 72, 41, 0.55);
       --radius-lg: 28px;
       --radius-md: 20px;
+      --content-horizontal-padding: clamp(1.4rem, 5vw, 2rem);
       --controls-offset: 0px;
     }
 
@@ -1217,7 +1218,7 @@
 
     #log {
       flex: 1;
-      padding: clamp(1.75rem, 5vh, 2.25rem) clamp(1.4rem, 5vw, 2rem)
+      padding: clamp(1.75rem, 5vh, 2.25rem) var(--content-horizontal-padding)
         clamp(2rem, 6vh, 2.5rem);
       overflow-y: auto;
       display: flex;
@@ -1375,6 +1376,37 @@
     .message[data-state="error"] .message__media-trigger img {
       filter: grayscale(0.4);
       opacity: 0.6;
+    }
+
+    .message__media-status[data-error-message] {
+      cursor: pointer;
+    }
+
+    .upload-error-popover {
+      position: fixed;
+      max-width: 240px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: rgba(18, 32, 22, 0.94);
+      color: #ffffff;
+      font-size: 14px;
+      line-height: 1.45;
+      box-shadow: 0 20px 48px -28px rgba(12, 32, 20, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+      transition: opacity 160ms ease, transform 160ms ease;
+      z-index: 12;
+    }
+
+    .upload-error-popover[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .upload-error-popover__text {
+      display: block;
     }
 
     .message--me {
@@ -1586,7 +1618,8 @@
       flex-direction: column;
       align-items: stretch;
       gap: 14px;
-      padding: 18px 24px calc(18px + env(safe-area-inset-bottom));
+      padding: 18px var(--content-horizontal-padding)
+        calc(18px + env(safe-area-inset-bottom));
       background: rgba(255, 255, 255, 0.98);
       position: sticky;
       bottom: 0;
@@ -1604,7 +1637,8 @@
       background: #f7fbf6;
       border: 1px solid var(--border-soft);
       border-radius: 999px;
-      padding: 6px 8px 6px 16px;
+      padding: 8px 12px 8px 18px;
+      min-height: 56px;
       transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
 
@@ -1619,8 +1653,9 @@
       min-width: 0;
       border: none;
       background: transparent;
-      padding: 10px 0;
+      padding: 12px 0;
       font-size: 16px;
+      line-height: 1.5;
       color: var(--text-primary);
     }
 
@@ -1628,15 +1663,16 @@
       flex: 0 0 auto;
       width: 44px;
       height: 44px;
+      min-width: 44px;
       min-height: 0;
       padding: 0;
       border-radius: 50%;
       border: 1px solid rgba(46, 125, 82, 0.16);
       background: #ffffff;
       color: var(--accent);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1 / 1;
       box-shadow: 0 12px 28px -24px rgba(46, 125, 82, 0.55);
       cursor: pointer;
       transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
@@ -1695,14 +1731,15 @@
     #send {
       width: 44px;
       height: 44px;
+      min-width: 44px;
       min-height: 0;
       padding: 0;
       border-radius: 50%;
       background: var(--accent);
       color: #ffffff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1 / 1;
       box-shadow: 0 14px 30px -24px rgba(34, 72, 41, 0.7);
       transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
@@ -1733,6 +1770,9 @@
     }
 
     @media (max-width: 768px) {
+      :root {
+        --content-horizontal-padding: 18px;
+      }
       html,
       body {
         height: 100dvh;
@@ -1799,13 +1839,14 @@
       }
 
       #log {
-        padding: 22px 18px 28px;
+        padding: 22px var(--content-horizontal-padding) 28px;
         height: calc(100dvh - var(--header-offset, 0px) - var(--controls-offset, 0px));
         flex: none;
       }
 
       #controls {
-        padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
+        padding: 16px var(--content-horizontal-padding)
+          calc(18px + env(safe-area-inset-bottom));
         gap: 12px;
         position: fixed;
         bottom: 0;
@@ -1844,7 +1885,7 @@
 
     @media (max-width: 767px) {
       .controls__composer {
-        padding: 6px 12px 6px 16px;
+        padding: 8px 12px 8px 18px;
       }
 
       .controls__actions {
@@ -2297,8 +2338,16 @@
     const imagePreviewOverlay = document.getElementById("image-preview-overlay");
     const imagePreviewElement = document.getElementById("image-preview-element");
     const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-    const IMAGE_UPLOAD_ERROR_MESSAGE = "Upload failed, please try again.";
+    const IMAGE_UPLOAD_ERROR_MESSAGE = "Fotoğraf gönderilemedi, lütfen tekrar dene.";
     const pendingImageUploads = new WeakMap();
+    const uploadErrorPopover = createUploadErrorPopover();
+    const uploadErrorPopoverText = uploadErrorPopover
+      ? uploadErrorPopover.querySelector(".upload-error-popover__text")
+      : null;
+    let uploadErrorPopoverTimer = null;
+    let activeUploadErrorAnchor = null;
+    document.addEventListener("pointerdown", handleUploadErrorPopoverPointerDown);
+    window.addEventListener("scroll", hideUploadErrorPopover, true);
     const updateControlsOffset = () => {
       if (!controls) {
         return;
@@ -2415,7 +2464,8 @@
     let typingResetTimer = null;
 
     window.addEventListener("resize", () => {
-      updateHeaderNicknameDisplay(nickname);
+      refreshHeaderNicknameDisplay();
+      hideUploadErrorPopover();
     });
     let isCoolingDown = false;
     let cooldownTimer = null;
@@ -3252,6 +3302,14 @@
       }
     }
 
+    function refreshHeaderNicknameDisplay() {
+      const sourceNickname =
+        isMatched && currentPartnerNickname
+          ? currentPartnerNickname
+          : nickname;
+      updateHeaderNicknameDisplay(sourceNickname);
+    }
+
     function hidePartnerTypingIndicator() {
       if (partnerTypingTimer) {
         clearTimeout(partnerTypingTimer);
@@ -3280,7 +3338,14 @@
 
     hidePartnerTypingIndicator();
 
-    updateHeaderNicknameDisplay(document.body?.dataset?.nickname || "");
+    const initialNicknameFromBody =
+      document.body && document.body.dataset
+        ? sanitizeNickname(document.body.dataset.nickname || "").slice(0, 12)
+        : "";
+    if (initialNicknameFromBody) {
+      nickname = initialNicknameFromBody;
+    }
+    refreshHeaderNicknameDisplay();
     updateNicknameValidity();
 
     function showNicknameOverlay() {
@@ -3462,6 +3527,8 @@
       voiceCallManager?.handleMatchStateChange?.(state);
       callRequestController?.handleMatchStateChange?.(state);
       updateControls();
+      hideUploadErrorPopover();
+      refreshHeaderNicknameDisplay();
     }
 
     function openAttachmentSheet() {
@@ -3530,6 +3597,211 @@
       if (retryBtn) {
         retryBtn.disabled = Boolean(disabled);
       }
+    }
+
+    function handleUploadErrorPopoverPointerDown(event) {
+      if (!uploadErrorPopover || uploadErrorPopover.hidden) {
+        return;
+      }
+      const target = event ? event.target : null;
+      if (!target) {
+        hideUploadErrorPopover();
+        return;
+      }
+      const anchorContainsTarget =
+        activeUploadErrorAnchor &&
+        typeof activeUploadErrorAnchor.contains === "function" &&
+        activeUploadErrorAnchor.contains(target);
+      if (
+        uploadErrorPopover === target ||
+        uploadErrorPopover.contains(target) ||
+        anchorContainsTarget
+      ) {
+        return;
+      }
+      hideUploadErrorPopover();
+    }
+
+    function createUploadErrorPopover() {
+      if (typeof document === "undefined" || !document.body) {
+        return null;
+      }
+      const existing = document.getElementById("upload-error-popover");
+      if (existing) {
+        existing.hidden = true;
+        existing.dataset.open = "false";
+        return existing;
+      }
+      const element = document.createElement("div");
+      element.id = "upload-error-popover";
+      element.className = "upload-error-popover";
+      element.setAttribute("role", "status");
+      element.setAttribute("aria-live", "polite");
+      element.hidden = true;
+      const textElement = document.createElement("span");
+      textElement.className = "upload-error-popover__text";
+      element.appendChild(textElement);
+      document.body.appendChild(element);
+      return element;
+    }
+
+    function showUploadErrorPopover(anchor, message) {
+      if (!uploadErrorPopover || !uploadErrorPopoverText || !anchor) {
+        return;
+      }
+      const textValue = message ? message.toString().trim() : "";
+      if (!textValue) {
+        hideUploadErrorPopover();
+        return;
+      }
+      if (!document.body.contains(uploadErrorPopover)) {
+        document.body.appendChild(uploadErrorPopover);
+      }
+      uploadErrorPopoverText.textContent = textValue;
+      uploadErrorPopover.hidden = false;
+      uploadErrorPopover.dataset.open = "false";
+      window.requestAnimationFrame(() => {
+        const anchorRect = anchor.getBoundingClientRect();
+        const popRect = uploadErrorPopover.getBoundingClientRect();
+        let top = anchorRect.top - popRect.height - 12;
+        if (top < 12) {
+          top = anchorRect.bottom + 12;
+        }
+        let left = anchorRect.left + anchorRect.width / 2 - popRect.width / 2;
+        const maxLeft = window.innerWidth - popRect.width - 12;
+        if (left < 12) {
+          left = 12;
+        } else if (left > maxLeft) {
+          left = maxLeft;
+        }
+        uploadErrorPopover.style.top = `${Math.round(top)}px`;
+        uploadErrorPopover.style.left = `${Math.round(left)}px`;
+        uploadErrorPopover.dataset.open = "true";
+      });
+      if (uploadErrorPopoverTimer) {
+        window.clearTimeout(uploadErrorPopoverTimer);
+      }
+      uploadErrorPopoverTimer = window.setTimeout(() => {
+        hideUploadErrorPopover();
+      }, 3800);
+      activeUploadErrorAnchor = anchor;
+    }
+
+    function hideUploadErrorPopover() {
+      if (!uploadErrorPopover) {
+        return;
+      }
+      if (uploadErrorPopoverTimer) {
+        window.clearTimeout(uploadErrorPopoverTimer);
+        uploadErrorPopoverTimer = null;
+      }
+      if (uploadErrorPopover.dataset.open === "true") {
+        uploadErrorPopover.dataset.open = "false";
+        const element = uploadErrorPopover;
+        window.setTimeout(() => {
+          if (element.dataset.open !== "true") {
+            element.hidden = true;
+            element.style.top = "";
+            element.style.left = "";
+          }
+        }, 180);
+      } else if (!uploadErrorPopover.hidden) {
+        uploadErrorPopover.hidden = true;
+        uploadErrorPopover.style.top = "";
+        uploadErrorPopover.style.left = "";
+      }
+      activeUploadErrorAnchor = null;
+    }
+
+    function describeImageUploadError(error) {
+      const fallbackOverlay = "Upload to R2 failed";
+      let rawMessage = "";
+      if (error && typeof error === "object" && typeof error.message === "string") {
+        rawMessage = error.message;
+      } else if (typeof error === "string") {
+        rawMessage = error;
+      }
+      const normalized = rawMessage.toLowerCase();
+
+      if (rawMessage.indexOf("presign-") === 0) {
+        const statusCode = rawMessage.slice("presign-".length) || "unknown";
+        let overlayMessage = "Upload setup failed";
+        const leading = statusCode.charAt(0);
+        if (statusCode === "503") {
+          overlayMessage = "Upload service unavailable";
+        } else if (leading === "4") {
+          overlayMessage = "Server rejected file";
+        } else if (leading === "5") {
+          overlayMessage = "Upload service error";
+        }
+        return {
+          overlayMessage,
+          logMessage: `Presign request failed with status ${statusCode}`,
+          rawMessage,
+        };
+      }
+
+      if (rawMessage.indexOf("upload-") === 0) {
+        const statusCode = rawMessage.slice("upload-".length) || "unknown";
+        let overlayMessage = "Upload to R2 failed";
+        const leading = statusCode.charAt(0);
+        if (statusCode === "408" || statusCode === "504") {
+          overlayMessage = "Timeout";
+        } else if (leading === "4") {
+          overlayMessage = "Server rejected file";
+        }
+        return {
+          overlayMessage,
+          logMessage: `R2 upload failed with status ${statusCode}`,
+          rawMessage,
+        };
+      }
+
+      if (normalized === "invalid-presign") {
+        return {
+          overlayMessage: "Upload setup failed",
+          logMessage: "Received invalid presign payload",
+          rawMessage,
+        };
+      }
+
+      const isAbortError =
+        error &&
+        typeof error === "object" &&
+        ((error.name && error.name === "AbortError") ||
+          (error.cause && error.cause.name === "AbortError"));
+      if (isAbortError || normalized.indexOf("timeout") !== -1) {
+        const logMessage = rawMessage || "Upload timed out";
+        return {
+          overlayMessage: "Timeout",
+          logMessage,
+          rawMessage,
+        };
+      }
+
+      if (error && typeof error === "object" && error.name === "TypeError" && !rawMessage) {
+        return {
+          overlayMessage: "Network error",
+          logMessage: "Network error while uploading image",
+          rawMessage,
+        };
+      }
+
+      if (normalized.indexOf("network") !== -1) {
+        const logMessage = rawMessage || "Network error while uploading image";
+        return {
+          overlayMessage: "Network error",
+          logMessage,
+          rawMessage,
+        };
+      }
+
+      const logMessage = rawMessage || (error && typeof error === "object" && error.toString ? error.toString() : "Unknown error");
+      return {
+        overlayMessage: fallbackOverlay,
+        logMessage,
+        rawMessage,
+      };
     }
 
     async function performImageUpload(bubble) {
@@ -3614,8 +3886,12 @@
           retryButton.remove();
         }
       } catch (error) {
-        console.error("Görsel yüklenemedi", error);
-        updateImageMessageState(bubble, "error");
+        const errorDetails = describeImageUploadError(error);
+        updateImageMessageState(bubble, "error", {
+          errorMessage: errorDetails.overlayMessage,
+          errorReason: errorDetails.logMessage,
+        });
+        console.error("Görsel yüklenemedi", errorDetails.logMessage, error);
         appendMessage(userErrorMessage, "system");
         resetRetryButtonState(bubble, false);
       }
@@ -4785,12 +5061,20 @@
       const status = document.createElement("span");
       status.className = "message__media-status";
       if (state === "error") {
-        status.textContent = "Upload failed";
+        status.textContent = "Gönderilemedi";
       } else if (state === "uploading") {
-        status.textContent = "Uploading...";
+        status.textContent = "Yükleniyor...";
       } else {
         status.textContent = "";
       }
+      status.addEventListener("click", (event) => {
+        if (!status.dataset.errorMessage) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        showUploadErrorPopover(status, status.dataset.errorMessage);
+      });
       trigger.appendChild(status);
 
       trigger.addEventListener("click", () => {
@@ -4819,7 +5103,7 @@
       return bubble;
     }
 
-    function updateImageMessageState(bubble, state) {
+    function updateImageMessageState(bubble, state, options = {}) {
       if (!bubble) {
         return;
       }
@@ -4828,12 +5112,35 @@
       if (!status) {
         return;
       }
+      if (state !== "error" && activeUploadErrorAnchor && bubble.contains(activeUploadErrorAnchor)) {
+        hideUploadErrorPopover();
+      }
       if (state === "uploading") {
-        status.textContent = "Uploading...";
+        status.textContent = "Yükleniyor...";
+        delete status.dataset.errorMessage;
+        delete status.dataset.errorReason;
+        status.removeAttribute("title");
       } else if (state === "error") {
-        status.textContent = "Upload failed";
+        status.textContent = "Gönderilemedi";
+        const message = options && options.errorMessage ? options.errorMessage.toString().trim() : "";
+        if (message) {
+          status.dataset.errorMessage = message;
+          status.title = message;
+        } else {
+          delete status.dataset.errorMessage;
+          status.removeAttribute("title");
+        }
+        const reason = options && options.errorReason ? options.errorReason.toString() : "";
+        if (reason) {
+          status.dataset.errorReason = reason;
+        } else {
+          delete status.dataset.errorReason;
+        }
       } else {
         status.textContent = "";
+        delete status.dataset.errorMessage;
+        delete status.dataset.errorReason;
+        status.removeAttribute("title");
       }
     }
 
@@ -4902,6 +5209,7 @@
     }
 
     function resetChat(statusText) {
+      hideUploadErrorPopover();
       log.replaceChildren();
       msg.value = "";
       clearCooldown();
@@ -5016,7 +5324,7 @@
       nickname = cleaned;
       nicknameInput.value = cleaned;
       updateNicknameValidity();
-      updateHeaderNicknameDisplay(nickname);
+      refreshHeaderNicknameDisplay();
       sessionStorage.setItem("nickname", nickname);
       hideNicknameOverlay();
       requestNotificationPermission();
@@ -5029,7 +5337,7 @@
       if (cleanedStored) {
         nickname = cleanedStored;
         sessionStorage.setItem("nickname", nickname);
-        updateHeaderNicknameDisplay(nickname);
+        refreshHeaderNicknameDisplay();
         hideNicknameOverlay();
         if (nicknameInput) {
           nicknameInput.value = nickname;
@@ -5037,13 +5345,15 @@
         }
       } else {
         sessionStorage.removeItem("nickname");
-        updateHeaderNicknameDisplay("");
+        nickname = "";
+        refreshHeaderNicknameDisplay();
         nicknameInput.value = sanitizeNickname(storedNickname).slice(0, 12);
         updateNicknameValidity({ preserveCaret: true });
         showNicknameOverlay();
       }
     } else {
-      updateHeaderNicknameDisplay("");
+      nickname = "";
+      refreshHeaderNicknameDisplay();
       nicknameInput.value = "";
       updateNicknameValidity();
       showNicknameOverlay();
