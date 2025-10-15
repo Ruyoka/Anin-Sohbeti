@@ -2524,136 +2524,154 @@
       status.dataset.progress = String(clamped);
       status.textContent = `Yükleniyor… %${clamped}`;
     }
-    function uploadFileToR2({ url, file, contentType, onProgress }) {
-      return new Promise((resolve, reject) => {
+    async function uploadFileToR2({ url, file, contentType, onProgress }) {
+      const resolvedUrl = typeof url === "string" ? url : String(url || "");
+      if (!resolvedUrl) {
+        throw new Error("upload-url-missing");
+      }
+
+      const presignedContentType =
+        typeof contentType === "string" && contentType.trim() !== ""
+          ? contentType.trim()
+          : "";
+      const fileContentType =
+        file && typeof file.type === "string" && file.type.trim() !== ""
+          ? file.type.trim()
+          : "";
+
+      if (
+        presignedContentType &&
+        fileContentType &&
+        presignedContentType !== fileContentType
+      ) {
+        console.warn("Content type mismatch detected", {
+          presignedContentType,
+          fileContentType,
+        });
+      }
+
+      const normalizedContentType = presignedContentType || fileContentType || "";
+      const headers = {};
+      if (normalizedContentType) {
+        headers["Content-Type"] = normalizedContentType;
+      }
+
+      if (typeof onProgress === "function") {
         try {
-          const xhr = new XMLHttpRequest();
-          const resolvedUrl = typeof url === "string" ? url : String(url || "");
-          if (!resolvedUrl) {
-            throw new Error("upload-url-missing");
-          }
-
-          xhr.open("PUT", resolvedUrl, true);
-          xhr.responseType = "text";
-          xhr.timeout = 120000;
-          xhr.withCredentials = false;
-
-          const presignedContentType =
-            typeof contentType === "string" && contentType.trim() !== ""
-              ? contentType.trim()
-              : "";
-          const fileContentType =
-            file && typeof file.type === "string" && file.type.trim() !== ""
-              ? file.type.trim()
-              : "";
-
-          if (
-            presignedContentType &&
-            fileContentType &&
-            presignedContentType !== fileContentType
-          ) {
-            console.warn("Content type mismatch detected", {
-              presignedContentType,
-              fileContentType,
-            });
-          }
-
-          const normalizedContentType = presignedContentType || fileContentType;
-
-          if (normalizedContentType) {
-            xhr.setRequestHeader("Content-Type", normalizedContentType);
-          }
-
-          xhr.onload = () => {
-            const status = xhr.status;
-            const statusText = xhr.statusText;
-            const responseText = typeof xhr.responseText === "string" ? xhr.responseText : "";
-            if (status === 200 || status === 204) {
-              resolve({ status, statusText, responseText });
-              return;
-            }
-
-            const error = new Error(`upload-${status}`);
-            error.name = "UploadHttpError";
-            error.uploadResponse = {
-              status,
-              statusText,
-              responseText,
-              url: resolvedUrl,
-            };
-
-            console.error("R2 upload failed", {
-              step: "onload",
-              status,
-              statusText,
-              responseText,
-              url: resolvedUrl,
-            });
-
-            reject(error);
-          };
-
-          xhr.onerror = (event) => {
-            const error = new Error("network-error");
-            error.name = "UploadNetworkError";
-            error.uploadResponse = { url: resolvedUrl, eventType: "error" };
-
-            console.error("R2 upload network error", {
-              step: "onerror",
-              url: resolvedUrl,
-              event,
-            });
-
-            reject(error);
-          };
-
-          xhr.ontimeout = () => {
-            const error = new Error("upload-408");
-            error.name = "UploadTimeoutError";
-            error.uploadResponse = { url: resolvedUrl, status: 408 };
-
-            console.error("R2 upload timeout", {
-              step: "ontimeout",
-              url: resolvedUrl,
-            });
-
-            reject(error);
-          };
-
-          xhr.onabort = () => {
-            const error = new Error("upload-aborted");
-            error.name = "UploadAbortError";
-            error.uploadResponse = { url: resolvedUrl, eventType: "abort" };
-
-            console.warn("R2 upload aborted", {
-              step: "onabort",
-              url: resolvedUrl,
-            });
-
-            reject(error);
-          };
-
-          if (xhr.upload && typeof onProgress === "function") {
-            xhr.upload.onprogress = (event) => {
-              if (!event.lengthComputable) {
-                onProgress(50);
-                return;
-              }
-              const percentage = (event.loaded / event.total) * 100;
-              onProgress(percentage);
-            };
-          }
-
-          xhr.send(file);
-        } catch (sendError) {
-          console.error("R2 upload threw before sending", {
-            step: "exception",
-            url: typeof url === "string" ? url : undefined,
-            error: sendError,
-          });
-          reject(sendError);
+          onProgress(5);
+        } catch (progressError) {
+          console.warn("Upload progress callback threw", progressError);
         }
+      }
+
+      const timeoutMs = 120000;
+      const supportsAbort = typeof AbortController === "function";
+      const controller = supportsAbort ? new AbortController() : null;
+      const timeoutId = supportsAbort
+        ? window.setTimeout(() => {
+            controller.abort();
+          }, timeoutMs)
+        : null;
+
+      console.info("Starting R2 upload", {
+        url: resolvedUrl,
+        contentType: normalizedContentType || undefined,
+        size: file && typeof file.size === "number" ? file.size : undefined,
       });
+
+      let response;
+      try {
+        response = await fetch(resolvedUrl, {
+          method: "PUT",
+          headers,
+          body: file,
+          signal: controller ? controller.signal : undefined,
+          mode: "cors",
+          credentials: "omit",
+        });
+      } catch (fetchError) {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+
+        if (fetchError && fetchError.name === "AbortError") {
+          const timeoutError = new Error("upload-408");
+          timeoutError.name = "UploadTimeoutError";
+          timeoutError.uploadResponse = { url: resolvedUrl, status: 408 };
+          console.error("R2 upload timeout", {
+            url: resolvedUrl,
+            error: fetchError,
+          });
+          throw timeoutError;
+        }
+
+        const networkError = new Error("network-error");
+        networkError.name = "UploadNetworkError";
+        networkError.uploadResponse = { url: resolvedUrl, eventType: "fetch-error" };
+        console.error("R2 upload network error", {
+          url: resolvedUrl,
+          error: fetchError,
+        });
+        throw networkError;
+      } finally {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+      }
+
+      let responseText = "";
+      try {
+        responseText = await response.text();
+      } catch (readError) {
+        console.warn("Unable to read R2 upload response body", {
+          url: resolvedUrl,
+          error: readError,
+        });
+      }
+
+      const responseHeaders = {};
+      try {
+        response.headers.forEach((value, key) => {
+          responseHeaders[key] = value;
+        });
+      } catch (headerError) {
+        console.warn("Unable to iterate R2 upload response headers", headerError);
+      }
+
+      const status = response.status;
+      const statusText = response.statusText;
+
+      const logPayload = {
+        url: resolvedUrl,
+        status,
+        statusText,
+        headers: responseHeaders,
+        responseText,
+      };
+
+      if (status === 200 || status === 204) {
+        console.info("R2 upload succeeded", logPayload);
+        if (typeof onProgress === "function") {
+          try {
+            onProgress(100);
+          } catch (progressError) {
+            console.warn("Upload progress callback threw", progressError);
+          }
+        }
+        return { status, statusText, responseText, headers: responseHeaders };
+      }
+
+      const error = new Error(`upload-${status || "unknown"}`);
+      error.name = "UploadHttpError";
+      error.uploadResponse = {
+        status,
+        statusText,
+        responseText,
+        headers: responseHeaders,
+        url: resolvedUrl,
+      };
+      console.error("R2 upload failed", logPayload);
+      throw error;
     }
     const uploadErrorPopover = createUploadErrorPopover();
     const uploadErrorPopoverText = uploadErrorPopover
