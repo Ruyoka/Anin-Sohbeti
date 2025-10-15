@@ -2340,6 +2340,153 @@
     const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
     const IMAGE_UPLOAD_ERROR_MESSAGE = "Fotoğraf gönderilemedi, lütfen tekrar dene.";
     const pendingImageUploads = new WeakMap();
+    const uploadStepLabels = {
+      preparing: { tr: "Hazırlanıyor", en: "Preparing" },
+      requesting: { tr: "Adres alınıyor", en: "Requesting URL" },
+      uploading: { tr: "Yükleniyor", en: "Uploading" },
+      uploaded: { tr: "Tamamlandı", en: "Uploaded" },
+      error: { tr: "Hata", en: "Error" },
+    };
+    function logUploadStep(step, details = "") {
+      const label = uploadStepLabels[step] || { tr: step, en: step };
+      const suffix = details ? ` - ${details}` : "";
+      console.log(
+        `[Görsel Yükleme] ${label.tr} (${label.en})${suffix}`,
+      );
+    }
+    function toSafeFileExtensionFromMime(mime) {
+      switch ((mime || "").toLowerCase()) {
+        case "image/jpeg":
+          return "jpg";
+        case "image/png":
+          return "png";
+        case "image/webp":
+          return "webp";
+        case "image/gif":
+          return "gif";
+        case "image/heic":
+          return "heic";
+        case "image/heif":
+          return "heif";
+        case "image/avif":
+          return "avif";
+        default:
+          return "";
+      }
+    }
+    function toSafeFileExtensionFromName(name) {
+      if (typeof name !== "string") {
+        return "";
+      }
+      const lastDot = name.lastIndexOf(".");
+      if (lastDot === -1) {
+        return "";
+      }
+      const ext = name.slice(lastDot + 1).toLowerCase();
+      if (!/^[a-z0-9]{1,6}$/.test(ext)) {
+        return "";
+      }
+      return ext;
+    }
+    function generateRandomHex(bytes = 4) {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint8Array(bytes);
+        window.crypto.getRandomValues(array);
+        return Array.from(array, (value) =>
+          value.toString(16).padStart(2, "0"),
+        ).join("");
+      }
+      let fallback = "";
+      for (let index = 0; index < bytes; index += 1) {
+        fallback += Math.floor(Math.random() * 256)
+          .toString(16)
+          .padStart(2, "0");
+      }
+      return fallback;
+    }
+    function normalizeFileBase(name) {
+      if (typeof name !== "string" || !name) {
+        return "dosya";
+      }
+      const base = name.replace(/\.[^.]+$/, "");
+      const normalized = base
+        .toLocaleLowerCase("tr-TR")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      return normalized || "dosya";
+    }
+    function prepareUploadMetadata(file) {
+      const originalName = typeof file?.name === "string" ? file.name : "Adsız";
+      const mimeType =
+        typeof file?.type === "string" && file.type
+          ? file.type
+          : "application/octet-stream";
+      const size = Number.isFinite(file?.size) ? Number(file.size) : 0;
+      const extensionFromMime = toSafeFileExtensionFromMime(mimeType);
+      const extensionFromName = toSafeFileExtensionFromName(originalName);
+      const extension = extensionFromMime || extensionFromName;
+      const timestamp = Date.now();
+      const randomHex = generateRandomHex(6);
+      const safeBase = normalizeFileBase(originalName);
+      const safeFileName = extension
+        ? `${timestamp}_${randomHex}_${safeBase}.${extension}`
+        : `${timestamp}_${randomHex}_${safeBase}`;
+      return {
+        preparedAt: timestamp,
+        originalName,
+        mimeType,
+        size,
+        safeFileName,
+      };
+    }
+    function updateImageUploadProgress(bubble, progressValue) {
+      if (!bubble) {
+        return;
+      }
+      const status = bubble.querySelector(".message__media-status");
+      if (!status) {
+        return;
+      }
+      const clamped = Math.max(0, Math.min(100, Math.round(progressValue)));
+      status.dataset.progress = String(clamped);
+      status.textContent = `Yükleniyor… %${clamped}`;
+    }
+    function uploadFileToR2({ url, file, contentType, onProgress }) {
+      return new Promise((resolve, reject) => {
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", url);
+          xhr.responseType = "text";
+          xhr.timeout = 120000;
+          xhr.setRequestHeader("Content-Type", contentType || "application/octet-stream");
+          xhr.onload = () => {
+            resolve({ status: xhr.status });
+          };
+          xhr.onerror = () => {
+            reject(new Error("network-error"));
+          };
+          xhr.ontimeout = () => {
+            reject(new Error("upload-408"));
+          };
+          xhr.onabort = () => {
+            reject(new Error("upload-aborted"));
+          };
+          if (xhr.upload && typeof onProgress === "function") {
+            xhr.upload.onprogress = (event) => {
+              if (!event.lengthComputable) {
+                onProgress(50);
+                return;
+              }
+              const percentage = (event.loaded / event.total) * 100;
+              onProgress(percentage);
+            };
+          }
+          xhr.send(file);
+        } catch (sendError) {
+          reject(sendError);
+        }
+      });
+    }
     const uploadErrorPopover = createUploadErrorPopover();
     const uploadErrorPopoverText = uploadErrorPopover
       ? uploadErrorPopover.querySelector(".upload-error-popover__text")
@@ -3714,7 +3861,7 @@
     }
 
     function describeImageUploadError(error) {
-      const fallbackOverlay = "Upload to R2 failed";
+      const fallbackOverlay = "Yükleme tamamlanamadı";
       let rawMessage = "";
       if (error && typeof error === "object" && typeof error.message === "string") {
         rawMessage = error.message;
@@ -3725,14 +3872,14 @@
 
       if (rawMessage.indexOf("presign-") === 0) {
         const statusCode = rawMessage.slice("presign-".length) || "unknown";
-        let overlayMessage = "Upload setup failed";
+        let overlayMessage = "Yükleme hazırlığı başarısız";
         const leading = statusCode.charAt(0);
         if (statusCode === "503") {
-          overlayMessage = "Upload service unavailable";
+          overlayMessage = "Yükleme servisi kullanılamıyor";
         } else if (leading === "4") {
-          overlayMessage = "Server rejected file";
+          overlayMessage = "Sunucu dosyayı reddetti";
         } else if (leading === "5") {
-          overlayMessage = "Upload service error";
+          overlayMessage = "Yükleme servisi hata verdi";
         }
         return {
           overlayMessage,
@@ -3743,12 +3890,12 @@
 
       if (rawMessage.indexOf("upload-") === 0) {
         const statusCode = rawMessage.slice("upload-".length) || "unknown";
-        let overlayMessage = "Upload to R2 failed";
+        let overlayMessage = "Yükleme tamamlanamadı";
         const leading = statusCode.charAt(0);
         if (statusCode === "408" || statusCode === "504") {
-          overlayMessage = "Timeout";
+          overlayMessage = "Zaman aşımı";
         } else if (leading === "4") {
-          overlayMessage = "Server rejected file";
+          overlayMessage = "Sunucu dosyayı reddetti";
         }
         return {
           overlayMessage,
@@ -3759,7 +3906,7 @@
 
       if (normalized === "invalid-presign") {
         return {
-          overlayMessage: "Upload setup failed",
+          overlayMessage: "Yükleme hazırlığı başarısız",
           logMessage: "Received invalid presign payload",
           rawMessage,
         };
@@ -3773,7 +3920,7 @@
       if (isAbortError || normalized.indexOf("timeout") !== -1) {
         const logMessage = rawMessage || "Upload timed out";
         return {
-          overlayMessage: "Timeout",
+          overlayMessage: "Zaman aşımı",
           logMessage,
           rawMessage,
         };
@@ -3781,7 +3928,7 @@
 
       if (error && typeof error === "object" && error.name === "TypeError" && !rawMessage) {
         return {
-          overlayMessage: "Network error",
+          overlayMessage: "Ağ hatası",
           logMessage: "Network error while uploading image",
           rawMessage,
         };
@@ -3790,7 +3937,7 @@
       if (normalized.indexOf("network") !== -1) {
         const logMessage = rawMessage || "Network error while uploading image";
         return {
-          overlayMessage: "Network error",
+          overlayMessage: "Ağ hatası",
           logMessage,
           rawMessage,
         };
@@ -3810,21 +3957,30 @@
         return;
       }
 
-      const { file, dimensions, objectUrl } = uploadEntry;
+      const { file, dimensions, objectUrl, metadata } = uploadEntry;
+      const uploadMetadata = metadata || prepareUploadMetadata(file);
+      uploadEntry.metadata = uploadMetadata;
       let userErrorMessage = IMAGE_UPLOAD_ERROR_MESSAGE;
 
       resetRetryButtonState(bubble, true);
       updateImageMessageState(bubble, "uploading");
+      updateImageUploadProgress(bubble, 0);
 
       try {
+        if (!uploadEntry.loggedPreparing) {
+          logUploadStep("preparing", uploadMetadata.safeFileName);
+          uploadEntry.loggedPreparing = true;
+        }
+        logUploadStep("requesting", uploadMetadata.safeFileName);
         const presignResponse = await fetch("/api/uploads/presign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contentType: file.type || "image/jpeg",
-            fileName: file.name,
+            contentType: uploadMetadata.mimeType || file.type || "image/jpeg",
+            fileName: uploadMetadata.safeFileName,
             nickname,
-            fileSize: file.size,
+            fileSize: uploadMetadata.size || file.size,
+            originalName: uploadMetadata.originalName,
           }),
         });
 
@@ -3837,7 +3993,7 @@
           }
 
           if (presignResponse.status === 413 || errorBody?.error === "file_too_large") {
-            userErrorMessage = "Images must be 10 MB or smaller.";
+            userErrorMessage = "Görsel 10 MB veya daha küçük olmalı.";
           }
 
           throw new Error(`presign-${presignResponse.status}`);
@@ -3848,17 +4004,23 @@
           throw new Error("invalid-presign");
         }
 
-        const uploadResponse = await fetch(presignData.uploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": presignData.contentType || file.type || "application/octet-stream",
+        logUploadStep("uploading", uploadMetadata.safeFileName);
+        const uploadResult = await uploadFileToR2({
+          url: presignData.uploadUrl,
+          file,
+          contentType: presignData.contentType || uploadMetadata.mimeType || file.type,
+          onProgress: (progressValue) => {
+            updateImageUploadProgress(bubble, progressValue);
           },
-          body: file,
         });
 
-        if (!uploadResponse.ok) {
-          throw new Error(`upload-${uploadResponse.status}`);
+        updateImageUploadProgress(bubble, 100);
+
+        if (uploadResult.status !== 200 && uploadResult.status !== 204) {
+          throw new Error(`upload-${uploadResult.status}`);
         }
+
+        logUploadStep("uploaded", uploadMetadata.safeFileName);
 
         updateImageMessageSource(bubble, presignData.assetUrl, dimensions || {});
         updateImageMessageState(bubble, "sent");
@@ -3886,11 +4048,17 @@
           retryButton.remove();
         }
       } catch (error) {
+        logUploadStep("error", uploadMetadata.safeFileName);
         const errorDetails = describeImageUploadError(error);
         updateImageMessageState(bubble, "error", {
           errorMessage: errorDetails.overlayMessage,
           errorReason: errorDetails.logMessage,
         });
+        uploadEntry.loggedPreparing = false;
+        const statusElement = bubble.querySelector(".message__media-status");
+        if (statusElement) {
+          showUploadErrorPopover(statusElement, errorDetails.overlayMessage);
+        }
         console.error("Görsel yüklenemedi", errorDetails.logMessage, error);
         appendMessage(userErrorMessage, "system");
         resetRetryButtonState(bubble, false);
@@ -3923,6 +4091,9 @@
         dimensions = null;
       }
 
+      const metadata = prepareUploadMetadata(file);
+      logUploadStep("preparing", metadata.safeFileName);
+
       const bubble = appendImageMessage({
         src: objectUrl,
         type: "me",
@@ -3933,7 +4104,13 @@
         altText: "Gönderdiğin görsel",
       });
 
-      pendingImageUploads.set(bubble, { file, dimensions, objectUrl });
+      pendingImageUploads.set(bubble, {
+        file,
+        dimensions,
+        objectUrl,
+        metadata,
+        loggedPreparing: true,
+      });
       resetRetryButtonState(bubble, true);
       await performImageUpload(bubble);
     }
@@ -5116,12 +5293,19 @@
         hideUploadErrorPopover();
       }
       if (state === "uploading") {
-        status.textContent = "Yükleniyor...";
+        const currentProgress = Number.parseInt(status.dataset.progress || "0", 10);
+        const progressValue = Number.isFinite(currentProgress) ? currentProgress : 0;
+        status.dataset.progress = String(progressValue);
+        status.textContent = `Yükleniyor… %${Math.max(
+          0,
+          Math.min(100, Math.round(progressValue)),
+        )}`;
         delete status.dataset.errorMessage;
         delete status.dataset.errorReason;
         status.removeAttribute("title");
       } else if (state === "error") {
         status.textContent = "Gönderilemedi";
+        delete status.dataset.progress;
         const message = options && options.errorMessage ? options.errorMessage.toString().trim() : "";
         if (message) {
           status.dataset.errorMessage = message;
@@ -5141,6 +5325,7 @@
         delete status.dataset.errorMessage;
         delete status.dataset.errorReason;
         status.removeAttribute("title");
+        delete status.dataset.progress;
       }
     }
 
