@@ -2546,31 +2546,15 @@
         throw invalidFileError;
       }
 
-      const presignedContentType =
-        typeof contentType === "string" && contentType.trim() !== ""
-          ? contentType.trim()
-          : "";
       const fileContentType =
         typeof file.type === "string" && file.type.trim() !== ""
           ? file.type.trim()
           : "";
-
-      if (
-        presignedContentType &&
-        fileContentType &&
-        presignedContentType !== fileContentType
-      ) {
-        console.warn("Content type mismatch detected", {
-          presignedContentType,
-          fileContentType,
-        });
-      }
-
-      const normalizedContentType = presignedContentType || fileContentType || "";
-      const headers = {};
-      if (normalizedContentType) {
-        headers["Content-Type"] = normalizedContentType;
-      }
+      const normalizedContentType =
+        fileContentType ||
+        (typeof contentType === "string" && contentType.trim() !== ""
+          ? contentType.trim()
+          : "application/octet-stream");
 
       const totalSize = Number.isFinite(file.size) ? Number(file.size) : 0;
       console.info("Starting R2 upload", {
@@ -2604,6 +2588,18 @@
             return typeof xhr.responseText === "string" ? xhr.responseText : "";
           } catch (_error) {
             return "";
+          }
+        };
+
+        const logResponseSnapshot = (label) => {
+          try {
+            console.info(`R2 upload ${label}`, {
+              status: xhr.status || 0,
+              statusText: xhr.statusText || "",
+              responseText: safeResponseText(),
+            });
+          } catch (_logError) {
+            // Ignore logging errors.
           }
         };
 
@@ -2678,29 +2674,31 @@
         xhr.responseType = "text";
         xhr.timeout = 180000;
 
-        Object.entries(headers).forEach(([header, value]) => {
-          if (!value) {
-            return;
-          }
-          try {
-            xhr.setRequestHeader(header, value);
-          } catch (headerError) {
-            console.warn("Unable to set upload header", {
-              header,
-              value,
-              error: headerError,
-            });
-          }
-        });
+        try {
+          xhr.setRequestHeader("Content-Type", normalizedContentType);
+        } catch (headerError) {
+          console.warn("Unable to set upload header", {
+            header: "Content-Type",
+            value: normalizedContentType,
+            error: headerError,
+          });
+        }
 
         reportProgress(0);
+        console.info("R2 upload progress", { percent: 0, loaded: 0, total: totalSize });
 
         xhr.upload.addEventListener("progress", (event) => {
           if (settled || !event) {
             return;
           }
           if (event.lengthComputable && event.total > 0) {
-            reportProgress((event.loaded / event.total) * 100);
+            const progressValue = (event.loaded / event.total) * 100;
+            console.info("R2 upload progress", {
+              percent: Math.max(0, Math.min(100, Math.round(progressValue))),
+              loaded: event.loaded,
+              total: event.total,
+            });
+            reportProgress(progressValue);
             return;
           }
           if (
@@ -2708,7 +2706,13 @@
             typeof event.loaded === "number" &&
             event.loaded >= 0
           ) {
-            reportProgress(Math.min(99, (event.loaded / totalSize) * 100));
+            const progressValue = Math.min(99, (event.loaded / totalSize) * 100);
+            console.info("R2 upload progress", {
+              percent: Math.max(0, Math.min(100, Math.round(progressValue))),
+              loaded: event.loaded,
+              total: totalSize,
+            });
+            reportProgress(progressValue);
           }
         });
 
@@ -2716,6 +2720,7 @@
           if (settled) {
             return;
           }
+          logResponseSnapshot("load event");
           const status = xhr.status || 0;
           const statusText = xhr.statusText || "";
           const responseText = safeResponseText();
@@ -2760,6 +2765,7 @@
         });
 
         xhr.addEventListener("error", () => {
+          logResponseSnapshot("error event");
           handleTerminalFailure(
             "error",
             (uploadResponse) => {
@@ -2772,6 +2778,7 @@
         });
 
         xhr.addEventListener("timeout", () => {
+          logResponseSnapshot("timeout event");
           handleTerminalFailure(
             "timeout",
             (uploadResponse) => {
@@ -2787,6 +2794,7 @@
         });
 
         xhr.addEventListener("abort", () => {
+          logResponseSnapshot("abort event");
           handleTerminalFailure(
             "abort",
             (uploadResponse) => {
@@ -2801,6 +2809,7 @@
 
         try {
           xhr.send(file);
+          logResponseSnapshot("sent");
         } catch (sendError) {
           handleTerminalFailure(
             "send",
