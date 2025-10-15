@@ -49,6 +49,10 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/avif",
 ]);
 
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
+const PRESIGN_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const PRESIGN_RATE_LIMIT_MAX_REQUESTS = 5;
+
 function normalizePublicUrl(base) {
   if (!base) {
     return null;
@@ -117,6 +121,21 @@ function buildImageObjectKey({ nickname, extension }) {
   return `temp-images/user_${safeNickname}_${timestamp}_${randomId}${suffix}`;
 }
 
+function consumePresignQuota(socketId, now = Date.now()) {
+  const usage = presignUsageBySocket.get(socketId);
+  if (!usage || now - usage.windowStart >= PRESIGN_RATE_LIMIT_WINDOW_MS) {
+    presignUsageBySocket.set(socketId, { windowStart: now, count: 1 });
+    return true;
+  }
+
+  if (usage.count >= PRESIGN_RATE_LIMIT_MAX_REQUESTS) {
+    return false;
+  }
+
+  usage.count += 1;
+  return true;
+}
+
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get(["/privacy", "/privacy.html"], (_req, res) => {
@@ -130,11 +149,54 @@ app.post("/api/uploads/presign", async (req, res) => {
       return;
     }
 
-    const { contentType, fileName, nickname: rawNickname } = req.body || {};
+    const {
+      contentType,
+      fileName,
+      nickname: rawNickname,
+      socketId: rawSocketId,
+      fileSize,
+    } = req.body || {};
+
+    const socketId = typeof rawSocketId === "string" ? rawSocketId.trim() : "";
+    if (!socketId) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    const socket = io.sockets.sockets.get(socketId);
+    if (!socket) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    if (!partners.has(socketId)) {
+      res.status(403).json({ error: "not_in_chat" });
+      return;
+    }
+
     const mime = typeof contentType === "string" ? contentType.toLowerCase() : "";
 
     if (!ALLOWED_IMAGE_TYPES.has(mime)) {
       res.status(400).json({ error: "unsupported_type" });
+      return;
+    }
+
+    const size = Number(fileSize);
+    if (!Number.isFinite(size) || size <= 0) {
+      res.status(400).json({ error: "invalid_size" });
+      return;
+    }
+
+    if (size > MAX_IMAGE_UPLOAD_BYTES) {
+      res.status(413).json({
+        error: "file_too_large",
+        maxBytes: MAX_IMAGE_UPLOAD_BYTES,
+      });
+      return;
+    }
+
+    if (!consumePresignQuota(socketId)) {
+      res.status(429).json({ error: "rate_limited" });
       return;
     }
 
@@ -148,12 +210,13 @@ app.post("/api/uploads/presign", async (req, res) => {
       Bucket: R2_BUCKET,
       Key: key,
       ContentType: mime,
+      ContentLength: size,
     });
 
     const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 60 });
     const assetUrl = `${normalizedPublicUrl}/${key}`;
 
-    res.json({ uploadUrl, key, assetUrl, contentType: mime });
+    res.json({ uploadUrl, key, assetUrl, contentType: mime, maxBytes: MAX_IMAGE_UPLOAD_BYTES });
   } catch (error) {
     console.error("Failed to create presigned URL", error);
     res.status(500).json({ error: "presign_failed" });
@@ -166,6 +229,7 @@ const nicknames = new Map();
 const waitTimers = new Map();
 const recentMatches = new Map();
 const blockedUsers = new Map();
+const presignUsageBySocket = new Map();
 let scheduledTryMatchHandle = null;
 let scheduledTryMatchTime = 0;
 const callRequestsByCaller = new Map();
@@ -712,6 +776,7 @@ io.on("connection", (socket) => {
     endCurrentChat(socket.id);
     nicknames.delete(socket.id);
     blockedUsers.delete(socket.id);
+    presignUsageBySocket.delete(socket.id);
   });
 });
 
