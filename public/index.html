@@ -969,7 +969,7 @@
       font-size: var(--nickname-font-size);
       letter-spacing: -0.01em;
       color: var(--text-primary);
-      white-space: nowrap;
+      white-space: normal;
       text-align: center;
     }
 
@@ -981,9 +981,16 @@
     .app-header__nickname-text {
       display: inline-flex;
       flex-direction: column;
-      align-items: flex-start;
-      gap: 2px;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
       min-width: 0;
+      text-align: center;
+      line-height: 1.15;
+    }
+
+    #header-nickname {
+      white-space: nowrap;
     }
 
     .app-header__status {
@@ -991,13 +998,17 @@
       font-weight: 500;
       color: var(--accent);
       opacity: 0;
-      transition: opacity 160ms ease;
-      line-height: 1;
-      white-space: nowrap;
+      transform: translateY(-2px);
+      transition: opacity 200ms ease, transform 220ms ease;
+      line-height: 1.1;
+      white-space: normal;
+      text-align: center;
+      min-height: 1.2em;
     }
 
     .app-header__status[data-visible="true"] {
       opacity: 1;
+      transform: translateY(0);
     }
 
     .app-header__avatar {
