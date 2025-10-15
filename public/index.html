@@ -1011,6 +1011,50 @@
       transform: translateY(0);
     }
 
+    .app-header__status--dots {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    .app-header__status-dots {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .app-header__status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: currentColor;
+      opacity: 0.25;
+      animation: typingDotPulse 1.2s ease-in-out infinite;
+    }
+
+    .app-header__status-dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .app-header__status-dot:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes typingDotPulse {
+      0%,
+      100% {
+        opacity: 0.25;
+        transform: translateY(0);
+      }
+
+      50% {
+        opacity: 1;
+        transform: translateY(-1px);
+      }
+    }
+
     .app-header__avatar {
       display: inline-block;
       width: 28px;
@@ -1895,6 +1939,24 @@
     }
 
     @media (max-width: 767px) {
+      .app-header__nickname-text {
+        flex-direction: row;
+        align-items: center;
+        gap: 0;
+      }
+
+      .app-header__status {
+        min-height: 0;
+      }
+
+      .app-header__status[data-visible="true"] {
+        margin-left: 6px;
+      }
+
+      .app-header__status[data-visible="false"] {
+        margin-left: 0;
+      }
+
       .controls__composer {
         padding: 8px 12px 8px 18px;
       }
@@ -3468,6 +3530,35 @@
       updateHeaderNicknameDisplay(sourceNickname);
     }
 
+    function renderPartnerTypingIndicatorContent() {
+      if (!headerPartnerStatus) {
+        return;
+      }
+
+      headerPartnerStatus.innerHTML = "";
+      headerPartnerStatus.classList.remove("app-header__status--dots");
+
+      if (mobileViewportMatcher && mobileViewportMatcher.matches) {
+        headerPartnerStatus.classList.add("app-header__status--dots");
+        const dotsWrapper = document.createElement("span");
+        dotsWrapper.className = "app-header__status-dots";
+        dotsWrapper.setAttribute("aria-hidden", "true");
+        for (let index = 0; index < 3; index += 1) {
+          const dot = document.createElement("span");
+          dot.className = "app-header__status-dot";
+          dotsWrapper.appendChild(dot);
+        }
+        headerPartnerStatus.appendChild(dotsWrapper);
+
+        const srText = document.createElement("span");
+        srText.className = "visually-hidden";
+        srText.textContent = "yazıyor...";
+        headerPartnerStatus.appendChild(srText);
+      } else {
+        headerPartnerStatus.textContent = "yazıyor...";
+      }
+    }
+
     function hidePartnerTypingIndicator() {
       if (partnerTypingTimer) {
         clearTimeout(partnerTypingTimer);
@@ -3476,7 +3567,8 @@
       if (!headerPartnerStatus) {
         return;
       }
-      headerPartnerStatus.textContent = "";
+      headerPartnerStatus.innerHTML = "";
+      headerPartnerStatus.classList.remove("app-header__status--dots");
       headerPartnerStatus.dataset.visible = "false";
     }
 
@@ -3484,7 +3576,7 @@
       if (!headerPartnerStatus) {
         return;
       }
-      headerPartnerStatus.textContent = "yazıyor...";
+      renderPartnerTypingIndicatorContent();
       headerPartnerStatus.dataset.visible = "true";
       if (partnerTypingTimer) {
         clearTimeout(partnerTypingTimer);
@@ -3492,6 +3584,26 @@
       partnerTypingTimer = setTimeout(() => {
         hidePartnerTypingIndicator();
       }, PARTNER_TYPING_TIMEOUT_MS);
+    }
+
+    function handleViewportChangeForTypingIndicator() {
+      if (!headerPartnerStatus) {
+        return;
+      }
+      if (headerPartnerStatus.dataset.visible === "true") {
+        renderPartnerTypingIndicatorContent();
+      }
+    }
+
+    if (mobileViewportMatcher) {
+      if (typeof mobileViewportMatcher.addEventListener === "function") {
+        mobileViewportMatcher.addEventListener(
+          "change",
+          handleViewportChangeForTypingIndicator,
+        );
+      } else if (typeof mobileViewportMatcher.addListener === "function") {
+        mobileViewportMatcher.addListener(handleViewportChangeForTypingIndicator);
+      }
     }
 
     hidePartnerTypingIndicator();

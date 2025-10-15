@@ -22,6 +22,8 @@ const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
 
 const R2_BUCKET = process.env.R2_BUCKET;
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+const R2_REGION = process.env.R2_REGION || "auto";
+
 const hasR2Credentials =
   Boolean(process.env.R2_ENDPOINT) &&
   Boolean(process.env.R2_ACCESS_KEY) &&
@@ -30,12 +32,13 @@ const hasR2Credentials =
 
 const r2Client = hasR2Credentials
   ? new S3Client({
-      region: "auto",
+      region: R2_REGION,
       endpoint: process.env.R2_ENDPOINT,
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY,
         secretAccessKey: process.env.R2_SECRET_KEY,
       },
+      forcePathStyle: true,
     })
   : null;
 
