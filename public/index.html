@@ -140,6 +140,143 @@
       pointer-events: auto;
     }
 
+    .attachment-sheet {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 180ms ease;
+      z-index: 7;
+    }
+
+    .attachment-sheet__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(18, 34, 24, 0.35);
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .attachment-sheet__content {
+      position: relative;
+      margin: 0 auto;
+      width: min(520px, 100%);
+      background: #ffffff;
+      border-radius: 28px 28px 0 0;
+      box-shadow: 0 -20px 52px -30px rgba(33, 64, 41, 0.55);
+      padding: 28px 24px calc(28px + env(safe-area-inset-bottom));
+      transform: translateY(24px);
+      opacity: 0;
+      transition: transform 220ms ease, opacity 200ms ease;
+    }
+
+    .attachment-sheet[data-open="true"] {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .attachment-sheet[data-open="true"] .attachment-sheet__backdrop {
+      opacity: 1;
+    }
+
+    .attachment-sheet[data-open="true"] .attachment-sheet__content {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .attachment-sheet__handle {
+      width: 44px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(47, 123, 69, 0.2);
+      margin: 0 auto 18px;
+    }
+
+    .attachment-sheet__title {
+      margin: 0 0 18px;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    .attachment-sheet__actions {
+      display: flex;
+      gap: 12px;
+      flex-direction: column;
+    }
+
+    .attachment-sheet__action {
+      min-height: 52px;
+      border-radius: 16px;
+      border: 1px solid rgba(47, 123, 69, 0.18);
+      background: #f6fbf6;
+      color: var(--accent-strong);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .attachment-sheet__action:hover,
+    .attachment-sheet__action:focus-visible {
+      background: #e9f7ea;
+      transform: translateY(-1px);
+      box-shadow: 0 14px 32px -26px rgba(47, 123, 69, 0.45);
+    }
+
+    .attachment-sheet__action:focus-visible {
+      outline: 3px solid rgba(47, 123, 69, 0.24);
+      outline-offset: 2px;
+    }
+
+    .image-preview-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(12, 26, 18, 0.82);
+      z-index: 8;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 200ms ease;
+      padding: clamp(16px, 6vw, 32px);
+    }
+
+    .image-preview-overlay__backdrop {
+      position: absolute;
+      inset: 0;
+    }
+
+    .image-preview-overlay__image {
+      position: relative;
+      max-width: min(92vw, 620px);
+      max-height: min(92vh, 92dvh);
+      border-radius: 18px;
+      object-fit: contain;
+      box-shadow: 0 32px 64px -34px rgba(12, 26, 18, 0.65);
+      opacity: 0;
+      transform: scale(0.98);
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+
+    .image-preview-overlay[data-open="true"] {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .image-preview-overlay[data-open="true"] .image-preview-overlay__image {
+      opacity: 1;
+      transform: scale(1);
+    }
+
     .report-overlay {
       position: fixed;
       left: 50%;
@@ -840,6 +977,28 @@
       min-width: 0;
     }
 
+    .app-header__nickname-text {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .app-header__status {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      opacity: 0;
+      transition: opacity 160ms ease;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .app-header__status[data-visible="true"] {
+      opacity: 1;
+    }
+
     .app-header__avatar {
       display: inline-block;
       width: 28px;
@@ -953,6 +1112,14 @@
 
       .app-header__nickname {
         --nickname-font-size-base: 16px;
+      }
+
+      .attachment-sheet__actions {
+        flex-direction: row;
+      }
+
+      .attachment-sheet__action {
+        flex: 1;
       }
     }
 
@@ -1092,6 +1259,89 @@
 
     .message__text {
       font-size: 16px;
+    }
+
+    .message--image {
+      gap: clamp(0.6rem, 1.6vh, 0.9rem);
+    }
+
+    .message__media-trigger {
+      position: relative;
+      width: 100%;
+      padding: 0;
+      border: none;
+      border-radius: 18px;
+      overflow: hidden;
+      cursor: pointer;
+      background: rgba(47, 123, 69, 0.08);
+      display: block;
+    }
+
+    .message__media-trigger:focus-visible {
+      outline: 3px solid rgba(47, 123, 69, 0.4);
+      outline-offset: 3px;
+    }
+
+    .message__media-trigger img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: clamp(220px, 32vh, 360px);
+      object-fit: cover;
+      transition: transform 220ms ease;
+    }
+
+    .message--me .message__media-trigger img {
+      border-bottom-right-radius: 10px;
+    }
+
+    .message--stranger .message__media-trigger img {
+      border-bottom-left-radius: 10px;
+    }
+
+    .message[data-state="uploading"] .message__media-trigger img {
+      filter: saturate(0.85);
+      opacity: 0.75;
+    }
+
+    .message__media-status {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(33, 98, 56, 0.9);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      box-shadow: 0 12px 28px -26px rgba(33, 64, 38, 0.55);
+    }
+
+    .message__media-status::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.9;
+    }
+
+    .message[data-state="uploading"] .message__media-status {
+      display: inline-flex;
+    }
+
+    .message[data-state="error"] .message__media-status {
+      display: inline-flex;
+      background: rgba(227, 91, 91, 0.92);
+    }
+
+    .message[data-state="error"] .message__media-trigger img {
+      filter: grayscale(0.4);
+      opacity: 0.6;
     }
 
     .message--me {
@@ -1321,7 +1571,7 @@
       background: #f7fbf6;
       border: 1px solid var(--border-soft);
       border-radius: 999px;
-      padding: 6px 8px 6px 18px;
+      padding: 6px 8px 6px 16px;
       transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
 
@@ -1339,6 +1589,50 @@
       padding: 10px 0;
       font-size: 16px;
       color: var(--text-primary);
+    }
+
+    .controls__attachment-button {
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(46, 125, 82, 0.16);
+      background: #ffffff;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 28px -24px rgba(46, 125, 82, 0.55);
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
+    }
+
+    .controls__attachment-button:hover,
+    .controls__attachment-button:focus-visible {
+      background: #f2faf3;
+      transform: translateY(-1px);
+      box-shadow: 0 18px 36px -26px rgba(46, 125, 82, 0.6);
+    }
+
+    .controls__attachment-button:focus-visible {
+      outline: 3px solid rgba(46, 125, 82, 0.32);
+      outline-offset: 2px;
+    }
+
+    .controls__attachment-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .controls__attachment-icon {
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1;
+      transform: translateY(-1px);
     }
 
     #msg:focus {
@@ -1577,7 +1871,14 @@
             class="app-header__avatar"
             aria-hidden="true"
           >
-          <span id="header-nickname">Sen</span>
+          <span class="app-header__nickname-text">
+            <span id="header-nickname">Sen</span>
+            <span
+              id="header-partner-status"
+              class="app-header__status"
+              aria-live="polite"
+            ></span>
+          </span>
         </div>
         <div class="app-header__logo">
           <img src="/assets/icon.png" alt="Anın Sohbeti logosu">
@@ -1880,6 +2181,14 @@
       </div>
       <div id="controls">
         <div class="controls__composer">
+          <button
+            id="attachment-button"
+            type="button"
+            class="controls__attachment-button"
+            aria-label="Medya ekle"
+          >
+            <span aria-hidden="true" class="controls__attachment-icon">+</span>
+          </button>
           <input id="msg" placeholder="Mesaj yaz...">
           <button id="send" type="button" aria-label="Gönder">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -1902,6 +2211,31 @@
     </div>
   </div>
 
+  <div class="attachment-sheet" id="attachment-sheet" aria-hidden="true">
+    <div class="attachment-sheet__backdrop" id="attachment-sheet-backdrop"></div>
+    <div class="attachment-sheet__content" role="dialog" aria-modal="true" aria-labelledby="attachment-sheet-title">
+      <div class="attachment-sheet__handle" aria-hidden="true"></div>
+      <h2 class="attachment-sheet__title" id="attachment-sheet-title">Medya gönder</h2>
+      <div class="attachment-sheet__actions">
+        <button type="button" class="attachment-sheet__action" id="attachment-camera">Kamera</button>
+        <button type="button" class="attachment-sheet__action" id="attachment-photo">Fotoğraf</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
+  <input type="file" id="photo-input" accept="image/*" hidden>
+
+  <div class="image-preview-overlay" id="image-preview-overlay" hidden>
+    <div class="image-preview-overlay__backdrop"></div>
+    <img
+      id="image-preview-element"
+      class="image-preview-overlay__image"
+      alt="Gönderilen resim önizlemesi"
+      loading="lazy"
+    >
+  </div>
+
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     const socket = io();
@@ -1916,9 +2250,19 @@
     const headerNicknameEl = document.getElementById("header-nickname");
     const headerNicknameContainer =
       headerNicknameEl && headerNicknameEl.closest(".app-header__nickname");
+    const headerPartnerStatus = document.getElementById("header-partner-status");
     const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
     const controls = document.getElementById("controls");
     const headerEl = document.querySelector("header");
+    const attachmentButton = document.getElementById("attachment-button");
+    const attachmentSheet = document.getElementById("attachment-sheet");
+    const attachmentBackdrop = document.getElementById("attachment-sheet-backdrop");
+    const attachmentCameraBtn = document.getElementById("attachment-camera");
+    const attachmentPhotoBtn = document.getElementById("attachment-photo");
+    const cameraInput = document.getElementById("camera-input");
+    const photoInput = document.getElementById("photo-input");
+    const imagePreviewOverlay = document.getElementById("image-preview-overlay");
+    const imagePreviewElement = document.getElementById("image-preview-element");
     const updateControlsOffset = () => {
       if (!controls) {
         return;
@@ -2003,6 +2347,8 @@
     const CALL_COOLDOWN_SECONDS = 15;
     const CALL_REQUEST_TIMEOUT_SECONDS = 10;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
+    const USER_TYPING_IDLE_MS = 3500;
+    const PARTNER_TYPING_TIMEOUT_MS = 4000;
 
     const blockedUsers = new Set();
     try {
@@ -2026,6 +2372,11 @@
     let currentPartnerId = null;
     let currentPartnerNickname = "";
     let reportOverlayOpen = false;
+    let isAttachmentSheetOpen = false;
+    let lastFocusBeforeAttachment = null;
+    let partnerTypingTimer = null;
+    let lastTypingState = false;
+    let typingResetTimer = null;
 
     window.addEventListener("resize", () => {
       updateHeaderNicknameDisplay(nickname);
@@ -2865,6 +3216,34 @@
       }
     }
 
+    function hidePartnerTypingIndicator() {
+      if (partnerTypingTimer) {
+        clearTimeout(partnerTypingTimer);
+        partnerTypingTimer = null;
+      }
+      if (!headerPartnerStatus) {
+        return;
+      }
+      headerPartnerStatus.textContent = "";
+      headerPartnerStatus.dataset.visible = "false";
+    }
+
+    function showPartnerTypingIndicator() {
+      if (!headerPartnerStatus) {
+        return;
+      }
+      headerPartnerStatus.textContent = "yazıyor...";
+      headerPartnerStatus.dataset.visible = "true";
+      if (partnerTypingTimer) {
+        clearTimeout(partnerTypingTimer);
+      }
+      partnerTypingTimer = setTimeout(() => {
+        hidePartnerTypingIndicator();
+      }, PARTNER_TYPING_TIMEOUT_MS);
+    }
+
+    hidePartnerTypingIndicator();
+
     updateHeaderNicknameDisplay(document.body?.dataset?.nickname || "");
     updateNicknameValidity();
 
@@ -2976,6 +3355,10 @@
         reportBtn.disabled = !isMatched || isSearchCountdownActive;
       }
 
+      if (attachmentButton) {
+        attachmentButton.disabled = !isMatched;
+      }
+
       const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
       const hasActiveRequest = callRequestController?.isActive?.() ?? false;
       const isCallDisabled =
@@ -2987,6 +3370,42 @@
       }
     }
 
+    function setUserTypingState(nextState) {
+      const desiredState = Boolean(nextState) && isMatched;
+      if (!desiredState) {
+        if (typingResetTimer) {
+          clearTimeout(typingResetTimer);
+          typingResetTimer = null;
+        }
+      }
+
+      if (lastTypingState === desiredState) {
+        if (desiredState) {
+          if (typingResetTimer) {
+            clearTimeout(typingResetTimer);
+          }
+          typingResetTimer = setTimeout(() => {
+            setUserTypingState(false);
+          }, USER_TYPING_IDLE_MS);
+        }
+        return;
+      }
+
+      lastTypingState = desiredState;
+      if (socket.connected && isMatched) {
+        socket.emit("typing", { isTyping: desiredState });
+      }
+
+      if (desiredState) {
+        if (typingResetTimer) {
+          clearTimeout(typingResetTimer);
+        }
+        typingResetTimer = setTimeout(() => {
+          setUserTypingState(false);
+        }, USER_TYPING_IDLE_MS);
+      }
+    }
+
     function setMatchedState(state) {
       isMatched = state;
       if (!state) {
@@ -2994,13 +3413,166 @@
         currentPartnerId = null;
         currentPartnerNickname = "";
         closeReportOverlay({ immediate: true });
+        closeAttachmentSheet({ immediate: true, restoreFocus: false });
+        setUserTypingState(false);
+        hidePartnerTypingIndicator();
+        closeImagePreview();
       } else {
         hideWaitingStatus();
         closeReportOverlay({ immediate: true });
+        hidePartnerTypingIndicator();
+        closeImagePreview();
       }
       voiceCallManager?.handleMatchStateChange?.(state);
       callRequestController?.handleMatchStateChange?.(state);
       updateControls();
+    }
+
+    function openAttachmentSheet() {
+      if (!attachmentSheet || !isMatched || isAttachmentSheetOpen) {
+        return;
+      }
+      isAttachmentSheetOpen = true;
+      attachmentSheet.dataset.open = "true";
+      attachmentSheet.setAttribute("aria-hidden", "false");
+      lastFocusBeforeAttachment =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const focusTarget =
+        (attachmentCameraBtn && !attachmentCameraBtn.disabled
+          ? attachmentCameraBtn
+          : attachmentPhotoBtn) || attachmentSheet.querySelector("button");
+      if (focusTarget && typeof focusTarget.focus === "function") {
+        window.requestAnimationFrame(() => {
+          focusTarget.focus({ preventScroll: true });
+        });
+      }
+    }
+
+    function closeAttachmentSheet(options = {}) {
+      if (!attachmentSheet) {
+        return;
+      }
+      const immediate = Boolean(options.immediate);
+      const restoreFocus = options.restoreFocus !== false;
+      attachmentSheet.removeAttribute("data-open");
+      attachmentSheet.setAttribute("aria-hidden", "true");
+      const previousFocus = lastFocusBeforeAttachment;
+      lastFocusBeforeAttachment = null;
+      isAttachmentSheetOpen = false;
+      if (restoreFocus && previousFocus && typeof previousFocus.focus === "function") {
+        const delay = immediate ? 0 : 220;
+        setTimeout(() => {
+          previousFocus.focus({ preventScroll: true });
+        }, delay);
+      }
+    }
+
+    function readImageDimensions(url) {
+      return new Promise((resolve) => {
+        if (!url) {
+          resolve(null);
+          return;
+        }
+        const img = new Image();
+        img.decoding = "async";
+        img.onload = () => {
+          resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        };
+        img.onerror = () => {
+          resolve(null);
+        };
+        img.src = url;
+      });
+    }
+
+    async function handleImageFileSelection(file) {
+      if (!file || !isMatched) {
+        return;
+      }
+
+      if (!/^image\//i.test(file.type || "")) {
+        appendMessage("Sadece görsel dosyaları gönderebilirsin.", "system");
+        return;
+      }
+
+      setUserTypingState(false);
+
+      const objectUrl = URL.createObjectURL(file);
+      let dimensions = null;
+      try {
+        dimensions = await readImageDimensions(objectUrl);
+      } catch (error) {
+        dimensions = null;
+      }
+
+      const bubble = appendImageMessage({
+        src: objectUrl,
+        type: "me",
+        prefixText: nickname || "Sen",
+        state: "uploading",
+        width: dimensions?.width,
+        height: dimensions?.height,
+        altText: "Gönderdiğin görsel",
+      });
+
+      try {
+        const presignResponse = await fetch("/api/uploads/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentType: file.type || "image/jpeg",
+            fileName: file.name,
+            nickname,
+          }),
+        });
+
+        if (!presignResponse.ok) {
+          throw new Error(`presign-${presignResponse.status}`);
+        }
+
+        const presignData = await presignResponse.json();
+        if (!presignData?.uploadUrl || !presignData?.assetUrl || !presignData?.key) {
+          throw new Error("invalid-presign");
+        }
+
+        updateImageMessageState(bubble, "uploading");
+
+        const uploadResponse = await fetch(presignData.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": presignData.contentType || file.type || "application/octet-stream",
+          },
+          body: file,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`upload-${uploadResponse.status}`);
+        }
+
+        updateImageMessageSource(bubble, presignData.assetUrl, dimensions || {});
+        updateImageMessageState(bubble, "sent");
+        socket.emit("image-message", {
+          url: presignData.assetUrl,
+          key: presignData.key,
+          width: dimensions?.width,
+          height: dimensions?.height,
+          nickname,
+        });
+      } catch (error) {
+        console.error("Görsel yüklenemedi", error);
+        updateImageMessageState(bubble, "error");
+        appendMessage("Görsel gönderilemedi. Lütfen tekrar dene.", "system");
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    }
+
+    function triggerAttachmentInput(input) {
+      if (!input) {
+        return;
+      }
+      input.value = "";
+      input.click();
     }
 
     function resetReportOverlayButtons() {
@@ -4062,6 +4634,129 @@
       return bubble;
     }
 
+    function createImageMessageElement(options) {
+      const {
+        src,
+        type,
+        prefixText,
+        state = "sent",
+        width,
+        height,
+        altText = "Gönderilen görsel",
+      } = options;
+
+      const bubble = document.createElement("div");
+      bubble.classList.add("message", `message--${type}`, "message--image");
+      bubble.dataset.state = state;
+
+      if (type === "stranger" || type === "me") {
+        const finalPrefix = prefixText ? `${prefixText}:` : "";
+        if (finalPrefix) {
+          const prefix = document.createElement("span");
+          prefix.className = "message__prefix";
+          prefix.textContent = finalPrefix;
+          bubble.appendChild(prefix);
+        }
+      }
+
+      const trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "message__media-trigger";
+      trigger.setAttribute("aria-label", "Görseli büyüt");
+
+      const image = document.createElement("img");
+      image.decoding = "async";
+      image.loading = "lazy";
+      image.alt = altText;
+      if (typeof width === "number" && typeof height === "number") {
+        image.width = width;
+        image.height = height;
+      }
+      image.src = src;
+      trigger.appendChild(image);
+
+      const status = document.createElement("span");
+      status.className = "message__media-status";
+      if (state === "error") {
+        status.textContent = "Gönderilemedi";
+      } else if (state === "uploading") {
+        status.textContent = "Yükleniyor...";
+      } else {
+        status.textContent = "";
+      }
+      trigger.appendChild(status);
+
+      trigger.addEventListener("click", () => {
+        const targetUrl = bubble.dataset.imageUrl || src;
+        if (targetUrl) {
+          openImagePreview(targetUrl, { alt: image.alt });
+        }
+      });
+
+      bubble.dataset.imageUrl = src;
+      bubble.appendChild(trigger);
+      return bubble;
+    }
+
+    function updateImageMessageState(bubble, state) {
+      if (!bubble) {
+        return;
+      }
+      bubble.dataset.state = state;
+      const status = bubble.querySelector(".message__media-status");
+      if (!status) {
+        return;
+      }
+      if (state === "uploading") {
+        status.textContent = "Yükleniyor...";
+      } else if (state === "error") {
+        status.textContent = "Gönderilemedi";
+      } else {
+        status.textContent = "";
+      }
+    }
+
+    function updateImageMessageSource(bubble, src, options = {}) {
+      if (!bubble) {
+        return;
+      }
+      const trigger = bubble.querySelector(".message__media-trigger img");
+      if (trigger && src) {
+        trigger.src = src;
+        if (options.width && options.height) {
+          trigger.width = options.width;
+          trigger.height = options.height;
+        }
+      }
+      bubble.dataset.imageUrl = src;
+    }
+
+    function appendImageMessage(options) {
+      const bubble = createImageMessageElement(options);
+      log.appendChild(bubble);
+      scrollChatToBottom();
+      return bubble;
+    }
+
+    function openImagePreview(url, options = {}) {
+      if (!imagePreviewOverlay || !imagePreviewElement || !url) {
+        return;
+      }
+      imagePreviewElement.src = url;
+      imagePreviewElement.alt = options.alt || "Gönderilen görsel";
+      imagePreviewOverlay.hidden = false;
+      imagePreviewOverlay.dataset.open = "true";
+    }
+
+    function closeImagePreview() {
+      if (!imagePreviewOverlay || !imagePreviewElement) {
+        return;
+      }
+      imagePreviewOverlay.removeAttribute("data-open");
+      imagePreviewOverlay.hidden = true;
+      imagePreviewElement.src = "";
+    }
+
     function scrollChatToBottom() {
       log.scrollTop = log.scrollHeight;
 
@@ -4090,6 +4785,10 @@
       msg.value = "";
       clearCooldown();
       hideWaitingStatus();
+      setUserTypingState(false);
+      hidePartnerTypingIndicator();
+      closeAttachmentSheet({ immediate: true, restoreFocus: false });
+      closeImagePreview();
       updateControls();
       if (statusText) {
         appendMessage(statusText, "system");
@@ -4289,10 +4988,58 @@
           : { text: (payload ?? "").toString(), nickname: "" };
 
       const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "YABANCI";
+      hidePartnerTypingIndicator();
       appendMessage(data.text, "stranger", senderName);
       if (data.text) {
         const previewText = data.text.length > 120 ? `${data.text.slice(0, 117)}...` : data.text;
         triggerChatNotification("Yeni mesaj", `${senderName}: ${previewText}`);
+      }
+    });
+
+    socket.on("image-message", (payload) => {
+      const data =
+        payload && typeof payload === "object"
+          ? {
+              url: typeof payload.url === "string" ? payload.url : "",
+              nickname: (payload.nickname ?? "").toString(),
+              width: Number(payload.width),
+              height: Number(payload.height),
+            }
+          : { url: "", nickname: "", width: null, height: null };
+
+      if (!data.url) {
+        return;
+      }
+
+      const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "YABANCI";
+      hidePartnerTypingIndicator();
+      appendImageMessage({
+        src: data.url,
+        type: "stranger",
+        prefixText: senderName,
+        state: "sent",
+        width: Number.isFinite(data.width) && data.width > 0 ? Math.round(data.width) : undefined,
+        height:
+          Number.isFinite(data.height) && data.height > 0
+            ? Math.round(data.height)
+            : undefined,
+        altText: `${senderName} tarafından gönderilen görsel`,
+      });
+
+      triggerChatNotification("Yeni mesaj", `${senderName}: 📷 Fotoğraf gönderdi`);
+    });
+
+    socket.on("typing", (payload) => {
+      const isTyping =
+        payload && typeof payload === "object" ? Boolean(payload.isTyping) : Boolean(payload);
+      if (!isMatched) {
+        hidePartnerTypingIndicator();
+        return;
+      }
+      if (isTyping) {
+        showPartnerTypingIndicator();
+      } else {
+        hidePartnerTypingIndicator();
       }
     });
 
@@ -4360,6 +5107,7 @@
     });
 
     socket.on("ended", () => {
+      hidePartnerTypingIndicator();
       beginMatchSearch({
         countdownSeconds: DISCONNECT_SEARCH_COUNTDOWN_SECONDS,
         messagePrefix: DISCONNECT_SEARCH_MESSAGE,
@@ -4392,6 +5140,107 @@
           return;
         }
         callRequestController?.startOutgoingRequest?.();
+      });
+    }
+
+    if (attachmentButton) {
+      attachmentButton.addEventListener("click", () => {
+        if (attachmentButton.disabled || !isMatched) {
+          return;
+        }
+        if (isAttachmentSheetOpen) {
+          closeAttachmentSheet();
+        } else {
+          openAttachmentSheet();
+        }
+      });
+    }
+
+    if (attachmentBackdrop) {
+      attachmentBackdrop.addEventListener("click", () => {
+        closeAttachmentSheet();
+      });
+    }
+
+    if (attachmentSheet) {
+      attachmentSheet.addEventListener("keydown", (event) => {
+        if (!isAttachmentSheetOpen) {
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeAttachmentSheet();
+          return;
+        }
+        if (event.key !== "Tab") {
+          return;
+        }
+        const focusable = Array.from(
+          attachmentSheet.querySelectorAll("button:not(:disabled)") || [],
+        );
+        if (!focusable.length) {
+          return;
+        }
+        const currentIndex = focusable.indexOf(document.activeElement);
+        let nextIndex = currentIndex;
+        if (event.shiftKey) {
+          nextIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
+        } else {
+          nextIndex = currentIndex === focusable.length - 1 ? 0 : currentIndex + 1;
+        }
+        event.preventDefault();
+        focusable[nextIndex]?.focus({ preventScroll: true });
+      });
+    }
+
+    if (attachmentCameraBtn) {
+      attachmentCameraBtn.addEventListener("click", () => {
+        if (!isMatched) {
+          return;
+        }
+        closeAttachmentSheet({ restoreFocus: false });
+        triggerAttachmentInput(cameraInput);
+      });
+    }
+
+    if (attachmentPhotoBtn) {
+      attachmentPhotoBtn.addEventListener("click", () => {
+        if (!isMatched) {
+          return;
+        }
+        closeAttachmentSheet({ restoreFocus: false });
+        triggerAttachmentInput(photoInput);
+      });
+    }
+
+    if (cameraInput) {
+      cameraInput.addEventListener("change", (event) => {
+        const file = event.target?.files?.[0];
+        if (file) {
+          handleImageFileSelection(file).catch((error) => {
+            console.error("Kamera görseli gönderilemedi", error);
+          });
+        }
+        cameraInput.value = "";
+      });
+    }
+
+    if (photoInput) {
+      photoInput.addEventListener("change", (event) => {
+        const file = event.target?.files?.[0];
+        if (file) {
+          handleImageFileSelection(file).catch((error) => {
+            console.error("Fotoğraf yüklenemedi", error);
+          });
+        }
+        photoInput.value = "";
+      });
+    }
+
+    if (imagePreviewOverlay) {
+      imagePreviewOverlay.addEventListener("click", (event) => {
+        event.preventDefault();
+        closeImagePreview();
       });
     }
 
@@ -4430,7 +5279,23 @@
     }
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && reportOverlayOpen) {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (imagePreviewOverlay && !imagePreviewOverlay.hidden) {
+        event.preventDefault();
+        closeImagePreview();
+        return;
+      }
+
+      if (isAttachmentSheetOpen) {
+        event.preventDefault();
+        closeAttachmentSheet();
+        return;
+      }
+
+      if (reportOverlayOpen) {
         event.preventDefault();
         closeReportOverlay();
         reportBtn?.focus({ preventScroll: true });
@@ -4444,6 +5309,7 @@
       socket.emit("message", { text: messageText, nickname });
       appendMessage(messageText, "me", nickname);
       msg.value = "";
+      setUserTypingState(false);
       startCooldown();
       updateControls();
       msg.focus();
@@ -4465,7 +5331,11 @@
       socket.emit("next");
     };
 
-    msg.addEventListener("input", updateControls);
+    msg.addEventListener("input", () => {
+      updateControls();
+      const hasMessage = Boolean(msg.value.trim());
+      setUserTypingState(hasMessage);
+    });
     msg.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();

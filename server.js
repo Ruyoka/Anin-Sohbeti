@@ -3,7 +3,10 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const path = require("path");
+const crypto = require("crypto");
 const { Server } = require("socket.io");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const PORT = process.env.PORT || 6000;
 const WAITING_STATUS_TEXT =
@@ -11,15 +14,150 @@ const WAITING_STATUS_TEXT =
 const POST_REPORT_REQUEUE_DELAY_MS = 5000;
 
 const app = express();
+app.use(express.json({ limit: "1mb" }));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
 
+const R2_BUCKET = process.env.R2_BUCKET;
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+const hasR2Credentials =
+  Boolean(process.env.R2_ENDPOINT) &&
+  Boolean(process.env.R2_ACCESS_KEY) &&
+  Boolean(process.env.R2_SECRET_KEY) &&
+  Boolean(R2_BUCKET);
+
+const r2Client = hasR2Credentials
+  ? new S3Client({
+      region: "auto",
+      endpoint: process.env.R2_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY,
+        secretAccessKey: process.env.R2_SECRET_KEY,
+      },
+    })
+  : null;
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+  "image/avif",
+]);
+
+function normalizePublicUrl(base) {
+  if (!base) {
+    return null;
+  }
+  return base.endsWith("/") ? base.slice(0, -1) : base;
+}
+
+const normalizedPublicUrl = normalizePublicUrl(R2_PUBLIC_URL);
+
+function getExtensionFromMime(mime) {
+  switch (mime) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    case "image/gif":
+      return "gif";
+    case "image/heic":
+      return "heic";
+    case "image/heif":
+      return "heif";
+    case "image/avif":
+      return "avif";
+    default:
+      return "";
+  }
+}
+
+function getExtensionFromName(name) {
+  if (typeof name !== "string") {
+    return "";
+  }
+  const lastDot = name.lastIndexOf(".");
+  if (lastDot === -1) {
+    return "";
+  }
+  const ext = name.slice(lastDot + 1).toLowerCase();
+  if (!/^[a-z0-9]{1,6}$/.test(ext)) {
+    return "";
+  }
+  return ext;
+}
+
+function formatTimestampForKey(date = new Date()) {
+  const pad = (value) => value.toString().padStart(2, "0");
+  return (
+    date.getFullYear().toString() +
+    pad(date.getMonth() + 1) +
+    pad(date.getDate()) +
+    "_" +
+    pad(date.getHours()) +
+    pad(date.getMinutes()) +
+    pad(date.getSeconds())
+  );
+}
+
+function buildImageObjectKey({ nickname, extension }) {
+  const safeNickname = sanitizeNickname(nickname || "")
+    .toLocaleLowerCase("tr-TR")
+    .slice(0, 24) || "anonim";
+  const timestamp = formatTimestampForKey();
+  const randomId = crypto.randomBytes(3).toString("hex");
+  const suffix = extension ? `.${extension}` : "";
+  return `temp-images/user_${safeNickname}_${timestamp}_${randomId}${suffix}`;
+}
+
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get(["/privacy", "/privacy.html"], (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "privacy", "index.html"));
+});
+
+app.post("/api/uploads/presign", async (req, res) => {
+  try {
+    if (!r2Client || !normalizedPublicUrl) {
+      res.status(503).json({ error: "storage_not_configured" });
+      return;
+    }
+
+    const { contentType, fileName, nickname: rawNickname } = req.body || {};
+    const mime = typeof contentType === "string" ? contentType.toLowerCase() : "";
+
+    if (!ALLOWED_IMAGE_TYPES.has(mime)) {
+      res.status(400).json({ error: "unsupported_type" });
+      return;
+    }
+
+    const extensionFromMime = getExtensionFromMime(mime);
+    const fallbackExt = getExtensionFromName(typeof fileName === "string" ? fileName : "");
+    const extension = extensionFromMime || fallbackExt;
+
+    const key = buildImageObjectKey({ nickname: rawNickname, extension });
+
+    const command = new PutObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: key,
+      ContentType: mime,
+    });
+
+    const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 60 });
+    const assetUrl = `${normalizedPublicUrl}/${key}`;
+
+    res.json({ uploadUrl, key, assetUrl, contentType: mime });
+  } catch (error) {
+    console.error("Failed to create presigned URL", error);
+    res.status(500).json({ error: "presign_failed" });
+  }
 });
 
 let queue = [];
@@ -208,6 +346,7 @@ function endCurrentChat(socketId, options = {}) {
   queue = queue.filter((id) => id !== partnerId);
   clearWaitTimer(partnerId);
   notifyWaitingStatus(partnerId, false);
+  io.to(partnerId).emit("typing", { isTyping: false });
 
   io.to(partnerId).emit("voice-call:peer-ended");
 
@@ -372,6 +511,58 @@ io.on("connection", (socket) => {
       text: incoming.text,
       nickname: cleanedNickname,
     });
+  });
+
+  socket.on("image-message", (payload) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+
+    const assetUrl = typeof payload.url === "string" ? payload.url : "";
+    const objectKey = typeof payload.key === "string" ? payload.key : "";
+    const widthValue = Number(payload.width);
+    const heightValue = Number(payload.height);
+    const width = Number.isFinite(widthValue) && widthValue > 0 ? Math.round(widthValue) : undefined;
+    const height = Number.isFinite(heightValue) && heightValue > 0 ? Math.round(heightValue) : undefined;
+
+    if (!assetUrl || !objectKey) {
+      return;
+    }
+
+    if (!objectKey.startsWith("temp-images/")) {
+      return;
+    }
+
+    if (!normalizedPublicUrl || !assetUrl.startsWith(`${normalizedPublicUrl}/`)) {
+      return;
+    }
+
+    const storedNickname = nicknames.get(socket.id) || "";
+    const providedNickname = sanitizeNickname((payload.nickname || "").toString()).slice(0, 50);
+    const effectiveNickname = providedNickname || storedNickname;
+    const cleanedNickname = sanitizeNickname(effectiveNickname).slice(0, 50);
+
+    io.to(partnerId).emit("image-message", {
+      url: assetUrl,
+      key: objectKey,
+      width,
+      height,
+      nickname: cleanedNickname,
+    });
+  });
+
+  socket.on("typing", (payload) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    const isTyping =
+      payload && typeof payload === "object"
+        ? Boolean(payload.isTyping)
+        : Boolean(payload);
+
+    io.to(partnerId).emit("typing", { isTyping: Boolean(isTyping) });
   });
 
   socket.on("voice-call:request", () => {
