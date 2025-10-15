@@ -979,6 +979,7 @@
     }
 
     .app-header__nickname-text {
+      --nickname-status-offset: 18px;
       display: inline-flex;
       flex-direction: column;
       align-items: center;
@@ -987,6 +988,8 @@
       min-width: 0;
       text-align: center;
       line-height: 1.15;
+      position: relative;
+      padding-bottom: var(--nickname-status-offset);
     }
 
     #header-nickname {
@@ -994,21 +997,28 @@
     }
 
     .app-header__status {
+      --status-translate-y: -2px;
       font-size: 12px;
       font-weight: 500;
       color: var(--accent);
       opacity: 0;
-      transform: translateY(-2px);
       transition: opacity 200ms ease, transform 220ms ease;
       line-height: 1.1;
       white-space: normal;
       text-align: center;
       min-height: 1.2em;
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 4px);
+      transform: translate(-50%, var(--status-translate-y));
+      width: max-content;
+      max-width: 100%;
+      pointer-events: none;
     }
 
     .app-header__status[data-visible="true"] {
       opacity: 1;
-      transform: translateY(0);
+      --status-translate-y: 0;
     }
 
     .app-header__status--dots {
@@ -2530,12 +2540,18 @@
         throw new Error("upload-url-missing");
       }
 
+      if (!(file instanceof Blob)) {
+        const invalidFileError = new Error("upload-invalid-file");
+        invalidFileError.name = "UploadInvalidFileError";
+        throw invalidFileError;
+      }
+
       const presignedContentType =
         typeof contentType === "string" && contentType.trim() !== ""
           ? contentType.trim()
           : "";
       const fileContentType =
-        file && typeof file.type === "string" && file.type.trim() !== ""
+        typeof file.type === "string" && file.type.trim() !== ""
           ? file.type.trim()
           : "";
 
@@ -2556,122 +2572,252 @@
         headers["Content-Type"] = normalizedContentType;
       }
 
-      if (typeof onProgress === "function") {
-        try {
-          onProgress(5);
-        } catch (progressError) {
-          console.warn("Upload progress callback threw", progressError);
-        }
-      }
-
-      const timeoutMs = 120000;
-      const supportsAbort = typeof AbortController === "function";
-      const controller = supportsAbort ? new AbortController() : null;
-      const timeoutId = supportsAbort
-        ? window.setTimeout(() => {
-            controller.abort();
-          }, timeoutMs)
-        : null;
-
+      const totalSize = Number.isFinite(file.size) ? Number(file.size) : 0;
       console.info("Starting R2 upload", {
         url: resolvedUrl,
         contentType: normalizedContentType || undefined,
-        size: file && typeof file.size === "number" ? file.size : undefined,
+        size: totalSize || undefined,
       });
 
-      let response;
-      try {
-        response = await fetch(resolvedUrl, {
-          method: "PUT",
-          headers,
-          body: file,
-          signal: controller ? controller.signal : undefined,
-          mode: "cors",
-          credentials: "omit",
-        });
-      } catch (fetchError) {
-        if (timeoutId) {
-          window.clearTimeout(timeoutId);
+      const reportProgress = (value) => {
+        if (typeof onProgress !== "function") {
+          return;
         }
-
-        if (fetchError && fetchError.name === "AbortError") {
-          const timeoutError = new Error("upload-408");
-          timeoutError.name = "UploadTimeoutError";
-          timeoutError.uploadResponse = { url: resolvedUrl, status: 408 };
-          console.error("R2 upload timeout", {
-            url: resolvedUrl,
-            error: fetchError,
-          });
-          throw timeoutError;
+        try {
+          const clamped = Math.max(0, Math.min(100, Math.round(value)));
+          onProgress(clamped);
+        } catch (progressError) {
+          console.warn("Upload progress callback threw", progressError);
         }
-
-        const networkError = new Error("network-error");
-        networkError.name = "UploadNetworkError";
-        networkError.uploadResponse = { url: resolvedUrl, eventType: "fetch-error" };
-        console.error("R2 upload network error", {
-          url: resolvedUrl,
-          error: fetchError,
-        });
-        throw networkError;
-      } finally {
-        if (timeoutId) {
-          window.clearTimeout(timeoutId);
-        }
-      }
-
-      let responseText = "";
-      try {
-        responseText = await response.text();
-      } catch (readError) {
-        console.warn("Unable to read R2 upload response body", {
-          url: resolvedUrl,
-          error: readError,
-        });
-      }
-
-      const responseHeaders = {};
-      try {
-        response.headers.forEach((value, key) => {
-          responseHeaders[key] = value;
-        });
-      } catch (headerError) {
-        console.warn("Unable to iterate R2 upload response headers", headerError);
-      }
-
-      const status = response.status;
-      const statusText = response.statusText;
-
-      const logPayload = {
-        url: resolvedUrl,
-        status,
-        statusText,
-        headers: responseHeaders,
-        responseText,
       };
 
-      if (status === 200 || status === 204) {
-        console.info("R2 upload succeeded", logPayload);
-        if (typeof onProgress === "function") {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let settled = false;
+
+        const markSettled = () => {
+          settled = true;
+        };
+
+        const safeResponseText = () => {
           try {
-            onProgress(100);
-          } catch (progressError) {
-            console.warn("Upload progress callback threw", progressError);
+            return typeof xhr.responseText === "string" ? xhr.responseText : "";
+          } catch (_error) {
+            return "";
           }
-        }
-        return { status, statusText, responseText, headers: responseHeaders };
-      }
+        };
 
-      const error = new Error(`upload-${status || "unknown"}`);
-      error.name = "UploadHttpError";
-      error.uploadResponse = {
-        status,
-        statusText,
-        responseText,
-        headers: responseHeaders,
-        url: resolvedUrl,
-      };
-      console.error("R2 upload failed", logPayload);
-      throw error;
+        const getAllHeaders = () => {
+          try {
+            return xhr.getAllResponseHeaders();
+          } catch (_error) {
+            return "";
+          }
+        };
+
+        const parseResponseHeaders = (rawHeaders) => {
+          if (!rawHeaders || typeof rawHeaders !== "string") {
+            return {};
+          }
+          const entries = rawHeaders
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean);
+          const headerMap = {};
+          for (const entry of entries) {
+            const separatorIndex = entry.indexOf(":");
+            if (separatorIndex === -1) {
+              continue;
+            }
+            const key = entry.slice(0, separatorIndex).trim().toLowerCase();
+            const value = entry.slice(separatorIndex + 1).trim();
+            if (key) {
+              headerMap[key] = value;
+            }
+          }
+          return headerMap;
+        };
+
+        const handleTerminalFailure = (eventType, buildError, options = {}) => {
+          if (settled) {
+            return;
+          }
+          const headersMap = parseResponseHeaders(getAllHeaders());
+          const status = xhr.status || 0;
+          const statusText = xhr.statusText || "";
+          const responseText = safeResponseText();
+          const uploadResponse = {
+            status,
+            statusText,
+            responseText,
+            headers: headersMap,
+            url: resolvedUrl,
+            eventType,
+            readyState: xhr.readyState,
+          };
+          const error = buildError(uploadResponse);
+          error.uploadResponse =
+            error.uploadResponse && typeof error.uploadResponse === "object"
+              ? { ...uploadResponse, ...error.uploadResponse }
+              : uploadResponse;
+          markSettled();
+          const consoleMessage = options.consoleMessage ||
+            (eventType === "timeout"
+              ? "R2 upload timeout"
+              : eventType === "abort"
+                ? "R2 upload aborted"
+                : "R2 upload network error");
+          console.error(consoleMessage, {
+            ...uploadResponse,
+            error,
+          });
+          reject(error);
+        };
+
+        xhr.open("PUT", resolvedUrl, true);
+        xhr.responseType = "text";
+        xhr.timeout = 180000;
+
+        Object.entries(headers).forEach(([header, value]) => {
+          if (!value) {
+            return;
+          }
+          try {
+            xhr.setRequestHeader(header, value);
+          } catch (headerError) {
+            console.warn("Unable to set upload header", {
+              header,
+              value,
+              error: headerError,
+            });
+          }
+        });
+
+        reportProgress(0);
+
+        xhr.upload.addEventListener("progress", (event) => {
+          if (settled || !event) {
+            return;
+          }
+          if (event.lengthComputable && event.total > 0) {
+            reportProgress((event.loaded / event.total) * 100);
+            return;
+          }
+          if (
+            totalSize > 0 &&
+            typeof event.loaded === "number" &&
+            event.loaded >= 0
+          ) {
+            reportProgress(Math.min(99, (event.loaded / totalSize) * 100));
+          }
+        });
+
+        xhr.addEventListener("load", () => {
+          if (settled) {
+            return;
+          }
+          const status = xhr.status || 0;
+          const statusText = xhr.statusText || "";
+          const responseText = safeResponseText();
+          const headersMap = parseResponseHeaders(getAllHeaders());
+          const logPayload = {
+            url: resolvedUrl,
+            status,
+            statusText,
+            headers: headersMap,
+            responseText,
+            readyState: xhr.readyState,
+            eventType: "load",
+          };
+
+          if (status === 200 || status === 204) {
+            reportProgress(100);
+            markSettled();
+            console.info("R2 upload succeeded", logPayload);
+            resolve({
+              status,
+              statusText,
+              responseText,
+              headers: headersMap,
+            });
+            return;
+          }
+
+          const error = new Error(`upload-${status || "unknown"}`);
+          error.name = "UploadHttpError";
+          error.uploadResponse = {
+            status,
+            statusText,
+            responseText,
+            headers: headersMap,
+            url: resolvedUrl,
+            eventType: "load",
+            readyState: xhr.readyState,
+          };
+          markSettled();
+          console.error("R2 upload failed", logPayload);
+          reject(error);
+        });
+
+        xhr.addEventListener("error", () => {
+          handleTerminalFailure(
+            "error",
+            (uploadResponse) => {
+              const networkError = new Error("network-error");
+              networkError.name = "UploadNetworkError";
+              networkError.uploadResponse = uploadResponse;
+              return networkError;
+            },
+          );
+        });
+
+        xhr.addEventListener("timeout", () => {
+          handleTerminalFailure(
+            "timeout",
+            (uploadResponse) => {
+              const timeoutError = new Error("upload-408");
+              timeoutError.name = "UploadTimeoutError";
+              timeoutError.uploadResponse = {
+                ...uploadResponse,
+                status: uploadResponse.status || 408,
+              };
+              return timeoutError;
+            },
+          );
+        });
+
+        xhr.addEventListener("abort", () => {
+          handleTerminalFailure(
+            "abort",
+            (uploadResponse) => {
+              const abortError = new Error("upload-aborted");
+              abortError.name = "UploadAbortError";
+              abortError.uploadResponse = uploadResponse;
+              return abortError;
+            },
+            { consoleMessage: "R2 upload aborted" },
+          );
+        });
+
+        try {
+          xhr.send(file);
+        } catch (sendError) {
+          handleTerminalFailure(
+            "send",
+            () => {
+              const sendException = new Error("upload-send-failed");
+              sendException.name = "UploadSendError";
+              sendException.cause = sendError;
+              sendException.uploadResponse = {
+                url: resolvedUrl,
+                eventType: "send",
+              };
+              return sendException;
+            },
+            { consoleMessage: "R2 upload send failed" },
+          );
+        }
+      });
     }
     const uploadErrorPopover = createUploadErrorPopover();
     const uploadErrorPopoverText = uploadErrorPopover
