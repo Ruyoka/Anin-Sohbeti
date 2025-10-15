@@ -1339,6 +1339,39 @@
       background: rgba(227, 91, 91, 0.92);
     }
 
+    .message__media-retry {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(33, 98, 56, 0.92);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      box-shadow: 0 12px 28px -26px rgba(33, 64, 38, 0.55);
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .message__media-retry:focus-visible {
+      outline: 3px solid rgba(47, 123, 69, 0.4);
+      outline-offset: 3px;
+    }
+
+    .message__media-retry:active {
+      transform: scale(0.97);
+    }
+
+    .message[data-state="error"] .message__media-retry {
+      display: inline-flex;
+    }
+
     .message[data-state="error"] .message__media-trigger img {
       filter: grayscale(0.4);
       opacity: 0.6;
@@ -2263,6 +2296,9 @@
     const photoInput = document.getElementById("photo-input");
     const imagePreviewOverlay = document.getElementById("image-preview-overlay");
     const imagePreviewElement = document.getElementById("image-preview-element");
+    const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+    const IMAGE_UPLOAD_ERROR_MESSAGE = "Upload failed, please try again.";
+    const pendingImageUploads = new WeakMap();
     const updateControlsOffset = () => {
       if (!controls) {
         return;
@@ -3485,6 +3521,106 @@
       });
     }
 
+    function getRetryButton(bubble) {
+      return bubble?.querySelector?.(".message__media-retry") || null;
+    }
+
+    function resetRetryButtonState(bubble, disabled) {
+      const retryBtn = getRetryButton(bubble);
+      if (retryBtn) {
+        retryBtn.disabled = Boolean(disabled);
+      }
+    }
+
+    async function performImageUpload(bubble) {
+      const uploadEntry = pendingImageUploads.get(bubble);
+      if (!uploadEntry) {
+        return;
+      }
+
+      const { file, dimensions, objectUrl } = uploadEntry;
+      let userErrorMessage = IMAGE_UPLOAD_ERROR_MESSAGE;
+
+      resetRetryButtonState(bubble, true);
+      updateImageMessageState(bubble, "uploading");
+
+      try {
+        const presignResponse = await fetch("/api/uploads/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentType: file.type || "image/jpeg",
+            fileName: file.name,
+            nickname,
+            fileSize: file.size,
+          }),
+        });
+
+        if (!presignResponse.ok) {
+          let errorBody = null;
+          try {
+            errorBody = await presignResponse.json();
+          } catch (parseError) {
+            errorBody = null;
+          }
+
+          if (presignResponse.status === 413 || errorBody?.error === "file_too_large") {
+            userErrorMessage = "Images must be 10 MB or smaller.";
+          }
+
+          throw new Error(`presign-${presignResponse.status}`);
+        }
+
+        const presignData = await presignResponse.json();
+        if (!presignData?.uploadUrl || !presignData?.assetUrl || !presignData?.key) {
+          throw new Error("invalid-presign");
+        }
+
+        const uploadResponse = await fetch(presignData.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": presignData.contentType || file.type || "application/octet-stream",
+          },
+          body: file,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`upload-${uploadResponse.status}`);
+        }
+
+        updateImageMessageSource(bubble, presignData.assetUrl, dimensions || {});
+        updateImageMessageState(bubble, "sent");
+        bubble.dataset.imageUrl = presignData.assetUrl;
+
+        socket.emit("image-message", {
+          url: presignData.assetUrl,
+          key: presignData.key,
+          width: dimensions?.width,
+          height: dimensions?.height,
+          nickname,
+        });
+
+        if (objectUrl) {
+          try {
+            URL.revokeObjectURL(objectUrl);
+          } catch (revokeError) {
+            console.warn("Preview URL could not be revoked", revokeError);
+          }
+        }
+
+        pendingImageUploads.delete(bubble);
+        const retryButton = getRetryButton(bubble);
+        if (retryButton) {
+          retryButton.remove();
+        }
+      } catch (error) {
+        console.error("Görsel yüklenemedi", error);
+        updateImageMessageState(bubble, "error");
+        appendMessage(userErrorMessage, "system");
+        resetRetryButtonState(bubble, false);
+      }
+    }
+
     async function handleImageFileSelection(file) {
       if (!file || !isMatched) {
         return;
@@ -3495,10 +3631,16 @@
         return;
       }
 
+      if (file.size > MAX_IMAGE_UPLOAD_SIZE_BYTES) {
+        appendMessage("Images must be 10 MB or smaller.", "system");
+        return;
+      }
+
       setUserTypingState(false);
 
       const objectUrl = URL.createObjectURL(file);
       let dimensions = null;
+
       try {
         dimensions = await readImageDimensions(objectUrl);
       } catch (error) {
@@ -3515,56 +3657,21 @@
         altText: "Gönderdiğin görsel",
       });
 
-      try {
-        const presignResponse = await fetch("/api/uploads/presign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contentType: file.type || "image/jpeg",
-            fileName: file.name,
-            nickname,
-          }),
-        });
+      pendingImageUploads.set(bubble, { file, dimensions, objectUrl });
+      resetRetryButtonState(bubble, true);
+      await performImageUpload(bubble);
+    }
 
-        if (!presignResponse.ok) {
-          throw new Error(`presign-${presignResponse.status}`);
-        }
-
-        const presignData = await presignResponse.json();
-        if (!presignData?.uploadUrl || !presignData?.assetUrl || !presignData?.key) {
-          throw new Error("invalid-presign");
-        }
-
-        updateImageMessageState(bubble, "uploading");
-
-        const uploadResponse = await fetch(presignData.uploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": presignData.contentType || file.type || "application/octet-stream",
-          },
-          body: file,
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error(`upload-${uploadResponse.status}`);
-        }
-
-        updateImageMessageSource(bubble, presignData.assetUrl, dimensions || {});
-        updateImageMessageState(bubble, "sent");
-        socket.emit("image-message", {
-          url: presignData.assetUrl,
-          key: presignData.key,
-          width: dimensions?.width,
-          height: dimensions?.height,
-          nickname,
-        });
-      } catch (error) {
-        console.error("Görsel yüklenemedi", error);
-        updateImageMessageState(bubble, "error");
-        appendMessage("Görsel gönderilemedi. Lütfen tekrar dene.", "system");
-      } finally {
-        URL.revokeObjectURL(objectUrl);
+    function retryImageUpload(bubble) {
+      if (!bubble || bubble.dataset.state === "uploading") {
+        return;
       }
+
+      if (!pendingImageUploads.has(bubble)) {
+        return;
+      }
+
+      performImageUpload(bubble);
     }
 
     function triggerAttachmentInput(input) {
@@ -4678,9 +4785,9 @@
       const status = document.createElement("span");
       status.className = "message__media-status";
       if (state === "error") {
-        status.textContent = "Gönderilemedi";
+        status.textContent = "Upload failed";
       } else if (state === "uploading") {
-        status.textContent = "Yükleniyor...";
+        status.textContent = "Uploading...";
       } else {
         status.textContent = "";
       }
@@ -4695,6 +4802,20 @@
 
       bubble.dataset.imageUrl = src;
       bubble.appendChild(trigger);
+
+      if (type === "me") {
+        const retryButton = document.createElement("button");
+        retryButton.type = "button";
+        retryButton.className = "message__media-retry";
+        retryButton.textContent = "Retry";
+        retryButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          retryImageUpload(bubble);
+        });
+        bubble.appendChild(retryButton);
+      }
+
       return bubble;
     }
 
@@ -4708,9 +4829,9 @@
         return;
       }
       if (state === "uploading") {
-        status.textContent = "Yükleniyor...";
+        status.textContent = "Uploading...";
       } else if (state === "error") {
-        status.textContent = "Gönderilemedi";
+        status.textContent = "Upload failed";
       } else {
         status.textContent = "";
       }
