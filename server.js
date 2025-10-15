@@ -153,11 +153,24 @@ app.post("/api/uploads/presign", async (req, res) => {
       contentType,
       fileName,
       nickname: rawNickname,
-      socketId: rawSocketId,
       fileSize,
+      presignToken: rawPresignToken,
+      uploadToken: rawUploadToken,
     } = req.body || {};
 
-    const socketId = typeof rawSocketId === "string" ? rawSocketId.trim() : "";
+    const providedToken =
+      typeof rawPresignToken === "string"
+        ? rawPresignToken.trim()
+        : typeof rawUploadToken === "string"
+          ? rawUploadToken.trim()
+          : "";
+
+    if (!providedToken) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    const socketId = presignTokens.get(providedToken);
     if (!socketId) {
       res.status(401).json({ error: "unauthorized" });
       return;
@@ -165,6 +178,13 @@ app.post("/api/uploads/presign", async (req, res) => {
 
     const socket = io.sockets.sockets.get(socketId);
     if (!socket) {
+      presignTokens.delete(providedToken);
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+
+    if (socket.data?.presignToken !== providedToken) {
+      presignTokens.delete(providedToken);
       res.status(401).json({ error: "unauthorized" });
       return;
     }
@@ -230,6 +250,7 @@ const waitTimers = new Map();
 const recentMatches = new Map();
 const blockedUsers = new Map();
 const presignUsageBySocket = new Map();
+const presignTokens = new Map();
 let scheduledTryMatchHandle = null;
 let scheduledTryMatchTime = 0;
 const callRequestsByCaller = new Map();
@@ -532,6 +553,13 @@ function findNextPair() {
 
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı:", socket.id);
+  const presignToken = crypto.randomBytes(16).toString("hex");
+  socket.data.presignToken = presignToken;
+  presignTokens.set(presignToken, socket.id);
+  socket.emit("uploads:token", {
+    token: presignToken,
+    maxBytes: MAX_IMAGE_UPLOAD_BYTES,
+  });
   blockedUsers.set(socket.id, new Set());
 
   socket.on("join", (payload) => {
@@ -777,6 +805,9 @@ io.on("connection", (socket) => {
     nicknames.delete(socket.id);
     blockedUsers.delete(socket.id);
     presignUsageBySocket.delete(socket.id);
+    if (socket.data?.presignToken) {
+      presignTokens.delete(socket.data.presignToken);
+    }
   });
 });
 
