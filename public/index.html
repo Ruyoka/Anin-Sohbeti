@@ -2528,22 +2528,111 @@
       return new Promise((resolve, reject) => {
         try {
           const xhr = new XMLHttpRequest();
-          xhr.open("PUT", url);
+          const resolvedUrl = typeof url === "string" ? url : String(url || "");
+          if (!resolvedUrl) {
+            throw new Error("upload-url-missing");
+          }
+
+          xhr.open("PUT", resolvedUrl, true);
           xhr.responseType = "text";
           xhr.timeout = 120000;
-          xhr.setRequestHeader("Content-Type", contentType || "application/octet-stream");
+          xhr.withCredentials = false;
+
+          const presignedContentType =
+            typeof contentType === "string" && contentType.trim() !== ""
+              ? contentType.trim()
+              : "";
+          const fileContentType =
+            file && typeof file.type === "string" && file.type.trim() !== ""
+              ? file.type.trim()
+              : "";
+
+          if (
+            presignedContentType &&
+            fileContentType &&
+            presignedContentType !== fileContentType
+          ) {
+            console.warn("Content type mismatch detected", {
+              presignedContentType,
+              fileContentType,
+            });
+          }
+
+          const normalizedContentType = presignedContentType || fileContentType;
+
+          if (normalizedContentType) {
+            xhr.setRequestHeader("Content-Type", normalizedContentType);
+          }
+
           xhr.onload = () => {
-            resolve({ status: xhr.status });
+            const status = xhr.status;
+            const statusText = xhr.statusText;
+            const responseText = typeof xhr.responseText === "string" ? xhr.responseText : "";
+            if (status === 200 || status === 204) {
+              resolve({ status, statusText, responseText });
+              return;
+            }
+
+            const error = new Error(`upload-${status}`);
+            error.name = "UploadHttpError";
+            error.uploadResponse = {
+              status,
+              statusText,
+              responseText,
+              url: resolvedUrl,
+            };
+
+            console.error("R2 upload failed", {
+              step: "onload",
+              status,
+              statusText,
+              responseText,
+              url: resolvedUrl,
+            });
+
+            reject(error);
           };
-          xhr.onerror = () => {
-            reject(new Error("network-error"));
+
+          xhr.onerror = (event) => {
+            const error = new Error("network-error");
+            error.name = "UploadNetworkError";
+            error.uploadResponse = { url: resolvedUrl, eventType: "error" };
+
+            console.error("R2 upload network error", {
+              step: "onerror",
+              url: resolvedUrl,
+              event,
+            });
+
+            reject(error);
           };
+
           xhr.ontimeout = () => {
-            reject(new Error("upload-408"));
+            const error = new Error("upload-408");
+            error.name = "UploadTimeoutError";
+            error.uploadResponse = { url: resolvedUrl, status: 408 };
+
+            console.error("R2 upload timeout", {
+              step: "ontimeout",
+              url: resolvedUrl,
+            });
+
+            reject(error);
           };
+
           xhr.onabort = () => {
-            reject(new Error("upload-aborted"));
+            const error = new Error("upload-aborted");
+            error.name = "UploadAbortError";
+            error.uploadResponse = { url: resolvedUrl, eventType: "abort" };
+
+            console.warn("R2 upload aborted", {
+              step: "onabort",
+              url: resolvedUrl,
+            });
+
+            reject(error);
           };
+
           if (xhr.upload && typeof onProgress === "function") {
             xhr.upload.onprogress = (event) => {
               if (!event.lengthComputable) {
@@ -2554,8 +2643,14 @@
               onProgress(percentage);
             };
           }
+
           xhr.send(file);
         } catch (sendError) {
+          console.error("R2 upload threw before sending", {
+            step: "exception",
+            url: typeof url === "string" ? url : undefined,
+            error: sendError,
+          });
           reject(sendError);
         }
       });
@@ -3993,6 +4088,55 @@
       }
       const normalized = rawMessage.toLowerCase();
 
+      if (
+        error &&
+        typeof error === "object" &&
+        error.uploadResponse &&
+        typeof error.uploadResponse === "object"
+      ) {
+        const { status, statusText, responseText } = error.uploadResponse;
+        const numericStatus =
+          typeof status === "number" && Number.isFinite(status)
+            ? status
+            : Number.parseInt(status, 10);
+        const trimmedBody =
+          typeof responseText === "string" ? responseText.trim() : "";
+        const hasDetailedResponse =
+          Number.isFinite(numericStatus) ||
+          (typeof statusText === "string" && statusText.trim() !== "") ||
+          trimmedBody !== "";
+
+        if (hasDetailedResponse) {
+          const statusLabel = [
+            Number.isFinite(numericStatus) ? String(numericStatus) : "",
+            typeof statusText === "string" ? statusText.trim() : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          const overlayMessage = trimmedBody || statusLabel || fallbackOverlay;
+
+          const logFragments = [];
+          if (Number.isFinite(numericStatus)) {
+            logFragments.push(`status ${numericStatus}`);
+          }
+          if (statusText) {
+            logFragments.push(String(statusText));
+          }
+          if (trimmedBody && trimmedBody !== statusText) {
+            logFragments.push(`body: ${trimmedBody}`);
+          }
+
+          return {
+            overlayMessage,
+            logMessage:
+              logFragments.length > 0
+                ? `R2 upload failed (${logFragments.join(" | ")})`
+                : "R2 upload failed",
+            rawMessage,
+          };
+        }
+      }
+
       if (rawMessage.indexOf("presign-") === 0) {
         const statusCode = rawMessage.slice("presign-".length) || "unknown";
         let overlayMessage = "Yükleme hazırlığı başarısız";
@@ -4172,6 +4316,14 @@
         }
       } catch (error) {
         logUploadStep("error", uploadMetadata.safeFileName);
+        console.error("Image upload failed", {
+          message: error && typeof error === "object" ? error.message : String(error),
+          uploadResponse:
+            error && typeof error === "object" && "uploadResponse" in error
+              ? error.uploadResponse
+              : undefined,
+          stack: error && typeof error === "object" && error.stack ? error.stack : undefined,
+        });
         const errorDetails = describeImageUploadError(error);
         updateImageMessageState(bubble, "error", {
           errorMessage: errorDetails.overlayMessage,
