@@ -2396,6 +2396,7 @@
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     const socket = io();
+    let currentSocketId = null;
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
@@ -2422,6 +2423,7 @@
     const imagePreviewElement = document.getElementById("image-preview-element");
     const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
     const IMAGE_UPLOAD_ERROR_MESSAGE = "Fotoğraf gönderilemedi, lütfen tekrar dene.";
+    const IMAGE_UPLOAD_RATE_LIMIT_MESSAGE = "Çok seri gönderiyorsun azcık bekle";
     const pendingImageUploads = new WeakMap();
     const uploadStepLabels = {
       preparing: { tr: "Hazırlanıyor", en: "Preparing" },
@@ -4314,7 +4316,9 @@
         const statusCode = rawMessage.slice("presign-".length) || "unknown";
         let overlayMessage = "Yükleme hazırlığı başarısız";
         const leading = statusCode.charAt(0);
-        if (statusCode === "503") {
+        if (statusCode === "429") {
+          overlayMessage = IMAGE_UPLOAD_RATE_LIMIT_MESSAGE;
+        } else if (statusCode === "503") {
           overlayMessage = "Yükleme servisi kullanılamıyor";
         } else if (leading === "4") {
           overlayMessage = "Sunucu dosyayı reddetti";
@@ -4419,6 +4423,7 @@
             contentType: uploadMetadata.mimeType || file.type || "image/jpeg",
             fileName: uploadMetadata.safeFileName,
             nickname,
+            socketId: currentSocketId,
             fileSize: uploadMetadata.size || file.size,
             originalName: uploadMetadata.originalName,
           }),
@@ -4432,7 +4437,9 @@
             errorBody = null;
           }
 
-          if (presignResponse.status === 413 || errorBody?.error === "file_too_large") {
+          if (presignResponse.status === 429 || errorBody?.error === "rate_limited") {
+            userErrorMessage = IMAGE_UPLOAD_RATE_LIMIT_MESSAGE;
+          } else if (presignResponse.status === 413 || errorBody?.error === "file_too_large") {
             userErrorMessage = "Görsel 10 MB veya daha küçük olmalı.";
           }
 
@@ -5996,6 +6003,7 @@
     setupNotificationPermissionWatcher();
 
     socket.on("connect", () => {
+      currentSocketId = socket.id;
       setMatchedState(false);
       if (nickname) {
         joinQueue();
@@ -6193,6 +6201,7 @@
     });
 
     socket.on("disconnect", () => {
+      currentSocketId = null;
       setMatchedState(false);
       voiceCallManager?.handleDisconnect?.();
       callRequestController?.handleDisconnect?.();

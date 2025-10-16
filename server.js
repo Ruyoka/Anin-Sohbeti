@@ -21,7 +21,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
 
 const R2_BUCKET = process.env.R2_BUCKET;
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+const R2_PUBLIC_URL = process.env.CUSTOM_DOMAIN || process.env.R2_PUBLIC_URL;
 const R2_REGION = process.env.R2_REGION || "auto";
 
 const hasR2Credentials =
@@ -43,6 +43,11 @@ const r2Client = hasR2Credentials
   : null;
 
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const UPLOAD_COOLDOWN_MS = 60 * 1000;
+const RATE_LIMIT_MESSAGE = "Çok seri gönderiyorsun azcık bekle";
+
+const lastSuccessfulUploadBySocket = new Map();
+const lastSuccessfulUploadByNickname = new Map();
 
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -62,6 +67,80 @@ function normalizePublicUrl(base) {
 }
 
 const normalizedPublicUrl = normalizePublicUrl(R2_PUBLIC_URL);
+
+function getRateLimitNickname(value) {
+  return sanitizeNickname(typeof value === "string" ? value : "").slice(0, 50);
+}
+
+function getLastSuccessfulUploadTimestamp({ socketId, nickname }) {
+  const socketTimestamp =
+    socketId && lastSuccessfulUploadBySocket.has(socketId)
+      ? lastSuccessfulUploadBySocket.get(socketId)
+      : 0;
+  const nicknameTimestamp =
+    nickname && lastSuccessfulUploadByNickname.has(nickname)
+      ? lastSuccessfulUploadByNickname.get(nickname)
+      : 0;
+
+  const safeSocketTimestamp =
+    typeof socketTimestamp === "number" && Number.isFinite(socketTimestamp)
+      ? socketTimestamp
+      : 0;
+  const safeNicknameTimestamp =
+    typeof nicknameTimestamp === "number" && Number.isFinite(nicknameTimestamp)
+      ? nicknameTimestamp
+      : 0;
+
+  return Math.max(safeSocketTimestamp, safeNicknameTimestamp, 0);
+}
+
+function getUploadCooldownRemaining({ socketId, nickname, now = Date.now() }) {
+  const lastTimestamp = getLastSuccessfulUploadTimestamp({ socketId, nickname });
+  if (!lastTimestamp) {
+    return 0;
+  }
+  const expiresAt = lastTimestamp + UPLOAD_COOLDOWN_MS;
+  return Math.max(0, expiresAt - now);
+}
+
+function isUploadRateLimited({ socketId, nickname, now = Date.now() }) {
+  return getUploadCooldownRemaining({ socketId, nickname, now }) > 0;
+}
+
+function markSuccessfulUpload({ socketId, nickname, timestamp = Date.now() }) {
+  if (socketId) {
+    lastSuccessfulUploadBySocket.set(socketId, timestamp);
+  }
+  if (nickname) {
+    lastSuccessfulUploadByNickname.set(nickname, timestamp);
+  }
+}
+
+function sendUploadRateLimitMessage({ socketId, nickname }) {
+  const payload = {
+    text: RATE_LIMIT_MESSAGE,
+    nickname: "Sistem",
+  };
+
+  const targets = new Set();
+  if (socketId && io.sockets.sockets.get(socketId)) {
+    targets.add(socketId);
+  }
+
+  if (nickname) {
+    for (const [id, storedNickname] of nicknames.entries()) {
+      if (storedNickname === nickname && io.sockets.sockets.get(id)) {
+        targets.add(id);
+      }
+    }
+  }
+
+  for (const target of targets) {
+    io.to(target).emit("message", payload);
+  }
+
+  return targets.size > 0;
+}
 
 function getExtensionFromMime(mime) {
   switch (mime) {
@@ -135,7 +214,32 @@ app.post("/api/uploads/presign", async (req, res) => {
       return;
     }
 
-    const { contentType, fileName, nickname: rawNickname, fileSize } = req.body || {};
+    const {
+      contentType,
+      fileName,
+      nickname: rawNickname,
+      fileSize,
+      socketId: rawSocketId,
+    } = req.body || {};
+    const socketId = typeof rawSocketId === "string" ? rawSocketId : "";
+    const sanitizedNickname = getRateLimitNickname(rawNickname);
+    const now = Date.now();
+
+    const cooldownRemaining = getUploadCooldownRemaining({
+      socketId,
+      nickname: sanitizedNickname,
+      now,
+    });
+
+    if (cooldownRemaining > 0) {
+      sendUploadRateLimitMessage({ socketId, nickname: sanitizedNickname });
+      res.status(429).json({
+        error: "rate_limited",
+        message: RATE_LIMIT_MESSAGE,
+        retryAfterSeconds: Math.ceil(cooldownRemaining / 1000),
+      });
+      return;
+    }
     const mime = typeof contentType === "string" ? contentType.toLowerCase() : "";
     const sizeValue = Number(fileSize);
     const sizeInBytes =
@@ -545,6 +649,23 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const storedNickname = nicknames.get(socket.id) || "";
+    const providedNickname = sanitizeNickname((payload.nickname || "").toString()).slice(0, 50);
+    const effectiveNickname = providedNickname || storedNickname;
+    const cleanedNickname = sanitizeNickname(effectiveNickname).slice(0, 50);
+    const rateLimitCheckTime = Date.now();
+
+    if (
+      isUploadRateLimited({
+        socketId: socket.id,
+        nickname: cleanedNickname,
+        now: rateLimitCheckTime,
+      })
+    ) {
+      sendUploadRateLimitMessage({ socketId: socket.id, nickname: cleanedNickname });
+      return;
+    }
+
     const assetUrl = typeof payload.url === "string" ? payload.url : "";
     const objectKey = typeof payload.key === "string" ? payload.key : "";
     const widthValue = Number(payload.width);
@@ -564,17 +685,18 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const storedNickname = nicknames.get(socket.id) || "";
-    const providedNickname = sanitizeNickname((payload.nickname || "").toString()).slice(0, 50);
-    const effectiveNickname = providedNickname || storedNickname;
-    const cleanedNickname = sanitizeNickname(effectiveNickname).slice(0, 50);
-
     io.to(partnerId).emit("image-message", {
       url: assetUrl,
       key: objectKey,
       width,
       height,
       nickname: cleanedNickname,
+    });
+
+    markSuccessfulUpload({
+      socketId: socket.id,
+      nickname: cleanedNickname,
+      timestamp: Date.now(),
     });
   });
 
@@ -735,8 +857,22 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     endCurrentChat(socket.id);
+    const storedNickname = nicknames.get(socket.id) || "";
     nicknames.delete(socket.id);
     blockedUsers.delete(socket.id);
+    lastSuccessfulUploadBySocket.delete(socket.id);
+    if (storedNickname) {
+      let stillUsed = false;
+      for (const [id, nicknameValue] of nicknames.entries()) {
+        if (id !== socket.id && nicknameValue === storedNickname) {
+          stillUsed = true;
+          break;
+        }
+      }
+      if (!stillUsed) {
+        lastSuccessfulUploadByNickname.delete(storedNickname);
+      }
+    }
   });
 });
 
