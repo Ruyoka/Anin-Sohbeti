@@ -1909,6 +1909,22 @@
         flex: none;
       }
 
+      .message {
+        padding: clamp(0.78rem, 2.4vh, 1.08rem) clamp(1.1rem, 4vw, 1.6rem)
+          clamp(0.98rem, 3vh, 1.25rem);
+        gap: clamp(0.25rem, 0.9vh, 0.35rem);
+      }
+
+      .message__prefix {
+        display: block;
+        margin: 0;
+        line-height: 1.1;
+      }
+
+      .message--image {
+        gap: clamp(0.48rem, 1.25vh, 0.75rem);
+      }
+
       #controls {
         padding: 16px var(--content-horizontal-padding)
           calc(18px + env(safe-area-inset-bottom));
