@@ -1196,6 +1196,27 @@
 
       .app-header__nickname {
         --nickname-font-size-base: 16px;
+        justify-content: flex-start;
+      }
+
+      .app-header__nickname-text {
+        align-items: flex-start;
+        text-align: left;
+        gap: 0;
+        padding-bottom: 0;
+        position: static;
+      }
+
+      .app-header__status {
+        position: static;
+        transform: none;
+        left: auto;
+        top: auto;
+        margin-top: 4px;
+        width: auto;
+        max-width: 100%;
+        min-height: 0;
+        text-align: left;
       }
 
       .attachment-sheet__actions {
@@ -3857,27 +3878,22 @@
       }
 
       headerPartnerStatus.innerHTML = "";
-      headerPartnerStatus.classList.remove("app-header__status--dots");
+      headerPartnerStatus.classList.add("app-header__status--dots");
 
-      if (mobileViewportMatcher && mobileViewportMatcher.matches) {
-        headerPartnerStatus.classList.add("app-header__status--dots");
-        const dotsWrapper = document.createElement("span");
-        dotsWrapper.className = "app-header__status-dots";
-        dotsWrapper.setAttribute("aria-hidden", "true");
-        for (let index = 0; index < 3; index += 1) {
-          const dot = document.createElement("span");
-          dot.className = "app-header__status-dot";
-          dotsWrapper.appendChild(dot);
-        }
-        headerPartnerStatus.appendChild(dotsWrapper);
-
-        const srText = document.createElement("span");
-        srText.className = "visually-hidden";
-        srText.textContent = "yazıyor...";
-        headerPartnerStatus.appendChild(srText);
-      } else {
-        headerPartnerStatus.textContent = "yazıyor...";
+      const dotsWrapper = document.createElement("span");
+      dotsWrapper.className = "app-header__status-dots";
+      dotsWrapper.setAttribute("aria-hidden", "true");
+      for (let index = 0; index < 3; index += 1) {
+        const dot = document.createElement("span");
+        dot.className = "app-header__status-dot";
+        dotsWrapper.appendChild(dot);
       }
+      headerPartnerStatus.appendChild(dotsWrapper);
+
+      const srText = document.createElement("span");
+      srText.className = "visually-hidden";
+      srText.textContent = "yazıyor...";
+      headerPartnerStatus.appendChild(srText);
     }
 
     function hidePartnerTypingIndicator() {
