@@ -6522,49 +6522,6 @@
     });
   </script>
   <script>
-    (function () {
-      const STORAGE_LOG_PREFIX = "[storage]";
-
-      async function ensurePersistentStorage() {
-        if (!("storage" in navigator) || typeof navigator.storage !== "object") {
-          if ("webkitPersistentStorage" in navigator) {
-            console.warn(
-              STORAGE_LOG_PREFIX,
-              "navigator.webkitPersistentStorage detected; browser recommends navigator.storage instead."
-            );
-          }
-          return { supported: false, persisted: false };
-        }
-
-        try {
-          const alreadyPersisted = await navigator.storage.persisted?.();
-          if (alreadyPersisted) {
-            console.info(STORAGE_LOG_PREFIX, "Storage is already persisted.");
-            return { supported: true, persisted: true };
-          }
-
-          const granted = await navigator.storage.persist?.();
-          if (granted) {
-            console.info(STORAGE_LOG_PREFIX, "Persistent storage granted by the browser.");
-            return { supported: true, persisted: true };
-          }
-
-          console.warn(
-            STORAGE_LOG_PREFIX,
-            "Browser declined persistent storage request; data will use best-effort storage."
-          );
-          return { supported: true, persisted: false };
-        } catch (error) {
-          console.error(STORAGE_LOG_PREFIX, "Failed to negotiate persistent storage:", error);
-          return { supported: true, persisted: false, error };
-        }
-      }
-
-      window.addEventListener("load", () => {
-        ensurePersistentStorage();
-      });
-    })();
-
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker
