@@ -1,0 +1,9 @@
+[
+  {
+    "AllowedOrigins": ["https://chat.aninfotografi.online"],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]

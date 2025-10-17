@@ -1052,6 +1052,24 @@
       animation-delay: 0.3s;
     }
 
+    @media (max-width: 767px) {
+      .app-header__nickname-text {
+        padding-bottom: 0;
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .app-header__status {
+        position: static;
+        transform: none;
+        left: auto;
+        top: auto;
+        margin-top: 4px;
+        width: auto;
+        max-width: 100%;
+      }
+    }
+
     @keyframes typingDotPulse {
       0%,
       100% {
@@ -1909,6 +1927,22 @@
         flex: none;
       }
 
+      .message {
+        padding: clamp(0.78rem, 2.4vh, 1.08rem) clamp(1.1rem, 4vw, 1.6rem)
+          clamp(0.98rem, 3vh, 1.25rem);
+        gap: clamp(0.25rem, 0.9vh, 0.35rem);
+      }
+
+      .message__prefix {
+        display: block;
+        margin: 0;
+        line-height: 1.1;
+      }
+
+      .message--image {
+        gap: clamp(0.48rem, 1.25vh, 0.75rem);
+      }
+
       #controls {
         padding: 16px var(--content-horizontal-padding)
           calc(18px + env(safe-area-inset-bottom));
@@ -2396,6 +2430,7 @@
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     const socket = io();
+    let currentSocketId = null;
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
@@ -2422,6 +2457,7 @@
     const imagePreviewElement = document.getElementById("image-preview-element");
     const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
     const IMAGE_UPLOAD_ERROR_MESSAGE = "Fotoğraf gönderilemedi, lütfen tekrar dene.";
+    const IMAGE_UPLOAD_RATE_LIMIT_MESSAGE = "Çok seri gönderiyorsun azcık bekle";
     const pendingImageUploads = new WeakMap();
     const uploadStepLabels = {
       preparing: { tr: "Hazırlanıyor", en: "Preparing" },
@@ -2546,31 +2582,15 @@
         throw invalidFileError;
       }
 
-      const presignedContentType =
-        typeof contentType === "string" && contentType.trim() !== ""
-          ? contentType.trim()
-          : "";
       const fileContentType =
         typeof file.type === "string" && file.type.trim() !== ""
           ? file.type.trim()
           : "";
-
-      if (
-        presignedContentType &&
-        fileContentType &&
-        presignedContentType !== fileContentType
-      ) {
-        console.warn("Content type mismatch detected", {
-          presignedContentType,
-          fileContentType,
-        });
-      }
-
-      const normalizedContentType = presignedContentType || fileContentType || "";
-      const headers = {};
-      if (normalizedContentType) {
-        headers["Content-Type"] = normalizedContentType;
-      }
+      const normalizedContentType =
+        fileContentType ||
+        (typeof contentType === "string" && contentType.trim() !== ""
+          ? contentType.trim()
+          : "application/octet-stream");
 
       const totalSize = Number.isFinite(file.size) ? Number(file.size) : 0;
       console.info("Starting R2 upload", {
@@ -2604,6 +2624,18 @@
             return typeof xhr.responseText === "string" ? xhr.responseText : "";
           } catch (_error) {
             return "";
+          }
+        };
+
+        const logResponseSnapshot = (label) => {
+          try {
+            console.info(`R2 upload ${label}`, {
+              status: xhr.status || 0,
+              statusText: xhr.statusText || "",
+              responseText: safeResponseText(),
+            });
+          } catch (_logError) {
+            // Ignore logging errors.
           }
         };
 
@@ -2678,29 +2710,31 @@
         xhr.responseType = "text";
         xhr.timeout = 180000;
 
-        Object.entries(headers).forEach(([header, value]) => {
-          if (!value) {
-            return;
-          }
-          try {
-            xhr.setRequestHeader(header, value);
-          } catch (headerError) {
-            console.warn("Unable to set upload header", {
-              header,
-              value,
-              error: headerError,
-            });
-          }
-        });
+        try {
+          xhr.setRequestHeader("Content-Type", normalizedContentType);
+        } catch (headerError) {
+          console.warn("Unable to set upload header", {
+            header: "Content-Type",
+            value: normalizedContentType,
+            error: headerError,
+          });
+        }
 
         reportProgress(0);
+        console.info("R2 upload progress", { percent: 0, loaded: 0, total: totalSize });
 
         xhr.upload.addEventListener("progress", (event) => {
           if (settled || !event) {
             return;
           }
           if (event.lengthComputable && event.total > 0) {
-            reportProgress((event.loaded / event.total) * 100);
+            const progressValue = (event.loaded / event.total) * 100;
+            console.info("R2 upload progress", {
+              percent: Math.max(0, Math.min(100, Math.round(progressValue))),
+              loaded: event.loaded,
+              total: event.total,
+            });
+            reportProgress(progressValue);
             return;
           }
           if (
@@ -2708,7 +2742,13 @@
             typeof event.loaded === "number" &&
             event.loaded >= 0
           ) {
-            reportProgress(Math.min(99, (event.loaded / totalSize) * 100));
+            const progressValue = Math.min(99, (event.loaded / totalSize) * 100);
+            console.info("R2 upload progress", {
+              percent: Math.max(0, Math.min(100, Math.round(progressValue))),
+              loaded: event.loaded,
+              total: totalSize,
+            });
+            reportProgress(progressValue);
           }
         });
 
@@ -2716,6 +2756,7 @@
           if (settled) {
             return;
           }
+          logResponseSnapshot("load event");
           const status = xhr.status || 0;
           const statusText = xhr.statusText || "";
           const responseText = safeResponseText();
@@ -2760,6 +2801,7 @@
         });
 
         xhr.addEventListener("error", () => {
+          logResponseSnapshot("error event");
           handleTerminalFailure(
             "error",
             (uploadResponse) => {
@@ -2772,6 +2814,7 @@
         });
 
         xhr.addEventListener("timeout", () => {
+          logResponseSnapshot("timeout event");
           handleTerminalFailure(
             "timeout",
             (uploadResponse) => {
@@ -2787,6 +2830,7 @@
         });
 
         xhr.addEventListener("abort", () => {
+          logResponseSnapshot("abort event");
           handleTerminalFailure(
             "abort",
             (uploadResponse) => {
@@ -2801,6 +2845,7 @@
 
         try {
           xhr.send(file);
+          logResponseSnapshot("sent");
         } catch (sendError) {
           handleTerminalFailure(
             "send",
@@ -3675,14 +3720,31 @@
       oscillator.stop(ctx.currentTime + duration + 0.02);
     }
 
+    const nicknameLetterPattern = (() => {
+      try {
+        return new RegExp("\\\\p{L}", "u");
+      } catch (_error) {
+        return /[A-Za-z\u00C0-\u024F]/u;
+      }
+    })();
+
     function sanitizeNickname(value) {
       if (typeof value !== "string") {
         return "";
       }
 
-      return value
-        .toLocaleUpperCase("tr-TR")
-        .replace(/[^\p{L}]/gu, "");
+      const normalized =
+        typeof value.normalize === "function" ? value.normalize("NFKC") : value;
+
+      let filtered = "";
+      for (const char of normalized) {
+        nicknameLetterPattern.lastIndex = 0;
+        if (nicknameLetterPattern.test(char)) {
+          filtered += char;
+        }
+      }
+
+      return filtered.toLocaleUpperCase("tr-TR");
     }
 
     function isNicknameValid(value) {
@@ -4305,7 +4367,9 @@
         const statusCode = rawMessage.slice("presign-".length) || "unknown";
         let overlayMessage = "Yükleme hazırlığı başarısız";
         const leading = statusCode.charAt(0);
-        if (statusCode === "503") {
+        if (statusCode === "429") {
+          overlayMessage = IMAGE_UPLOAD_RATE_LIMIT_MESSAGE;
+        } else if (statusCode === "503") {
           overlayMessage = "Yükleme servisi kullanılamıyor";
         } else if (leading === "4") {
           overlayMessage = "Sunucu dosyayı reddetti";
@@ -4410,6 +4474,7 @@
             contentType: uploadMetadata.mimeType || file.type || "image/jpeg",
             fileName: uploadMetadata.safeFileName,
             nickname,
+            socketId: currentSocketId,
             fileSize: uploadMetadata.size || file.size,
             originalName: uploadMetadata.originalName,
           }),
@@ -4423,7 +4488,9 @@
             errorBody = null;
           }
 
-          if (presignResponse.status === 413 || errorBody?.error === "file_too_large") {
+          if (presignResponse.status === 429 || errorBody?.error === "rate_limited") {
+            userErrorMessage = IMAGE_UPLOAD_RATE_LIMIT_MESSAGE;
+          } else if (presignResponse.status === 413 || errorBody?.error === "file_too_large") {
             userErrorMessage = "Görsel 10 MB veya daha küçük olmalı.";
           }
 
@@ -5987,6 +6054,7 @@
     setupNotificationPermissionWatcher();
 
     socket.on("connect", () => {
+      currentSocketId = socket.id;
       setMatchedState(false);
       if (nickname) {
         joinQueue();
@@ -6184,6 +6252,7 @@
     });
 
     socket.on("disconnect", () => {
+      currentSocketId = null;
       setMatchedState(false);
       voiceCallManager?.handleDisconnect?.();
       callRequestController?.handleDisconnect?.();

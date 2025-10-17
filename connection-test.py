@@ -107,7 +107,9 @@ def main() -> None:
     )
 
     bucket_name = os.environ["R2_BUCKET"]
-    public_url = normalize_public_url(os.environ.get("R2_PUBLIC_URL"))
+    public_url = normalize_public_url(
+        os.environ.get("CUSTOM_DOMAIN") or os.environ.get("R2_PUBLIC_URL")
+    )
     test_file = project_root / "test.jpg"
     upload_key = "diagnostics/test.jpg"
 
@@ -149,7 +151,7 @@ def main() -> None:
         if public_url:
             print(f"ℹ️ Public URL: {public_url}/{upload_key}")
         else:
-            print("ℹ️ Public URL not configured (set R2_PUBLIC_URL to display).")
+            print("ℹ️ Public URL not configured (set CUSTOM_DOMAIN or R2_PUBLIC_URL to display).")
     except (BotoCoreError, ClientError, Exception) as exc:
         print(f"❌ Failed to confirm upload — {exc}")
         sys.exit(1)
