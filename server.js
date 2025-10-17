@@ -495,14 +495,31 @@ function enqueueSocketId(socketId) {
   startWaitTimer(socketId);
 }
 
+const nicknameLetterPattern = (() => {
+  try {
+    return new RegExp("\\\\p{L}", "u");
+  } catch (_error) {
+    return /[A-Za-z\u00C0-\u024F]/u;
+  }
+})();
+
 function sanitizeNickname(value) {
   if (typeof value !== "string") {
     return "";
   }
 
-  return value
-    .toLocaleUpperCase("tr-TR")
-    .replace(/[^\p{L}]/gu, "");
+  const normalized =
+    typeof value.normalize === "function" ? value.normalize("NFKC") : value;
+
+  let filtered = "";
+  for (const char of normalized) {
+    nicknameLetterPattern.lastIndex = 0;
+    if (nicknameLetterPattern.test(char)) {
+      filtered += char;
+    }
+  }
+
+  return filtered.toLocaleUpperCase("tr-TR");
 }
 
 function tryMatch() {
