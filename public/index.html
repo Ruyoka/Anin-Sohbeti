@@ -141,6 +141,68 @@
       pointer-events: auto;
     }
 
+    .mic-permission-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      background: rgba(14, 24, 18, 0.45);
+      z-index: 12;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms ease;
+    }
+
+    .mic-permission-overlay[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mic-permission-overlay__card {
+      max-width: 360px;
+      width: 100%;
+      background: rgba(18, 32, 24, 0.92);
+      color: #ffffff;
+      border-radius: 20px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 24px 48px -24px rgba(8, 16, 12, 0.65);
+    }
+
+    .mic-permission-overlay__text {
+      margin: 0 0 20px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .mic-permission-overlay__button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: #ffffff;
+      color: var(--accent-strong);
+      cursor: pointer;
+      transition: background 180ms ease, transform 180ms ease;
+    }
+
+    .mic-permission-overlay__button:focus-visible {
+      outline: 3px solid rgba(255, 255, 255, 0.8);
+      outline-offset: 3px;
+    }
+
+    .mic-permission-overlay__button:hover {
+      background: rgba(255, 255, 255, 0.92);
+      transform: translateY(-1px);
+    }
+
+    .mic-permission-overlay__button:active {
+      transform: translateY(0);
+    }
+
     .attachment-sheet {
       position: fixed;
       inset: 0;
@@ -2244,6 +2306,30 @@
       </div>
     </div>
     <div
+      id="mic-permission-overlay"
+      class="mic-permission-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="mic-permission-overlay-text"
+      hidden
+    >
+      <div class="mic-permission-overlay__card">
+        <p
+          class="mic-permission-overlay__text"
+          id="mic-permission-overlay-text"
+        >
+          Bu özelliği kullanmak için mikrofon izni gerekiyor. Lütfen sol üstteki kilit simgesine dokunup ‘Mikrofon &gt; İzin ver’ seçeneğini aktif edin.
+        </p>
+        <button
+          type="button"
+          class="mic-permission-overlay__button"
+          id="mic-permission-overlay-close"
+        >
+          Tamam
+        </button>
+      </div>
+    </div>
+    <div
       id="voice-call-overlay"
       class="voice-call-overlay"
       role="dialog"
@@ -2458,6 +2544,8 @@
     const callBtn = document.getElementById("header-call");
     const callBtnIcon = callBtn ? callBtn.querySelector(".app-header__action-icon") : null;
     const callBtnLabel = callBtn ? callBtn.querySelector(".app-header__action-label") : null;
+    const micPermissionOverlay = document.getElementById("mic-permission-overlay");
+    const micPermissionOverlayCloseBtn = document.getElementById("mic-permission-overlay-close");
     const nextBtn = document.getElementById("header-next");
     const reportBtn = document.getElementById("header-report");
     const headerNicknameEl = document.getElementById("header-nickname");
@@ -2480,6 +2568,173 @@
     const IMAGE_UPLOAD_ERROR_MESSAGE = "Fotoğraf gönderilemedi, lütfen tekrar dene.";
     const IMAGE_UPLOAD_RATE_LIMIT_MESSAGE = "Çok seri gönderiyorsun azcık bekle";
     const pendingImageUploads = new WeakMap();
+    const MIC_PERMISSION_OVERLAY_STORAGE_KEY = "micOverlayShown";
+    const MIC_PERMISSION_OVERLAY_TRANSITION_MS = 200;
+    const MIC_PERMISSION_MOBILE_MAX_WIDTH = 820;
+    const MIC_PERMISSION_USER_AGENT_PATTERN = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i;
+    let micPermissionOverlayHideTimer = null;
+    let isMicPermissionRequestInFlight = false;
+
+    if (micPermissionOverlay) {
+      micPermissionOverlay.dataset.open = "false";
+    }
+
+    function isMobileExperienceForMicOverlay() {
+      const widthCandidates = [
+        typeof window?.innerWidth === "number" ? window.innerWidth : 0,
+        typeof document?.documentElement?.clientWidth === "number"
+          ? document.documentElement.clientWidth
+          : 0,
+        typeof document?.body?.clientWidth === "number"
+          ? document.body.clientWidth
+          : 0,
+      ];
+      const maxWidth = Math.max(...widthCandidates, 0);
+      if (maxWidth && maxWidth <= MIC_PERMISSION_MOBILE_MAX_WIDTH) {
+        return true;
+      }
+      const userAgent = typeof navigator?.userAgent === "string" ? navigator.userAgent : "";
+      if (!userAgent) {
+        return false;
+      }
+      return MIC_PERMISSION_USER_AGENT_PATTERN.test(userAgent);
+    }
+
+    function hasShownMicPermissionOverlay() {
+      try {
+        return localStorage.getItem(MIC_PERMISSION_OVERLAY_STORAGE_KEY) === "1";
+      } catch (_storageError) {
+        return false;
+      }
+    }
+
+    function markMicPermissionOverlayShown() {
+      try {
+        localStorage.setItem(MIC_PERMISSION_OVERLAY_STORAGE_KEY, "1");
+      } catch (_storageError) {
+        // Ignore storage errors (e.g., private mode).
+      }
+    }
+
+    function clearMicPermissionOverlayFlag() {
+      try {
+        localStorage.removeItem(MIC_PERMISSION_OVERLAY_STORAGE_KEY);
+      } catch (_storageError) {
+        // Ignore storage errors (e.g., private mode).
+      }
+    }
+
+    function setMicPermissionOverlayOpen(isOpen) {
+      if (!micPermissionOverlay) {
+        return;
+      }
+      if (micPermissionOverlayHideTimer) {
+        clearTimeout(micPermissionOverlayHideTimer);
+        micPermissionOverlayHideTimer = null;
+      }
+      if (isOpen) {
+        micPermissionOverlay.hidden = false;
+        micPermissionOverlay.dataset.open = "true";
+      } else {
+        micPermissionOverlay.dataset.open = "false";
+        micPermissionOverlayHideTimer = window.setTimeout(() => {
+          if (!micPermissionOverlay || micPermissionOverlay.dataset.open === "true") {
+            return;
+          }
+          micPermissionOverlay.hidden = true;
+        }, MIC_PERMISSION_OVERLAY_TRANSITION_MS + 60);
+      }
+    }
+
+    function showMicPermissionOverlay() {
+      if (!micPermissionOverlay) {
+        return;
+      }
+      markMicPermissionOverlayShown();
+      setMicPermissionOverlayOpen(true);
+      if (micPermissionOverlayCloseBtn) {
+        micPermissionOverlayCloseBtn.focus({ preventScroll: true });
+      }
+    }
+
+    function hideMicPermissionOverlay(options = {}) {
+      const restoreFocus = Boolean(options?.restoreFocus);
+      setMicPermissionOverlayOpen(false);
+      if (restoreFocus && callBtn) {
+        window.setTimeout(() => {
+          callBtn.focus({ preventScroll: true });
+        }, MIC_PERMISSION_OVERLAY_TRANSITION_MS + 60);
+      }
+    }
+
+    function shouldShowMicPermissionOverlay() {
+      if (!micPermissionOverlay) {
+        return false;
+      }
+      if (!isMobileExperienceForMicOverlay()) {
+        return false;
+      }
+      return !hasShownMicPermissionOverlay();
+    }
+
+    function isMicPermissionBlockError(error) {
+      const errorName = typeof error?.name === "string" ? error.name : "";
+      const normalizedName = errorName.toLowerCase();
+      if (
+        normalizedName === "notallowederror" ||
+        normalizedName === "securityerror" ||
+        normalizedName === "notfounderror" ||
+        normalizedName === "notreadableerror" ||
+        normalizedName === "overconstrainederror" ||
+        normalizedName === "aborterror" ||
+        normalizedName === "notsupportederror"
+      ) {
+        return true;
+      }
+      if (typeof error?.message === "string" && /izin|denied|blocked/i.test(error.message)) {
+        return true;
+      }
+      return false;
+    }
+
+    async function ensureMicrophonePermission() {
+      if (!window.isSecureContext) {
+        const insecureError = new Error("microphone-requires-secure-context");
+        insecureError.name = "SecurityError";
+        throw insecureError;
+      }
+      const mediaDevices = navigator?.mediaDevices;
+      if (!mediaDevices || typeof mediaDevices.getUserMedia !== "function") {
+        const unsupportedError = new Error("media-devices-unavailable");
+        unsupportedError.name = "NotSupportedError";
+        throw unsupportedError;
+      }
+      let stream = null;
+      try {
+        stream = await mediaDevices.getUserMedia({ audio: true });
+      } finally {
+        if (stream && typeof stream.getTracks === "function") {
+          try {
+            stream.getTracks().forEach((track) => {
+              try {
+                track.stop();
+              } catch (_stopError) {
+                // Ignore stop errors.
+              }
+            });
+          } catch (_trackError) {
+            // Ignore cleanup errors.
+          }
+        }
+      }
+    }
+
+    function handleMicrophonePermissionError(error) {
+      console.error("Mikrofon izni alınamadı", error);
+      if (shouldShowMicPermissionOverlay() && isMicPermissionBlockError(error)) {
+        showMicPermissionOverlay();
+      }
+    }
     const uploadStepLabels = {
       preparing: { tr: "Hazırlanıyor", en: "Preparing" },
       requesting: { tr: "Adres alınıyor", en: "Requesting URL" },
@@ -6274,10 +6529,47 @@
       callRequestController?.handleDisconnect?.();
     });
 
+    if (typeof window !== "undefined") {
+      const clearMicOverlayFlagOnExit = () => {
+        clearMicPermissionOverlayFlag();
+      };
+      window.addEventListener("beforeunload", clearMicOverlayFlagOnExit);
+      window.addEventListener("pagehide", clearMicOverlayFlagOnExit);
+    }
+
+    if (micPermissionOverlayCloseBtn) {
+      micPermissionOverlayCloseBtn.addEventListener("click", () => {
+        hideMicPermissionOverlay({ restoreFocus: true });
+      });
+      micPermissionOverlayCloseBtn.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          hideMicPermissionOverlay({ restoreFocus: true });
+        }
+      });
+    }
+
+    if (micPermissionOverlay) {
+      micPermissionOverlay.addEventListener("click", (event) => {
+        if (event.target === micPermissionOverlay) {
+          hideMicPermissionOverlay({ restoreFocus: true });
+        }
+      });
+    }
+
     if (callBtn) {
-      callBtn.addEventListener("click", () => {
-        if (callBtn.disabled) {
+      callBtn.addEventListener("click", async () => {
+        if (callBtn.disabled || isMicPermissionRequestInFlight) {
           return;
+        }
+        isMicPermissionRequestInFlight = true;
+        try {
+          await ensureMicrophonePermission();
+        } catch (error) {
+          handleMicrophonePermissionError(error);
+          return;
+        } finally {
+          isMicPermissionRequestInFlight = false;
         }
         callRequestController?.startOutgoingRequest?.();
       });
