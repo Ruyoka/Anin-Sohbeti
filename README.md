@@ -13,7 +13,11 @@ Gerçek zamanlı, rastgele eşleştirmeli sohbet uygulaması.
    ```bash
    npm install
    ```
-2. Varsayılan olarak uygulama 6000 portunu kullanır.
+2. İsterseniz örnek ortam dosyasını kopyalayın:
+   ```bash
+   cp .env.example .env
+   ```
+3. Varsayılan olarak uygulama 6000 portunu kullanır.
 
 ## npm scriptleri
 
@@ -21,22 +25,33 @@ Gerçek zamanlı, rastgele eşleştirmeli sohbet uygulaması.
 | --- | --- |
 | `npm run start` | Üretim modunda sunucuyu başlatır. |
 | `npm run dev` | Değişiklikleri izleyerek (`nodemon`) sunucuyu çalıştırır. |
-| `npm run test:e2e` | Çalışmakta olan sunucuya karşı Cypress uçtan uca testlerini çalıştırır. |
-
-> **Not:** `npm run test:e2e` komutu, ayrı bir terminalde `PORT=6100 npm run start` (veya `PORT=6100 npm run dev`) ile sunucunun başlatılmış olmasını gerektirir.
+| `npm test` | Önce sunucu entegrasyon testlerini, ardından Cypress uçtan uca testlerini çalıştırır. |
+| `npm run test:server` | `node:test` tabanlı sunucu entegrasyon testlerini çalıştırır. |
+| `npm run test:e2e` | `npm test` ile aynı uçtan uca test akışını çalıştırır. |
+| `npm run test:e2e:open` | Cypress arayüzünü açar. |
 
 ## Testler
 
-1. Yeni bir terminalde (tarayıcıların güvenli port kısıtlamalarını aşmak için) 6100 portunda sunucuyu başlatın:
-   ```bash
-   PORT=6100 npm run start
-   ```
-2. Başka bir terminalde Cypress testlerini çalıştırın:
-   ```bash
-   npm run test:e2e
-   ```
+```bash
+npm test
+```
 
-Testler; eşleşme, mesajlaşma, "Sonraki" akışı, bağlantı kopmaları ve 2000 karakter sınırı gibi temel sohbet işlevlerini doğrular.
+Bu akış önce `node:test` ile `/health`, eşleşme, yapılandırılmış mesaj iletimi ve mesaj hız limiti kurallarını doğrular. Ardından test sunucusunu 6100 portunda ayağa kaldırır, `/health` yanıtını kontrol eder ve Cypress testlerini çalıştırır.
+
+Testler; eşleşme, mesajlaşma, hız limiti, hız limiti hata bildirimi, rumuz akışı, "Sonraki" onayı, bağlantı kopmaları ve 2000 karakter sınırı gibi temel sohbet işlevlerini doğrular.
+
+## Ortam değişkenleri
+
+| Değişken | Varsayılan | Açıklama |
+| --- | --- | --- |
+| `PORT` | `6000` | HTTP ve Socket.IO portu |
+| `CLIENT_ORIGIN` | `*` | İzin verilen istemci origin listesi; birden fazla değer virgülle ayrılabilir |
+| `MESSAGE_RATE_LIMIT_MAX` | `8` | `MESSAGE_RATE_LIMIT_WINDOW_MS` içinde izin verilen mesaj sayısı |
+| `MESSAGE_RATE_LIMIT_WINDOW_MS` | `5000` | Mesaj hız limiti penceresi |
+| `JOIN_RATE_LIMIT_MAX` | `6` | `JOIN_RATE_LIMIT_WINDOW_MS` içinde izin verilen `join/next` isteği |
+| `JOIN_RATE_LIMIT_WINDOW_MS` | `15000` | Eşleşme arama hız limiti penceresi |
+| `CALL_RATE_LIMIT_MAX` | `12` | Çağrı olayları için temel hız limiti |
+| `CALL_RATE_LIMIT_WINDOW_MS` | `10000` | Çağrı olayları hız limiti penceresi |
 
 ## Android WebView uygulamasını arşivleme
 
@@ -62,6 +77,15 @@ Test odaklı bir imaj oluşturmak için geliştirme bağımlılıklarını da da
 ```bash
 docker build --build-arg NODE_ENV=development -t aninsohbeti-dev .
 ```
+
+## CI
+
+GitHub Actions iş akışı [ci.yml](/opt/web-projects/aninsohbeti/.github/workflows/ci.yml) ile `npm test` komutunu her `push` ve `pull_request` olayında çalıştırır.
+
+## Güvenlik Notları
+
+- Sunucu `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` ve `Permissions-Policy` başlıklarını gönderir.
+- Socket.IO el sıkışması `CLIENT_ORIGIN` tanımına göre origin doğrulaması yapar. Üretimde `CLIENT_ORIGIN=*` yerine açık origin listesi kullanın.
 
 ## Sorun Giderme
 

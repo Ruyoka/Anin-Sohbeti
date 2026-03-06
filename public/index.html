@@ -3398,9 +3398,20 @@
         updateControls();
       }
 
-      function handleRequestError() {
+      function handleRequestError(payload) {
         closeAndResetOverlay();
-        appendMessage("Arama başlatılamadı. Lütfen tekrar deneyin.", "system");
+        const reason =
+          payload && typeof payload === "object" && typeof payload.reason === "string"
+            ? payload.reason
+            : "unknown";
+        const messageByReason = {
+          "no-partner": "Arama başlatılamadı. Şu anda aktif bir eşleşme yok.",
+          busy: "Arama başlatılamadı. Karşı taraf şu anda meşgul.",
+          unavailable: "Arama başlatılamadı. Karşı taraf artık erişilemiyor.",
+          "rate-limited": "Çok sık arama deniyorsun. Biraz bekleyip tekrar dene.",
+          unknown: "Arama başlatılamadı. Lütfen tekrar deneyin.",
+        };
+        appendMessage(messageByReason[reason] || messageByReason.unknown, "system");
         updateControls();
       }
 
@@ -3660,6 +3671,16 @@
       }
     });
 
+    socket.on("message:error", (payload) => {
+      const reason =
+        payload && typeof payload === "object" && typeof payload.reason === "string"
+          ? payload.reason
+          : "unknown";
+      if (reason === "rate-limited") {
+        appendMessage("Çok hızlı mesaj gönderiyorsun. Kısa bir süre bekleyip tekrar dene.", "system");
+      }
+    });
+
     socket.on("voice-call:request:incoming", () => {
       callRequestController?.handleIncoming?.();
     });
@@ -3679,8 +3700,8 @@
       callRequestController?.handleCancelled?.(payload);
     });
 
-    socket.on("voice-call:request:error", () => {
-      callRequestController?.handleError?.();
+    socket.on("voice-call:request:error", (payload) => {
+      callRequestController?.handleError?.(payload);
     });
 
     socket.on("voice-call:offer", (payload) => {

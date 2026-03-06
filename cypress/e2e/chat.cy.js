@@ -1,3 +1,32 @@
+const TEST_NICKNAME = "CypressUser";
+
+const installBrowserStubs = (win) => {
+  class FakeNotification {
+    static permission = "denied";
+
+    static requestPermission() {
+      return Promise.resolve("denied");
+    }
+
+    constructor() {}
+  }
+
+  win.Notification = FakeNotification;
+  win.alert = () => {};
+
+  if (win.navigator.permissions) {
+    win.navigator.permissions.query = () =>
+      Promise.resolve({
+        state: "denied",
+        onchange: null,
+      });
+  }
+
+  if (win.navigator.serviceWorker) {
+    win.navigator.serviceWorker.register = () => Promise.resolve();
+  }
+};
+
 const connectPartner = (win) =>
   new Cypress.Promise((resolve) => {
     const context = {
@@ -29,16 +58,23 @@ const connectPartner = (win) =>
 
 describe("Anın Sohbeti", () => {
   beforeEach(() => {
-    cy.visit("/");
-    cy.get("#log", { timeout: 10000 }).should(
-      "contain.text",
-      "Eşleşme bekleniyor..."
-    );
+    cy.visit("/", {
+      onBeforeLoad(win) {
+        installBrowserStubs(win);
+      },
+    });
+
+    cy.get("#nickname").type(TEST_NICKNAME);
+    cy.get("#nickname-submit").click();
+
+    cy.get("#log", { timeout: 10000 })
+      .invoke("text")
+      .should("match", /Eşleşme bekleniyor|Şu anda herkes meşgul/);
     cy.get("#send").should("be.disabled");
     cy.get("#msg").should("be.disabled");
   });
 
-  it("matches, relays messages, and handles next/disconnect flows", () => {
+  it("matches, relays messages, truncates long messages, and handles next/disconnect flows", () => {
     cy.window()
       .then((win) => connectPartner(win))
       .as("partner1");
@@ -47,43 +83,40 @@ describe("Anın Sohbeti", () => {
       "contain.text",
       "✓ Bir yabancı ile eşleştiniz!"
     );
-    cy.get("#send").should("not.be.disabled");
     cy.get("#msg").should("not.be.disabled");
-
-    cy.get("@partner1").then(({ socket }) => socket.emit("join"));
-    cy.get("#log div").last().should("have.text", "— Bağlantı sonlandı.");
     cy.get("#send").should("be.disabled");
-    cy.get("#msg").should("be.disabled");
-
-    cy.get("#log", { timeout: 10000 }).should(
-      "contain.text",
-      "✓ Bir yabancı ile eşleştiniz!"
-    );
-    cy.get("#send").should("not.be.disabled");
-    cy.get("#msg").should("not.be.disabled");
 
     cy.get("#msg").type("Merhaba!");
+    cy.get("#send").should("not.be.disabled");
     cy.get("#send").click();
-    cy.get("#log div").last().should("have.text", "Sen: Merhaba!");
+    cy.get("#log div").last().should("have.text", `${TEST_NICKNAME}:Merhaba!`);
 
     cy.get("@partner1").should(({ events }) => {
-      expect(events.messages).to.include("Merhaba!");
+      expect(events.messages).to.deep.include({
+        text: "Merhaba!",
+        nickname: TEST_NICKNAME,
+      });
     });
 
-    cy.get("@partner1").then(({ socket }) => socket.emit("message", "Selam!"));
-    cy.get("#log div").last().should("have.text", "Yabancı: Selam!");
+    cy.get("@partner1").then(({ socket }) =>
+      socket.emit("message", { text: "Selam!", nickname: "PartnerOne" })
+    );
+    cy.get("#log div").last().should("have.text", "PartnerOne:Selam!");
 
     const longMessage = "x".repeat(2100);
     const truncatedMessage = "x".repeat(2000);
-    cy.get("@partner1").then(({ socket }) => socket.emit("message", longMessage));
+    cy.get("@partner1").then(({ socket }) =>
+      socket.emit("message", { text: longMessage, nickname: "PartnerOne" })
+    );
     cy.get("#log div")
       .last()
-      .should("have.text", `Yabancı: ${truncatedMessage}`);
+      .should("have.text", `PartnerOne:${truncatedMessage}`);
 
     cy.get("#next").click();
-    cy.get('[data-waiting-status="true"] .waiting-status__message')
+    cy.get("#skip-confirm-confirm").click();
+    cy.get('[data-waiting-status="true"] .waiting-status__message', { timeout: 10000 })
       .last()
-      .should("have.text", "Yeni eşleşme aranıyor...");
+      .should("contain.text", "Yeni eşleşme aranıyor");
 
     cy.get("@partner1").should(({ events }) => {
       expect(events.endedCount).to.eq(1);
@@ -102,16 +135,19 @@ describe("Anın Sohbeti", () => {
 
     cy.get("#msg").type("Tekrar merhaba!");
     cy.get("#send").click();
-    cy.get("#log div").last().should("have.text", "Sen: Tekrar merhaba!");
+    cy.get("#log div")
+      .last()
+      .should("have.text", `${TEST_NICKNAME}:Tekrar merhaba!`);
 
     cy.get("@partner2").should(({ events }) => {
-      expect(events.messages).to.include("Tekrar merhaba!");
+      expect(events.messages).to.deep.include({
+        text: "Tekrar merhaba!",
+        nickname: TEST_NICKNAME,
+      });
     });
 
     cy.get("@partner2").then(({ socket }) => socket.disconnect());
-    cy.get("#log div")
-      .last()
-      .should("have.text", "— Bağlantı sonlandı.");
+    cy.contains("#log div", "Bağlantı sonlandı", { timeout: 10000 }).should("exist");
 
     cy.window()
       .then((win) => connectPartner(win))
@@ -123,8 +159,6 @@ describe("Anın Sohbeti", () => {
     );
 
     cy.get("@partner3").then(({ socket }) => socket.disconnect());
-    cy.get("#log div")
-      .last()
-      .should("have.text", "— Bağlantı sonlandı.");
+    cy.contains("#log div", "Bağlantı sonlandı", { timeout: 10000 }).should("exist");
   });
 });

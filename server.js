@@ -7,14 +7,68 @@ const { Server } = require("socket.io");
 const PORT = process.env.PORT || 6000;
 const WAITING_STATUS_TEXT =
   "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
+const CLIENT_ORIGIN = (process.env.CLIENT_ORIGIN || "*")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const MESSAGE_RATE_LIMIT_MAX = Number(process.env.MESSAGE_RATE_LIMIT_MAX || 8);
+const MESSAGE_RATE_LIMIT_WINDOW_MS = Number(process.env.MESSAGE_RATE_LIMIT_WINDOW_MS || 5000);
+const JOIN_RATE_LIMIT_MAX = Number(process.env.JOIN_RATE_LIMIT_MAX || 6);
+const JOIN_RATE_LIMIT_WINDOW_MS = Number(process.env.JOIN_RATE_LIMIT_WINDOW_MS || 15000);
+const CALL_RATE_LIMIT_MAX = Number(process.env.CALL_RATE_LIMIT_MAX || 12);
+const CALL_RATE_LIMIT_WINDOW_MS = Number(process.env.CALL_RATE_LIMIT_WINDOW_MS || 10000);
 
 const app = express();
+app.disable("x-powered-by");
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+  cors: {
+    origin: CLIENT_ORIGIN.includes("*") ? "*" : CLIENT_ORIGIN,
+  },
+  allowRequest: (req, callback) => {
+    callback(null, isOriginAllowed(req.headers.origin));
+  },
+});
 
 const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "manifest-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "script-src 'self' 'unsafe-inline' https://cdn.socket.io https://www.googletagmanager.com",
+  "connect-src 'self' ws: wss: https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com",
+  "media-src 'self' blob:",
+  "worker-src 'self' blob:",
+].join("; ");
 
-app.use(express.static("public"));
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader(
+    "Permissions-Policy",
+    "camera=(), geolocation=(), gyroscope=(), magnetometer=(), payment=(), usb=()"
+  );
+  next();
+});
+
+app.use(
+  express.static("public", {
+    dotfiles: "deny",
+  })
+);
+app.get("/health", (_req, res) => {
+  res.status(200).json({ ok: true });
+});
 
 let queue = [];
 const partners = new Map();
@@ -24,6 +78,17 @@ let scheduledTryMatchHandle = null;
 let scheduledTryMatchTime = 0;
 const callRequestsByCaller = new Map();
 const callRequestsByCallee = new Map();
+const eventRateLimits = new Map();
+
+function isOriginAllowed(origin) {
+  if (!origin) {
+    return true;
+  }
+  if (CLIENT_ORIGIN.includes("*")) {
+    return true;
+  }
+  return CLIENT_ORIGIN.includes(origin);
+}
 
 function getPairKey(firstId, secondId) {
   return [firstId, secondId].sort().join(":");
@@ -61,6 +126,43 @@ function clearScheduledTryMatch() {
     scheduledTryMatchHandle = null;
     scheduledTryMatchTime = 0;
   }
+}
+
+function pruneEventTimestamps(socketId, eventName, windowMs, now = Date.now()) {
+  const socketBuckets = eventRateLimits.get(socketId);
+  if (!socketBuckets) {
+    return [];
+  }
+
+  const timestamps = socketBuckets.get(eventName) || [];
+  const filtered = timestamps.filter((timestamp) => now - timestamp < windowMs);
+  if (filtered.length === 0) {
+    socketBuckets.delete(eventName);
+    if (socketBuckets.size === 0) {
+      eventRateLimits.delete(socketId);
+    }
+    return [];
+  }
+
+  socketBuckets.set(eventName, filtered);
+  return filtered;
+}
+
+function isRateLimited(socketId, eventName, maxEvents, windowMs) {
+  const now = Date.now();
+  const timestamps = pruneEventTimestamps(socketId, eventName, windowMs, now);
+  if (timestamps.length >= maxEvents) {
+    return true;
+  }
+
+  let socketBuckets = eventRateLimits.get(socketId);
+  if (!socketBuckets) {
+    socketBuckets = new Map();
+    eventRateLimits.set(socketId, socketBuckets);
+  }
+
+  socketBuckets.set(eventName, [...timestamps, now]);
+  return false;
 }
 
 function scheduleTryMatchAfter(delayMs) {
@@ -272,12 +374,26 @@ io.on("connection", (socket) => {
   console.log("Yeni kullanıcı:", socket.id);
 
   socket.on("join", () => {
+    if (isRateLimited(socket.id, "join", JOIN_RATE_LIMIT_MAX, JOIN_RATE_LIMIT_WINDOW_MS)) {
+      return;
+    }
     if (partners.has(socket.id)) return;
     enqueueSocketId(socket.id);
     tryMatch();
   });
 
   socket.on("message", (msg) => {
+    if (
+      isRateLimited(
+        socket.id,
+        "message",
+        MESSAGE_RATE_LIMIT_MAX,
+        MESSAGE_RATE_LIMIT_WINDOW_MS
+      )
+    ) {
+      io.to(socket.id).emit("message:error", { reason: "rate-limited" });
+      return;
+    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
@@ -293,6 +409,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:request", () => {
+    if (
+      isRateLimited(
+        socket.id,
+        "voice-call:request",
+        CALL_RATE_LIMIT_MAX,
+        CALL_RATE_LIMIT_WINDOW_MS
+      )
+    ) {
+      io.to(socket.id).emit("voice-call:request:error", { reason: "rate-limited" });
+      return;
+    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) {
       io.to(socket.id).emit("voice-call:request:error", { reason: "no-partner" });
@@ -317,6 +444,16 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:cancel-request", () => {
+    if (
+      isRateLimited(
+        socket.id,
+        "voice-call:cancel-request",
+        CALL_RATE_LIMIT_MAX,
+        CALL_RATE_LIMIT_WINDOW_MS
+      )
+    ) {
+      return;
+    }
     const request = removeCallRequestByCaller(socket.id);
     if (!request) {
       return;
@@ -332,6 +469,16 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:request-response", (payload) => {
+    if (
+      isRateLimited(
+        socket.id,
+        "voice-call:request-response",
+        CALL_RATE_LIMIT_MAX,
+        CALL_RATE_LIMIT_WINDOW_MS
+      )
+    ) {
+      return;
+    }
     const request = removeCallRequestByCallee(socket.id);
     if (!request) {
       return;
@@ -359,6 +506,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:offer", (payload) => {
+    if (
+      isRateLimited(socket.id, "voice-call:offer", CALL_RATE_LIMIT_MAX, CALL_RATE_LIMIT_WINDOW_MS)
+    ) {
+      return;
+    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
@@ -371,6 +523,16 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:answer", (payload) => {
+    if (
+      isRateLimited(
+        socket.id,
+        "voice-call:answer",
+        CALL_RATE_LIMIT_MAX,
+        CALL_RATE_LIMIT_WINDOW_MS
+      )
+    ) {
+      return;
+    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
@@ -383,6 +545,16 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:candidate", (payload) => {
+    if (
+      isRateLimited(
+        socket.id,
+        "voice-call:candidate",
+        CALL_RATE_LIMIT_MAX * 4,
+        CALL_RATE_LIMIT_WINDOW_MS
+      )
+    ) {
+      return;
+    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
@@ -395,6 +567,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:end", () => {
+    if (
+      isRateLimited(socket.id, "voice-call:end", CALL_RATE_LIMIT_MAX, CALL_RATE_LIMIT_WINDOW_MS)
+    ) {
+      return;
+    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
@@ -402,6 +579,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("next", () => {
+    if (isRateLimited(socket.id, "next", JOIN_RATE_LIMIT_MAX, JOIN_RATE_LIMIT_WINDOW_MS)) {
+      return;
+    }
     endCurrentChat(socket.id);
     setTimeout(() => {
       enqueueSocketId(socket.id);
@@ -410,6 +590,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    eventRateLimits.delete(socket.id);
     endCurrentChat(socket.id);
   });
 });
