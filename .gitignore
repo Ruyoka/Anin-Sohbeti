@@ -27,3 +27,5 @@ android-app/gradle/wrapper/gradle-wrapper-*.jar
 # Archive artifacts
 *.zip
 
+update.sh
+.logs/
