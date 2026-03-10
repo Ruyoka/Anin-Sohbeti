@@ -6,7 +6,9 @@ const net = require("node:net");
 const { setTimeout: delay } = require("node:timers/promises");
 const { io } = require("socket.io-client");
 
-const PROJECT_ROOT = "/opt/web-projects/aninsohbeti";
+const path = require("node:path");
+
+const PROJECT_ROOT = path.resolve(__dirname, "..");
 const SERVER_START_TIMEOUT_MS = 10000;
 
 async function getFreePort() {
@@ -40,7 +42,7 @@ async function getFreePort() {
 
 async function startServer(envOverrides = {}) {
   const port = await getFreePort();
-  const child = spawn("node", ["server.js"], {
+  const child = spawn(process.execPath, ["server.js"], {
     cwd: PROJECT_ROOT,
     env: {
       ...process.env,

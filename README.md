@@ -4,8 +4,8 @@ Gerçek zamanlı, rastgele eşleştirmeli sohbet uygulaması.
 
 ## Gereksinimler
 
-- [Node.js](https://nodejs.org/) 20.x
-- npm 9.x veya üzeri
+- [Node.js](https://nodejs.org/) 22.x
+- npm 10.x veya üzeri
 
 ## Kurulum
 
@@ -80,7 +80,7 @@ docker build --build-arg NODE_ENV=development -t aninsohbeti-dev .
 
 ## CI
 
-GitHub Actions iş akışı [ci.yml](/opt/web-projects/aninsohbeti/.github/workflows/ci.yml) ile `npm test` komutunu her `push` ve `pull_request` olayında çalıştırır.
+GitHub Actions iş akışı [ci.yml](.github/workflows/ci.yml) ile `npm test` komutunu her `push` ve `pull_request` olayında çalıştırır.
 
 ## Güvenlik Notları
 
