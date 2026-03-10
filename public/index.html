@@ -1580,7 +1580,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const log = document.getElementById("log");
@@ -2342,7 +2342,11 @@
       }
 
       try {
-        const notification = new Notification(title, { body });
+        const notification = new Notification(title, {
+          body,
+          icon: "/assets/logo.png",
+          badge: "/assets/favicon-96x96.png",
+        });
         notification.onclick = () => {
           window.focus();
         };
