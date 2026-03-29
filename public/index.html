@@ -8,23 +8,12 @@
   <meta name="keywords" content="anonim chat, anlık sohbet, rastgele sohbet, yeni insanlarla tanış, online chat, ekşi dertleşecek insan veritabanı">
   <meta name="application-name" content="Anın Sohbeti">
 
-  <link rel="apple-touch-icon" sizes="57x57" href="/assets/apple-icon-57x57.png">
-  <link rel="apple-touch-icon" sizes="60x60" href="/assets/apple-icon-60x60.png">
-  <link rel="apple-touch-icon" sizes="72x72" href="/assets/apple-icon-72x72.png">
-  <link rel="apple-touch-icon" sizes="76x76" href="/assets/apple-icon-76x76.png">
-  <link rel="apple-touch-icon" sizes="114x114" href="/assets/apple-icon-114x114.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="/assets/apple-icon-120x120.png">
-  <link rel="apple-touch-icon" sizes="144x144" href="/assets/apple-icon-144x144.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="/assets/apple-icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-icon-180x180.png">
-  <link rel="icon" type="image/png" sizes="192x192"  href="/assets/android-icon-192x192.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
-  <link rel="manifest" href="/assets/manifest.json">
-  <meta name="msapplication-TileColor" content="#ffffff">
-  <meta name="msapplication-TileImage" content="/assets/ms-icon-144x144.png">
-  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" type="image/png" href="/assets/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+<link rel="shortcut icon" href="/assets/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-title" content="Anın Sohbeti" />
+<link rel="manifest" href="/assets/site.webmanifest" />
 
   <meta property="og:title" content="Anın Sohbeti">
   <meta property="og:description" content="Anın Sohbeti ile anlık anonim sohbet, eşleş ve yeni insanlarla tanış.">
@@ -64,6 +53,7 @@
       --shadow-soft: 0 32px 62px -40px rgba(34, 72, 41, 0.55);
       --radius-lg: 28px;
       --radius-md: 20px;
+      --content-horizontal-padding: clamp(1.4rem, 5vw, 2rem);
       --controls-offset: 0px;
     }
 
@@ -149,6 +139,285 @@
     .modal-overlay[data-open="true"] {
       opacity: 1;
       pointer-events: auto;
+    }
+
+    .mic-permission-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      background: rgba(14, 24, 18, 0.45);
+      z-index: 12;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms ease;
+    }
+
+    .mic-permission-overlay[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mic-permission-overlay__card {
+      max-width: 360px;
+      width: 100%;
+      background: rgba(18, 32, 24, 0.92);
+      color: #ffffff;
+      border-radius: 20px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 24px 48px -24px rgba(8, 16, 12, 0.65);
+    }
+
+    .mic-permission-overlay__text {
+      margin: 0 0 20px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .mic-permission-overlay__button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: #ffffff;
+      color: var(--accent-strong);
+      cursor: pointer;
+      transition: background 180ms ease, transform 180ms ease;
+    }
+
+    .mic-permission-overlay__button:focus-visible {
+      outline: 3px solid rgba(255, 255, 255, 0.8);
+      outline-offset: 3px;
+    }
+
+    .mic-permission-overlay__button:hover {
+      background: rgba(255, 255, 255, 0.92);
+      transform: translateY(-1px);
+    }
+
+    .mic-permission-overlay__button:active {
+      transform: translateY(0);
+    }
+
+    .attachment-sheet {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 180ms ease;
+      z-index: 7;
+    }
+
+    .attachment-sheet__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(18, 34, 24, 0.35);
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .attachment-sheet__content {
+      position: relative;
+      margin: 0 auto;
+      width: min(520px, 100%);
+      background: #ffffff;
+      border-radius: 28px 28px 0 0;
+      box-shadow: 0 -20px 52px -30px rgba(33, 64, 41, 0.55);
+      padding: 28px 24px calc(28px + env(safe-area-inset-bottom));
+      transform: translateY(24px);
+      opacity: 0;
+      transition: transform 220ms ease, opacity 200ms ease;
+    }
+
+    .attachment-sheet[data-open="true"] {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .attachment-sheet[data-open="true"] .attachment-sheet__backdrop {
+      opacity: 1;
+    }
+
+    .attachment-sheet[data-open="true"] .attachment-sheet__content {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .attachment-sheet__handle {
+      width: 44px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(47, 123, 69, 0.2);
+      margin: 0 auto 18px;
+    }
+
+    .attachment-sheet__title {
+      margin: 0 0 18px;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    .attachment-sheet__actions {
+      display: flex;
+      gap: 12px;
+      flex-direction: column;
+    }
+
+    .attachment-sheet__action {
+      min-height: 52px;
+      border-radius: 16px;
+      border: 1px solid rgba(47, 123, 69, 0.18);
+      background: #f6fbf6;
+      color: var(--accent-strong);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .attachment-sheet__action:hover,
+    .attachment-sheet__action:focus-visible {
+      background: #e9f7ea;
+      transform: translateY(-1px);
+      box-shadow: 0 14px 32px -26px rgba(47, 123, 69, 0.45);
+    }
+
+    .attachment-sheet__action:focus-visible {
+      outline: 3px solid rgba(47, 123, 69, 0.24);
+      outline-offset: 2px;
+    }
+
+    .image-preview-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(12, 26, 18, 0.82);
+      z-index: 8;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 200ms ease;
+      padding: clamp(16px, 6vw, 32px);
+    }
+
+    .image-preview-overlay__backdrop {
+      position: absolute;
+      inset: 0;
+    }
+
+    .image-preview-overlay__image {
+      position: relative;
+      max-width: min(92vw, 620px);
+      max-height: min(92vh, 92dvh);
+      border-radius: 18px;
+      object-fit: contain;
+      box-shadow: 0 32px 64px -34px rgba(12, 26, 18, 0.65);
+      opacity: 0;
+      transform: scale(0.98);
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+
+    .image-preview-overlay[data-open="true"] {
+      pointer-events: auto;
+      opacity: 1;
+    }
+
+    .image-preview-overlay[data-open="true"] .image-preview-overlay__image {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .report-overlay {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--controls-offset, 0px) + 16px);
+      transform: translate(-50%, 12px);
+      width: min(440px, calc(100% - 32px));
+      background: rgba(252, 255, 252, 0.98);
+      border: 1px solid rgba(46, 125, 82, 0.18);
+      border-radius: 20px;
+      box-shadow: 0 24px 52px -32px rgba(34, 72, 41, 0.45);
+      padding: 18px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+      z-index: 4;
+      color: var(--text-primary);
+    }
+
+    .report-overlay[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, 0);
+    }
+
+    .report-overlay__message {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.5;
+      text-align: center;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .report-overlay__actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .report-overlay__button {
+      flex: 1 1 50%;
+      min-height: 44px;
+      border-radius: 999px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #ffffff;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .report-overlay__button:focus-visible {
+      outline: 3px solid rgba(46, 125, 82, 0.3);
+      outline-offset: 2px;
+    }
+
+    .report-overlay__button--confirm {
+      background: #45a263;
+      box-shadow: 0 18px 40px -30px rgba(69, 162, 99, 0.55);
+    }
+
+    .report-overlay__button--confirm:hover,
+    .report-overlay__button--confirm:focus-visible {
+      background: #3c8e56;
+      transform: translateY(-1px);
+    }
+
+    .report-overlay__button--cancel {
+      background: #f55b5b;
+      box-shadow: 0 18px 40px -30px rgba(245, 91, 91, 0.55);
+    }
+
+    .report-overlay__button--cancel:hover,
+    .report-overlay__button--cancel:focus-visible {
+      background: #e04c4c;
+      transform: translateY(-1px);
     }
 
     .call-request-overlay {
@@ -670,7 +939,8 @@
     .nickname-form {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
+      text-align: left;
     }
 
     .nickname-form input {
@@ -679,12 +949,20 @@
       padding: 14px 18px;
       font-size: 16px;
       background: #f7fbf6;
+      letter-spacing: 0.08em;
     }
 
     .nickname-form input:focus {
       outline: none;
       border-color: rgba(47, 123, 69, 0.45);
       box-shadow: 0 0 0 3px rgba(47, 123, 69, 0.18);
+    }
+
+    .nickname-form__helper {
+      margin: 0;
+      font-size: 13px;
+      color: var(--accent-strong);
+      min-height: 18px;
     }
 
     .nickname-form button {
@@ -695,35 +973,395 @@
       font-weight: 600;
       border: none;
       cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, opacity 180ms ease;
       box-shadow: 0 16px 34px -26px rgba(34, 72, 41, 0.7);
     }
 
-    .nickname-form button:hover,
-    .nickname-form button:focus-visible {
+    .nickname-form button[disabled] {
+      cursor: not-allowed;
+      opacity: 0.55;
+      box-shadow: none;
+    }
+
+    .nickname-form button:hover:not([disabled]),
+    .nickname-form button:focus-visible:not([disabled]) {
       background: var(--accent-strong);
       transform: translateY(-1px);
     }
 
     header {
-      padding: 28px 32px 16px;
-      text-align: center;
-      background: linear-gradient(180deg, rgba(230, 243, 228, 0.75) 0%, rgba(255, 255, 255, 0) 100%);
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 3;
+      padding: 8px 20px;
+      min-height: 48px;
+      background: linear-gradient(180deg, #f3faf4 0%, #e5f2e8 100%);
+      border-bottom: 1px solid rgba(46, 125, 82, 0.14);
+      box-shadow: 0 18px 42px -28px rgba(46, 125, 82, 0.55);
     }
 
-    header h1 {
-      margin: 0;
-      font-size: clamp(26px, 3vw, 34px);
+    .nickname-overlay-open .app-header {
+      display: none;
+    }
+
+    .app-header__container {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(48px, 12vw, 64px) minmax(0, 1fr);
+      align-items: center;
+      gap: 16px;
+      min-height: 56px;
+    }
+
+    .app-header__nickname {
+      --nickname-font-size-base: 15px;
+      --nickname-font-size: var(--nickname-font-size-base);
+      --nickname-gap: 8px;
+      justify-self: start;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--nickname-gap);
+      min-width: 0;
+      max-width: clamp(140px, 42vw, 220px);
+      padding: 0 4px;
       font-weight: 600;
+      font-size: var(--nickname-font-size);
       letter-spacing: -0.01em;
+      color: var(--text-primary);
+      white-space: normal;
+      text-align: center;
     }
 
-    header p {
-      margin: 10px auto 0;
-      max-width: 360px;
-      font-size: 16px;
-      line-height: 1.5;
-      color: var(--text-muted);
+    .app-header__nickname span {
+      display: inline-block;
+      min-width: 0;
+    }
+
+    .app-header__nickname-text {
+      --nickname-status-offset: 18px;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      min-width: 0;
+      text-align: center;
+      line-height: 1.15;
+      position: relative;
+      padding-bottom: var(--nickname-status-offset);
+    }
+
+    #header-nickname {
+      white-space: nowrap;
+    }
+
+    .app-header__status {
+      --status-translate-y: -2px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      opacity: 0;
+      transition: opacity 200ms ease, transform 220ms ease;
+      line-height: 1.1;
+      white-space: normal;
+      text-align: center;
+      min-height: 1.2em;
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 4px);
+      transform: translate(-50%, var(--status-translate-y));
+      width: max-content;
+      max-width: 100%;
+      pointer-events: none;
+    }
+
+    .app-header__status[data-visible="true"] {
+      opacity: 1;
+      --status-translate-y: 0;
+    }
+
+    .app-header__status--dots {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    .app-header__status-dots {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .app-header__status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: currentColor;
+      opacity: 0.25;
+      animation: typingDotPulse 1.2s ease-in-out infinite;
+    }
+
+    .app-header__status-dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .app-header__status-dot:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @media (max-width: 767px) {
+      .app-header__nickname-text {
+        padding-bottom: 0;
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .app-header__status {
+        position: static;
+        transform: none;
+        left: auto;
+        top: auto;
+        margin-top: 4px;
+        width: auto;
+        max-width: 100%;
+      }
+    }
+
+    @keyframes typingDotPulse {
+      0%,
+      100% {
+        opacity: 0.25;
+        transform: translateY(0);
+      }
+
+      50% {
+        opacity: 1;
+        transform: translateY(-1px);
+      }
+    }
+
+    .app-header__avatar {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid rgba(46, 125, 82, 0.18);
+      background: #ffffff;
+      object-fit: cover;
+    }
+
+    .app-header__logo {
+      justify-self: center;
+      width: clamp(48px, 12vw, 64px);
+      height: clamp(48px, 12vw, 64px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-header__logo img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .app-header__actions {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .app-header__action {
+      width: 36px;
+      height: 36px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 999px;
+      border: 1px solid rgba(46, 125, 82, 0.12);
+      background: #ffffff;
+      color: #2e7d52;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 10px 24px -20px rgba(46, 125, 82, 0.35);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .app-header__action-icon {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .app-header__action svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    #header-report .app-header__action-icon {
+      color: #e35b5b;
+    }
+
+    .app-header__action-label {
+      display: none;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+      color: var(--accent);
+    }
+
+    .app-header__action[data-countdown="true"] .app-header__action-icon {
+      display: none;
+    }
+
+    .app-header__action[data-countdown="true"] .app-header__action-label {
+      display: inline;
+    }
+
+    .app-header__action:hover,
+    .app-header__action:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 32px -18px rgba(46, 125, 82, 0.45);
+      background: #f8fcf9;
+    }
+
+    .app-header__action:focus-visible {
+      outline: 3px solid rgba(46, 125, 82, 0.38);
+      outline-offset: 2px;
+    }
+
+    .app-header__action:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: 0 4px 12px -10px rgba(46, 125, 82, 0.4);
+      transform: none;
+      background: #f2f7f3;
+      color: rgba(46, 125, 82, 0.55);
+    }
+
+    @media (min-width: 768px) {
+      header {
+        padding: 12px 24px;
+        min-height: 56px;
+      }
+
+      .app-header__nickname {
+        --nickname-font-size-base: 16px;
+        justify-content: flex-start;
+      }
+
+      .app-header__nickname-text {
+        align-items: flex-start;
+        text-align: left;
+        gap: 0;
+        padding-bottom: 0;
+        position: static;
+      }
+
+      .app-header__status {
+        position: static;
+        transform: none;
+        left: auto;
+        top: auto;
+        margin-top: 4px;
+        width: auto;
+        max-width: 100%;
+        min-height: 0;
+        text-align: left;
+      }
+
+      .attachment-sheet__actions {
+        flex-direction: row;
+      }
+
+      .attachment-sheet__action {
+        flex: 1;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .app-header {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        padding: 16px 28px;
+        border-bottom: none;
+      }
+
+      .app-header::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: rgba(46, 125, 82, 0.14);
+        pointer-events: none;
+      }
+
+      .app-header__container {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 18px;
+        min-height: 64px;
+      }
+
+      .app-header__logo {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .app-header__nickname {
+        --nickname-gap: 10px;
+        max-width: 220px;
+      }
+
+      .app-header__avatar {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid rgba(46, 125, 82, 0.18);
+        background: #ffffff;
+        object-fit: cover;
+      }
+
+      .app-header__actions {
+        margin-left: auto;
+      }
+
+      .app-shell #chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .app-shell .chat-window {
+        flex: 1;
+        min-height: 0;
+        border-top: none;
+      }
+
+      .app-shell #log {
+        height: calc(100dvh - var(--header-offset, 0px) - var(--controls-offset, 0px));
+        max-height: calc(100dvh - var(--header-offset, 0px) - var(--controls-offset, 0px));
+        overflow-y: auto;
+        scroll-padding-bottom: 32px;
+      }
     }
 
     #chat {
@@ -746,13 +1384,14 @@
 
     #log {
       flex: 1;
-      padding: 28px 28px 32px;
+      padding: clamp(1.75rem, 5vh, 2.25rem) var(--content-horizontal-padding)
+        clamp(2rem, 6vh, 2.5rem);
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: clamp(0.9rem, 3vh, 1.6rem);
       scroll-behavior: smooth;
-      scroll-padding-bottom: 32px;
+      scroll-padding-bottom: clamp(2rem, 6vh, 2.75rem);
     }
 
     #log::-webkit-scrollbar {
@@ -766,14 +1405,14 @@
 
     .message {
       max-width: 86%;
-      padding: 12px 16px;
+      padding: clamp(0.95rem, 2.8vh, 1.35rem) clamp(1.1rem, 4vw, 1.6rem);
       border-radius: 20px;
       font-size: 16px;
       line-height: 1.5;
       word-break: break-word;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: clamp(0.35rem, 1.2vh, 0.6rem);
       box-shadow: none;
     }
 
@@ -787,6 +1426,153 @@
 
     .message__text {
       font-size: 16px;
+    }
+
+    .message--image {
+      gap: clamp(0.6rem, 1.6vh, 0.9rem);
+    }
+
+    .message__media-trigger {
+      position: relative;
+      width: 100%;
+      padding: 0;
+      border: none;
+      border-radius: 18px;
+      overflow: hidden;
+      cursor: pointer;
+      background: rgba(47, 123, 69, 0.08);
+      display: block;
+    }
+
+    .message__media-trigger:focus-visible {
+      outline: 3px solid rgba(47, 123, 69, 0.4);
+      outline-offset: 3px;
+    }
+
+    .message__media-trigger img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: clamp(220px, 32vh, 360px);
+      object-fit: cover;
+      transition: transform 220ms ease;
+    }
+
+    .message--me .message__media-trigger img {
+      border-bottom-right-radius: 10px;
+    }
+
+    .message--stranger .message__media-trigger img {
+      border-bottom-left-radius: 10px;
+    }
+
+    .message[data-state="uploading"] .message__media-trigger img {
+      filter: saturate(0.85);
+      opacity: 0.75;
+    }
+
+    .message__media-status {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(33, 98, 56, 0.9);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      box-shadow: 0 12px 28px -26px rgba(33, 64, 38, 0.55);
+    }
+
+    .message__media-status::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.9;
+    }
+
+    .message[data-state="uploading"] .message__media-status {
+      display: inline-flex;
+    }
+
+    .message[data-state="error"] .message__media-status {
+      display: inline-flex;
+      background: rgba(227, 91, 91, 0.92);
+    }
+
+    .message__media-retry {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(33, 98, 56, 0.92);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      box-shadow: 0 12px 28px -26px rgba(33, 64, 38, 0.55);
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .message__media-retry:focus-visible {
+      outline: 3px solid rgba(47, 123, 69, 0.4);
+      outline-offset: 3px;
+    }
+
+    .message__media-retry:active {
+      transform: scale(0.97);
+    }
+
+    .message[data-state="error"] .message__media-retry {
+      display: inline-flex;
+    }
+
+    .message[data-state="error"] .message__media-trigger img {
+      filter: grayscale(0.4);
+      opacity: 0.6;
+    }
+
+    .message__media-status[data-error-message] {
+      cursor: pointer;
+    }
+
+    .upload-error-popover {
+      position: fixed;
+      max-width: 240px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: rgba(18, 32, 22, 0.94);
+      color: #ffffff;
+      font-size: 14px;
+      line-height: 1.45;
+      box-shadow: 0 20px 48px -28px rgba(12, 32, 20, 0.6);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+      transition: opacity 160ms ease, transform 160ms ease;
+      z-index: 12;
+    }
+
+    .upload-error-popover[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .upload-error-popover__text {
+      display: block;
     }
 
     .message--me {
@@ -825,9 +1611,11 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 12px;
+      gap: clamp(1.6rem, 5vh, 2.6rem);
       text-align: center;
-      padding: 18px 20px;
+      padding-block: clamp(2.25rem, 7vh, 3.25rem);
+      padding-inline: clamp(1.6rem, 6vw, 2.75rem);
+      margin-block: clamp(2.25rem, 7vh, 3.75rem);
       border-radius: 24px;
       max-width: 100%;
       box-shadow: 0 26px 48px -34px rgba(34, 72, 41, 0.55);
@@ -843,13 +1631,17 @@
 
     .waiting-status__start-button {
       align-self: center;
+      margin-inline: auto;
       background: var(--accent);
       color: #ffffff;
-      min-height: 0;
-      padding: 10px 22px;
+      min-height: clamp(2.5rem, 7vh, 3rem);
+      padding: clamp(0.9rem, 2.8vh, 1.1rem) clamp(1.9rem, 7vw, 2.8rem);
       font-size: 15px;
       border-radius: 999px;
       box-shadow: 0 18px 34px -28px rgba(34, 72, 41, 0.65);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .waiting-status__start-button:hover,
@@ -992,7 +1784,8 @@
       flex-direction: column;
       align-items: stretch;
       gap: 14px;
-      padding: 18px 24px calc(18px + env(safe-area-inset-bottom));
+      padding: 18px var(--content-horizontal-padding)
+        calc(18px + env(safe-area-inset-bottom));
       background: rgba(255, 255, 255, 0.98);
       position: sticky;
       bottom: 0;
@@ -1010,7 +1803,8 @@
       background: #f7fbf6;
       border: 1px solid var(--border-soft);
       border-radius: 999px;
-      padding: 6px 8px 6px 18px;
+      padding: 8px 12px 8px 18px;
+      min-height: 56px;
       transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
 
@@ -1025,9 +1819,55 @@
       min-width: 0;
       border: none;
       background: transparent;
-      padding: 10px 0;
+      padding: 12px 0;
       font-size: 16px;
+      line-height: 1.5;
       color: var(--text-primary);
+    }
+
+    .controls__attachment-button {
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(46, 125, 82, 0.16);
+      background: #ffffff;
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1 / 1;
+      box-shadow: 0 12px 28px -24px rgba(46, 125, 82, 0.55);
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
+    }
+
+    .controls__attachment-button:hover,
+    .controls__attachment-button:focus-visible {
+      background: #f2faf3;
+      transform: translateY(-1px);
+      box-shadow: 0 18px 36px -26px rgba(46, 125, 82, 0.6);
+    }
+
+    .controls__attachment-button:focus-visible {
+      outline: 3px solid rgba(46, 125, 82, 0.32);
+      outline-offset: 2px;
+    }
+
+    .controls__attachment-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .controls__attachment-icon {
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1;
+      transform: translateY(-1px);
     }
 
     #msg:focus {
@@ -1054,44 +1894,18 @@
       transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
     }
 
-    .control-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      min-height: 52px;
-      padding: 14px 22px;
-      font-size: 15px;
-      border-radius: 999px;
-    }
-
-    .control-button__icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .control-button__label {
-      font-weight: 600;
-    }
-
-    #controls .control-button {
-      flex: 1 1 0;
-      min-width: 0;
-      white-space: nowrap;
-    }
-
     #send {
       width: 44px;
       height: 44px;
+      min-width: 44px;
       min-height: 0;
       padding: 0;
       border-radius: 50%;
       background: var(--accent);
       color: #ffffff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1 / 1;
       box-shadow: 0 14px 30px -24px rgba(34, 72, 41, 0.7);
       transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
@@ -1114,66 +1928,6 @@
       cursor: not-allowed;
     }
 
-    .controls__actions {
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
-      gap: 12px;
-      width: 100%;
-    }
-
-    #call.control-button {
-      background: #eff7ee;
-      color: var(--accent);
-      padding: 14px 20px;
-      font-size: 15px;
-      box-shadow: 0 16px 32px -28px rgba(34, 72, 41, 0.5);
-      border: 1px solid rgba(47, 123, 69, 0.14);
-    }
-
-    #call.control-button svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    #call.control-button:not(:disabled):hover,
-    #call.control-button:not(:disabled):focus-visible {
-      background: #e6f3e5;
-      transform: translateY(-1px);
-    }
-
-    #call.control-button:disabled {
-      opacity: 0.5;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    #next.control-button {
-      background: #eff7ee;
-      color: var(--accent);
-      border: 1px solid var(--bubble-border);
-      box-shadow: 0 18px 34px -28px rgba(34, 72, 41, 0.6);
-    }
-
-    #next.control-button svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    #next.control-button:disabled {
-      opacity: 0.5;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    #call.control-button:not(:disabled):hover,
-    #call.control-button:not(:disabled):focus-visible,
-    #next.control-button:not(:disabled):hover,
-    #next.control-button:not(:disabled):focus-visible {
-      background: #e6f3e5;
-      transform: translateY(-1px);
-    }
-
     button:disabled {
       cursor: not-allowed;
       opacity: 0.6;
@@ -1182,6 +1936,9 @@
     }
 
     @media (max-width: 768px) {
+      :root {
+        --content-horizontal-padding: 18px;
+      }
       html,
       body {
         height: 100dvh;
@@ -1205,15 +1962,30 @@
       }
 
       header {
-        padding: 24px 20px 12px;
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
+        padding: 0 16px 12px;
+        padding-top: 10px;
+        padding-top: calc(10px + env(safe-area-inset-top));
+        min-height: 48px;
+        box-shadow: 0 16px 40px -28px rgba(46, 125, 82, 0.55);
+        border-bottom: 1px solid rgba(46, 125, 82, 0.16);
       }
 
-      header h1 {
-        font-size: 24px;
+      .app-header__container {
+        gap: 12px;
+      }
+
+      .app-header__nickname {
+        --nickname-font-size-base: 14px;
+        max-width: min(48vw, 168px);
+      }
+
+      .app-header__logo {
+        width: 56px;
+        height: 56px;
       }
 
       #chat {
@@ -1223,18 +1995,40 @@
         padding-top: var(--header-offset, 0px);
       }
 
+      .report-overlay {
+        width: calc(100% - 24px);
+        bottom: calc(var(--controls-offset, 0px) + 12px);
+      }
+
       .chat-window {
         flex: 1 1 auto;
       }
 
       #log {
-        padding: 22px 18px 28px;
+        padding: 22px var(--content-horizontal-padding) 28px;
         height: calc(100dvh - var(--header-offset, 0px) - var(--controls-offset, 0px));
         flex: none;
       }
 
+      .message {
+        padding: clamp(0.78rem, 2.4vh, 1.08rem) clamp(1.1rem, 4vw, 1.6rem)
+          clamp(0.98rem, 3vh, 1.25rem);
+        gap: clamp(0.25rem, 0.9vh, 0.35rem);
+      }
+
+      .message__prefix {
+        display: block;
+        margin: 0;
+        line-height: 1.1;
+      }
+
+      .message--image {
+        gap: clamp(0.48rem, 1.25vh, 0.75rem);
+      }
+
       #controls {
-        padding: 16px 18px calc(18px + env(safe-area-inset-bottom));
+        padding: 16px var(--content-horizontal-padding)
+          calc(18px + env(safe-area-inset-bottom));
         gap: 12px;
         position: fixed;
         bottom: 0;
@@ -1272,8 +2066,26 @@
     }
 
     @media (max-width: 767px) {
+      .app-header__nickname-text {
+        flex-direction: row;
+        align-items: center;
+        gap: 0;
+      }
+
+      .app-header__status {
+        min-height: 0;
+      }
+
+      .app-header__status[data-visible="true"] {
+        margin-left: 6px;
+      }
+
+      .app-header__status[data-visible="false"] {
+        margin-left: 0;
+      }
+
       .controls__composer {
-        padding: 6px 12px 6px 16px;
+        padding: 8px 12px 8px 18px;
       }
 
       .controls__actions {
@@ -1322,11 +2134,84 @@
     }
   </style>
 </head>
-<body>
+<body class="nickname-overlay-open">
   <div class="app-shell">
-    <header>
-      <h1>Ekşi Anın Sohbeti</h1>
-      <p>Anlık eşleş, sohbet et ve yeni insanlarla tanış.</p>
+    <header class="app-header">
+      <div class="app-header__container">
+        <div class="app-header__nickname" aria-live="polite">
+          <img
+            src="/assets/avatar.png"
+            alt=""
+            class="app-header__avatar"
+            aria-hidden="true"
+          >
+          <span class="app-header__nickname-text">
+            <span id="header-nickname">Sen</span>
+            <span
+              id="header-partner-status"
+              class="app-header__status"
+              aria-live="polite"
+            ></span>
+          </span>
+        </div>
+        <div class="app-header__logo">
+          <img src="/assets/icon.png" alt="Anın Sohbeti logosu">
+        </div>
+        <div class="app-header__actions">
+          <button
+            type="button"
+            class="app-header__action"
+            id="header-call"
+            aria-label="Arama (Call)"
+          >
+            <span class="app-header__action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span class="app-header__action-label" aria-hidden="true">Ara</span>
+          </button>
+          <button
+            type="button"
+            class="app-header__action"
+            id="header-next"
+            aria-label="Sonraki (Next)"
+          >
+            <span class="app-header__action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M4.94 4.44a.75.75 0 0 1 1.06 0l5.78 5.78a.75.75 0 0 1 0 1.06l-5.78 5.78a.75.75 0 1 1-1.06-1.06L9.73 11 4.94 6.2a.75.75 0 0 1 0-1.06Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M11.94 4.44a.75.75 0 0 1 1.06 0l5.78 5.78a.75.75 0 0 1 0 1.06l-5.78 5.78a.75.75 0 1 1-1.06-1.06L16.73 11l-4.79-4.8a.75.75 0 0 1 0-1.06Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span class="app-header__action-label" aria-hidden="true">Sonraki</span>
+          </button>
+          <button
+            type="button"
+            class="app-header__action"
+            id="header-report"
+            aria-label="Raporla (Report)"
+          >
+            <span class="app-header__action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M6 3.75a.75.75 0 0 1 .75-.75h9.25a.75.75 0 0 1 .6 1.2l-2.18 3.05 2.18 3.05a.75.75 0 0 1-.6 1.2H7.5v6.55a.75.75 0 0 1-1.5 0Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+            <span class="app-header__action-label" aria-hidden="true">Raporla</span>
+          </button>
+        </div>
+      </div>
     </header>
     <div
       class="nickname-overlay"
@@ -1346,8 +2231,18 @@
         <p id="nickname-description">Sohbete katılmadan önce seni tanıyabileceğimiz bir rumuz belirle.</p>
         <div class="nickname-form">
           <label class="visually-hidden" for="nickname">Rumuz</label>
-          <input id="nickname" type="text" maxlength="24" autocomplete="off" placeholder="Örn. Pesimist">
-          <button id="nickname-submit" type="button">Sohbete Başla</button>
+          <input
+            id="nickname"
+            type="text"
+            maxlength="12"
+            autocomplete="off"
+            placeholder="Örn. PESIMIST"
+            aria-describedby="nickname-helper"
+            inputmode="latin"
+            autocapitalize="characters"
+          >
+          <p class="nickname-form__helper" id="nickname-helper" role="status" aria-live="polite"></p>
+          <button id="nickname-submit" type="button" disabled>Sohbete Başla</button>
         </div>
       </div>
     </div>
@@ -1408,6 +2303,30 @@
             İstemem
           </button>
         </div>
+      </div>
+    </div>
+    <div
+      id="mic-permission-overlay"
+      class="mic-permission-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="mic-permission-overlay-text"
+      hidden
+    >
+      <div class="mic-permission-overlay__card">
+        <p
+          class="mic-permission-overlay__text"
+          id="mic-permission-overlay-text"
+        >
+          Bu özelliği kullanmak için mikrofon izni gerekiyor. Lütfen sol üstteki kilit simgesine dokunup ‘Mikrofon &gt; İzin ver’ seçeneğini aktif edin.
+        </p>
+        <button
+          type="button"
+          class="mic-permission-overlay__button"
+          id="mic-permission-overlay-close"
+        >
+          Tamam
+        </button>
       </div>
     </div>
     <div
@@ -1532,8 +2451,42 @@
       <div class="chat-window">
         <div id="log"></div>
       </div>
+      <div
+        id="report-overlay"
+        class="report-overlay"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="report-overlay-message"
+        hidden
+      >
+        <p class="report-overlay__message" id="report-overlay-message"></p>
+        <div class="report-overlay__actions">
+          <button
+            type="button"
+            class="report-overlay__button report-overlay__button--confirm"
+            id="report-overlay-confirm"
+          >
+            Evet
+          </button>
+          <button
+            type="button"
+            class="report-overlay__button report-overlay__button--cancel"
+            id="report-overlay-cancel"
+          >
+            Hayır
+          </button>
+        </div>
+      </div>
       <div id="controls">
         <div class="controls__composer">
+          <button
+            id="attachment-button"
+            type="button"
+            class="controls__attachment-button"
+            aria-label="Medya ekle"
+          >
+            <span aria-hidden="true" class="controls__attachment-icon">+</span>
+          </button>
           <input id="msg" placeholder="Mesaj yaz...">
           <button id="send" type="button" aria-label="Gönder">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -1552,47 +2505,649 @@
             <span class="visually-hidden">Gönder</span>
           </button>
         </div>
-        <div class="controls__actions">
-          <button id="call" type="button" class="control-button control-button--call">
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M7.37 3.5h2.12a1.2 1.2 0 0 1 1.14.8l1.05 3.14a1.2 1.2 0 0 1-.28 1.22l-1.35 1.35a12.85 12.85 0 0 0 5.46 5.46l1.35-1.35a1.2 1.2 0 0 1 1.22-.28l3.14 1.05a1.2 1.2 0 0 1 .8 1.14V19.8a1.2 1.2 0 0 1-1.2 1.2C13.04 21 6 13.96 6 5.2A1.7 1.7 0 0 1 7.37 3.5Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span class="control-button__label">Ara</span>
-          </button>
-          <button id="next" type="button" class="control-button control-button--next">
-            <span class="control-button__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M6.02 4.22a.75.75 0 0 1 1.06 0l6.22 6.22h-5.3a.75.75 0 0 0 0 1.5h5.3l-6.22 6.22a.75.75 0 1 0 1.06 1.06l7.5-7.5a.75.75 0 0 0 0-1.06l-7.5-7.5a.75.75 0 0 1 0-1.06Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <span class="control-button__label">Sonraki</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <div class="attachment-sheet" id="attachment-sheet" aria-hidden="true">
+    <div class="attachment-sheet__backdrop" id="attachment-sheet-backdrop"></div>
+    <div class="attachment-sheet__content" role="dialog" aria-modal="true" aria-labelledby="attachment-sheet-title">
+      <div class="attachment-sheet__handle" aria-hidden="true"></div>
+      <h2 class="attachment-sheet__title" id="attachment-sheet-title">Medya gönder</h2>
+      <div class="attachment-sheet__actions">
+        <button type="button" class="attachment-sheet__action" id="attachment-camera">Kamera</button>
+        <button type="button" class="attachment-sheet__action" id="attachment-photo">Fotoğraf</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
+  <input type="file" id="photo-input" accept="image/*" hidden>
+
+  <div class="image-preview-overlay" id="image-preview-overlay" hidden>
+    <div class="image-preview-overlay__backdrop"></div>
+    <img
+      id="image-preview-element"
+      class="image-preview-overlay__image"
+      alt="Gönderilen resim önizlemesi"
+      loading="lazy"
+    >
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     const socket = io();
+    let currentSocketId = null;
     const log = document.getElementById("log");
     const msg = document.getElementById("msg");
     const sendBtn = document.getElementById("send");
-    const nextBtn = document.getElementById("next");
-    const callBtn = document.getElementById("call");
-    const callBtnIcon = callBtn ? callBtn.querySelector(".control-button__icon") : null;
-    const callBtnLabel = callBtn ? callBtn.querySelector(".control-button__label") : null;
+    const callBtn = document.getElementById("header-call");
+    const callBtnIcon = callBtn ? callBtn.querySelector(".app-header__action-icon") : null;
+    const callBtnLabel = callBtn ? callBtn.querySelector(".app-header__action-label") : null;
+    const micPermissionOverlay = document.getElementById("mic-permission-overlay");
+    const micPermissionOverlayCloseBtn = document.getElementById("mic-permission-overlay-close");
+    const nextBtn = document.getElementById("header-next");
+    const reportBtn = document.getElementById("header-report");
+    const headerNicknameEl = document.getElementById("header-nickname");
+    const headerNicknameContainer =
+      headerNicknameEl && headerNicknameEl.closest(".app-header__nickname");
+    const headerPartnerStatus = document.getElementById("header-partner-status");
     const mobileViewportMatcher = window.matchMedia("(max-width: 768px)");
     const controls = document.getElementById("controls");
     const headerEl = document.querySelector("header");
+    const attachmentButton = document.getElementById("attachment-button");
+    const attachmentSheet = document.getElementById("attachment-sheet");
+    const attachmentBackdrop = document.getElementById("attachment-sheet-backdrop");
+    const attachmentCameraBtn = document.getElementById("attachment-camera");
+    const attachmentPhotoBtn = document.getElementById("attachment-photo");
+    const cameraInput = document.getElementById("camera-input");
+    const photoInput = document.getElementById("photo-input");
+    const imagePreviewOverlay = document.getElementById("image-preview-overlay");
+    const imagePreviewElement = document.getElementById("image-preview-element");
+    const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+    const IMAGE_UPLOAD_ERROR_MESSAGE = "Fotoğraf gönderilemedi, lütfen tekrar dene.";
+    const IMAGE_UPLOAD_RATE_LIMIT_MESSAGE = "Çok seri gönderiyorsun azcık bekle";
+    const pendingImageUploads = new WeakMap();
+    const MIC_PERMISSION_OVERLAY_STORAGE_KEY = "micOverlayShown";
+    const MIC_PERMISSION_OVERLAY_TRANSITION_MS = 200;
+    const MIC_PERMISSION_MOBILE_MAX_WIDTH = 820;
+    const MIC_PERMISSION_USER_AGENT_PATTERN = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i;
+    let micPermissionOverlayHideTimer = null;
+    let isMicPermissionRequestInFlight = false;
+
+    if (micPermissionOverlay) {
+      micPermissionOverlay.dataset.open = "false";
+    }
+
+    function isMobileExperienceForMicOverlay() {
+      const widthCandidates = [
+        typeof window?.innerWidth === "number" ? window.innerWidth : 0,
+        typeof document?.documentElement?.clientWidth === "number"
+          ? document.documentElement.clientWidth
+          : 0,
+        typeof document?.body?.clientWidth === "number"
+          ? document.body.clientWidth
+          : 0,
+      ];
+      const maxWidth = Math.max(...widthCandidates, 0);
+      if (maxWidth && maxWidth <= MIC_PERMISSION_MOBILE_MAX_WIDTH) {
+        return true;
+      }
+      const userAgent = typeof navigator?.userAgent === "string" ? navigator.userAgent : "";
+      if (!userAgent) {
+        return false;
+      }
+      return MIC_PERMISSION_USER_AGENT_PATTERN.test(userAgent);
+    }
+
+    function hasShownMicPermissionOverlay() {
+      try {
+        return localStorage.getItem(MIC_PERMISSION_OVERLAY_STORAGE_KEY) === "1";
+      } catch (_storageError) {
+        return false;
+      }
+    }
+
+    function markMicPermissionOverlayShown() {
+      try {
+        localStorage.setItem(MIC_PERMISSION_OVERLAY_STORAGE_KEY, "1");
+      } catch (_storageError) {
+        // Ignore storage errors (e.g., private mode).
+      }
+    }
+
+    function clearMicPermissionOverlayFlag() {
+      try {
+        localStorage.removeItem(MIC_PERMISSION_OVERLAY_STORAGE_KEY);
+      } catch (_storageError) {
+        // Ignore storage errors (e.g., private mode).
+      }
+    }
+
+    function setMicPermissionOverlayOpen(isOpen) {
+      if (!micPermissionOverlay) {
+        return;
+      }
+      if (micPermissionOverlayHideTimer) {
+        clearTimeout(micPermissionOverlayHideTimer);
+        micPermissionOverlayHideTimer = null;
+      }
+      if (isOpen) {
+        micPermissionOverlay.hidden = false;
+        micPermissionOverlay.dataset.open = "true";
+      } else {
+        micPermissionOverlay.dataset.open = "false";
+        micPermissionOverlayHideTimer = window.setTimeout(() => {
+          if (!micPermissionOverlay || micPermissionOverlay.dataset.open === "true") {
+            return;
+          }
+          micPermissionOverlay.hidden = true;
+        }, MIC_PERMISSION_OVERLAY_TRANSITION_MS + 60);
+      }
+    }
+
+    function showMicPermissionOverlay() {
+      if (!micPermissionOverlay) {
+        return;
+      }
+      markMicPermissionOverlayShown();
+      setMicPermissionOverlayOpen(true);
+      if (micPermissionOverlayCloseBtn) {
+        micPermissionOverlayCloseBtn.focus({ preventScroll: true });
+      }
+    }
+
+    function hideMicPermissionOverlay(options = {}) {
+      const restoreFocus = Boolean(options?.restoreFocus);
+      setMicPermissionOverlayOpen(false);
+      if (restoreFocus && callBtn) {
+        window.setTimeout(() => {
+          callBtn.focus({ preventScroll: true });
+        }, MIC_PERMISSION_OVERLAY_TRANSITION_MS + 60);
+      }
+    }
+
+    function shouldShowMicPermissionOverlay() {
+      if (!micPermissionOverlay) {
+        return false;
+      }
+      if (!isMobileExperienceForMicOverlay()) {
+        return false;
+      }
+      return !hasShownMicPermissionOverlay();
+    }
+
+    function isMicPermissionBlockError(error) {
+      const errorName = typeof error?.name === "string" ? error.name : "";
+      const normalizedName = errorName.toLowerCase();
+      if (
+        normalizedName === "notallowederror" ||
+        normalizedName === "securityerror" ||
+        normalizedName === "notfounderror" ||
+        normalizedName === "notreadableerror" ||
+        normalizedName === "overconstrainederror" ||
+        normalizedName === "aborterror" ||
+        normalizedName === "notsupportederror"
+      ) {
+        return true;
+      }
+      if (typeof error?.message === "string" && /izin|denied|blocked/i.test(error.message)) {
+        return true;
+      }
+      return false;
+    }
+
+    async function ensureMicrophonePermission() {
+      if (!window.isSecureContext) {
+        const insecureError = new Error("microphone-requires-secure-context");
+        insecureError.name = "SecurityError";
+        throw insecureError;
+      }
+      const mediaDevices = navigator?.mediaDevices;
+      if (!mediaDevices || typeof mediaDevices.getUserMedia !== "function") {
+        const unsupportedError = new Error("media-devices-unavailable");
+        unsupportedError.name = "NotSupportedError";
+        throw unsupportedError;
+      }
+      let stream = null;
+      try {
+        stream = await mediaDevices.getUserMedia({ audio: true });
+      } finally {
+        if (stream && typeof stream.getTracks === "function") {
+          try {
+            stream.getTracks().forEach((track) => {
+              try {
+                track.stop();
+              } catch (_stopError) {
+                // Ignore stop errors.
+              }
+            });
+          } catch (_trackError) {
+            // Ignore cleanup errors.
+          }
+        }
+      }
+    }
+
+    function handleMicrophonePermissionError(error) {
+      console.error("Mikrofon izni alınamadı", error);
+      if (shouldShowMicPermissionOverlay() && isMicPermissionBlockError(error)) {
+        showMicPermissionOverlay();
+      }
+    }
+    const uploadStepLabels = {
+      preparing: { tr: "Hazırlanıyor", en: "Preparing" },
+      requesting: { tr: "Adres alınıyor", en: "Requesting URL" },
+      uploading: { tr: "Yükleniyor", en: "Uploading" },
+      uploaded: { tr: "Tamamlandı", en: "Uploaded" },
+      error: { tr: "Hata", en: "Error" },
+    };
+    function logUploadStep(step, details = "") {
+      const label = uploadStepLabels[step] || { tr: step, en: step };
+      const suffix = details ? ` - ${details}` : "";
+      console.log(
+        `[Görsel Yükleme] ${label.tr} (${label.en})${suffix}`,
+      );
+    }
+    function toSafeFileExtensionFromMime(mime) {
+      switch ((mime || "").toLowerCase()) {
+        case "image/jpeg":
+          return "jpg";
+        case "image/png":
+          return "png";
+        case "image/webp":
+          return "webp";
+        case "image/gif":
+          return "gif";
+        case "image/heic":
+          return "heic";
+        case "image/heif":
+          return "heif";
+        case "image/avif":
+          return "avif";
+        default:
+          return "";
+      }
+    }
+    function toSafeFileExtensionFromName(name) {
+      if (typeof name !== "string") {
+        return "";
+      }
+      const lastDot = name.lastIndexOf(".");
+      if (lastDot === -1) {
+        return "";
+      }
+      const ext = name.slice(lastDot + 1).toLowerCase();
+      if (!/^[a-z0-9]{1,6}$/.test(ext)) {
+        return "";
+      }
+      return ext;
+    }
+    function generateRandomHex(bytes = 4) {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint8Array(bytes);
+        window.crypto.getRandomValues(array);
+        return Array.from(array, (value) =>
+          value.toString(16).padStart(2, "0"),
+        ).join("");
+      }
+      let fallback = "";
+      for (let index = 0; index < bytes; index += 1) {
+        fallback += Math.floor(Math.random() * 256)
+          .toString(16)
+          .padStart(2, "0");
+      }
+      return fallback;
+    }
+    function normalizeFileBase(name) {
+      if (typeof name !== "string" || !name) {
+        return "dosya";
+      }
+      const base = name.replace(/\.[^.]+$/, "");
+      const normalized = base
+        .toLocaleLowerCase("tr-TR")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      return normalized || "dosya";
+    }
+    function prepareUploadMetadata(file) {
+      const originalName = typeof file?.name === "string" ? file.name : "Adsız";
+      const mimeType =
+        typeof file?.type === "string" && file.type
+          ? file.type
+          : "application/octet-stream";
+      const size = Number.isFinite(file?.size) ? Number(file.size) : 0;
+      const extensionFromMime = toSafeFileExtensionFromMime(mimeType);
+      const extensionFromName = toSafeFileExtensionFromName(originalName);
+      const extension = extensionFromMime || extensionFromName;
+      const timestamp = Date.now();
+      const randomHex = generateRandomHex(6);
+      const safeBase = normalizeFileBase(originalName);
+      const safeFileName = extension
+        ? `${timestamp}_${randomHex}_${safeBase}.${extension}`
+        : `${timestamp}_${randomHex}_${safeBase}`;
+      return {
+        preparedAt: timestamp,
+        originalName,
+        mimeType,
+        size,
+        safeFileName,
+      };
+    }
+    function updateImageUploadProgress(bubble, progressValue) {
+      if (!bubble) {
+        return;
+      }
+      const status = bubble.querySelector(".message__media-status");
+      if (!status) {
+        return;
+      }
+      const clamped = Math.max(0, Math.min(100, Math.round(progressValue)));
+      status.dataset.progress = String(clamped);
+      status.textContent = `Yükleniyor… %${clamped}`;
+    }
+    async function uploadFileToR2({ url, file, contentType, onProgress }) {
+      const resolvedUrl = typeof url === "string" ? url : String(url || "");
+      if (!resolvedUrl) {
+        throw new Error("upload-url-missing");
+      }
+
+      if (!(file instanceof Blob)) {
+        const invalidFileError = new Error("upload-invalid-file");
+        invalidFileError.name = "UploadInvalidFileError";
+        throw invalidFileError;
+      }
+
+      const fileContentType =
+        typeof file.type === "string" && file.type.trim() !== ""
+          ? file.type.trim()
+          : "";
+      const normalizedContentType =
+        fileContentType ||
+        (typeof contentType === "string" && contentType.trim() !== ""
+          ? contentType.trim()
+          : "application/octet-stream");
+
+      const totalSize = Number.isFinite(file.size) ? Number(file.size) : 0;
+      console.info("Starting R2 upload", {
+        url: resolvedUrl,
+        contentType: normalizedContentType || undefined,
+        size: totalSize || undefined,
+      });
+
+      const reportProgress = (value) => {
+        if (typeof onProgress !== "function") {
+          return;
+        }
+        try {
+          const clamped = Math.max(0, Math.min(100, Math.round(value)));
+          onProgress(clamped);
+        } catch (progressError) {
+          console.warn("Upload progress callback threw", progressError);
+        }
+      };
+
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let settled = false;
+
+        const markSettled = () => {
+          settled = true;
+        };
+
+        const safeResponseText = () => {
+          try {
+            return typeof xhr.responseText === "string" ? xhr.responseText : "";
+          } catch (_error) {
+            return "";
+          }
+        };
+
+        const logResponseSnapshot = (label) => {
+          try {
+            console.info(`R2 upload ${label}`, {
+              status: xhr.status || 0,
+              statusText: xhr.statusText || "",
+              responseText: safeResponseText(),
+            });
+          } catch (_logError) {
+            // Ignore logging errors.
+          }
+        };
+
+        const getAllHeaders = () => {
+          try {
+            return xhr.getAllResponseHeaders();
+          } catch (_error) {
+            return "";
+          }
+        };
+
+        const parseResponseHeaders = (rawHeaders) => {
+          if (!rawHeaders || typeof rawHeaders !== "string") {
+            return {};
+          }
+          const entries = rawHeaders
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean);
+          const headerMap = {};
+          for (const entry of entries) {
+            const separatorIndex = entry.indexOf(":");
+            if (separatorIndex === -1) {
+              continue;
+            }
+            const key = entry.slice(0, separatorIndex).trim().toLowerCase();
+            const value = entry.slice(separatorIndex + 1).trim();
+            if (key) {
+              headerMap[key] = value;
+            }
+          }
+          return headerMap;
+        };
+
+        const handleTerminalFailure = (eventType, buildError, options = {}) => {
+          if (settled) {
+            return;
+          }
+          const headersMap = parseResponseHeaders(getAllHeaders());
+          const status = xhr.status || 0;
+          const statusText = xhr.statusText || "";
+          const responseText = safeResponseText();
+          const uploadResponse = {
+            status,
+            statusText,
+            responseText,
+            headers: headersMap,
+            url: resolvedUrl,
+            eventType,
+            readyState: xhr.readyState,
+          };
+          const error = buildError(uploadResponse);
+          error.uploadResponse =
+            error.uploadResponse && typeof error.uploadResponse === "object"
+              ? { ...uploadResponse, ...error.uploadResponse }
+              : uploadResponse;
+          markSettled();
+          const consoleMessage = options.consoleMessage ||
+            (eventType === "timeout"
+              ? "R2 upload timeout"
+              : eventType === "abort"
+                ? "R2 upload aborted"
+                : "R2 upload network error");
+          console.error(consoleMessage, {
+            ...uploadResponse,
+            error,
+          });
+          reject(error);
+        };
+
+        xhr.open("PUT", resolvedUrl, true);
+        xhr.responseType = "text";
+        xhr.timeout = 180000;
+
+        try {
+          xhr.setRequestHeader("Content-Type", normalizedContentType);
+        } catch (headerError) {
+          console.warn("Unable to set upload header", {
+            header: "Content-Type",
+            value: normalizedContentType,
+            error: headerError,
+          });
+        }
+
+        reportProgress(0);
+        console.info("R2 upload progress", { percent: 0, loaded: 0, total: totalSize });
+
+        xhr.upload.addEventListener("progress", (event) => {
+          if (settled || !event) {
+            return;
+          }
+          if (event.lengthComputable && event.total > 0) {
+            const progressValue = (event.loaded / event.total) * 100;
+            console.info("R2 upload progress", {
+              percent: Math.max(0, Math.min(100, Math.round(progressValue))),
+              loaded: event.loaded,
+              total: event.total,
+            });
+            reportProgress(progressValue);
+            return;
+          }
+          if (
+            totalSize > 0 &&
+            typeof event.loaded === "number" &&
+            event.loaded >= 0
+          ) {
+            const progressValue = Math.min(99, (event.loaded / totalSize) * 100);
+            console.info("R2 upload progress", {
+              percent: Math.max(0, Math.min(100, Math.round(progressValue))),
+              loaded: event.loaded,
+              total: totalSize,
+            });
+            reportProgress(progressValue);
+          }
+        });
+
+        xhr.addEventListener("load", () => {
+          if (settled) {
+            return;
+          }
+          logResponseSnapshot("load event");
+          const status = xhr.status || 0;
+          const statusText = xhr.statusText || "";
+          const responseText = safeResponseText();
+          const headersMap = parseResponseHeaders(getAllHeaders());
+          const logPayload = {
+            url: resolvedUrl,
+            status,
+            statusText,
+            headers: headersMap,
+            responseText,
+            readyState: xhr.readyState,
+            eventType: "load",
+          };
+
+          if (status === 200 || status === 204) {
+            reportProgress(100);
+            markSettled();
+            console.info("R2 upload succeeded", logPayload);
+            resolve({
+              status,
+              statusText,
+              responseText,
+              headers: headersMap,
+            });
+            return;
+          }
+
+          const error = new Error(`upload-${status || "unknown"}`);
+          error.name = "UploadHttpError";
+          error.uploadResponse = {
+            status,
+            statusText,
+            responseText,
+            headers: headersMap,
+            url: resolvedUrl,
+            eventType: "load",
+            readyState: xhr.readyState,
+          };
+          markSettled();
+          console.error("R2 upload failed", logPayload);
+          reject(error);
+        });
+
+        xhr.addEventListener("error", () => {
+          logResponseSnapshot("error event");
+          handleTerminalFailure(
+            "error",
+            (uploadResponse) => {
+              const networkError = new Error("network-error");
+              networkError.name = "UploadNetworkError";
+              networkError.uploadResponse = uploadResponse;
+              return networkError;
+            },
+          );
+        });
+
+        xhr.addEventListener("timeout", () => {
+          logResponseSnapshot("timeout event");
+          handleTerminalFailure(
+            "timeout",
+            (uploadResponse) => {
+              const timeoutError = new Error("upload-408");
+              timeoutError.name = "UploadTimeoutError";
+              timeoutError.uploadResponse = {
+                ...uploadResponse,
+                status: uploadResponse.status || 408,
+              };
+              return timeoutError;
+            },
+          );
+        });
+
+        xhr.addEventListener("abort", () => {
+          logResponseSnapshot("abort event");
+          handleTerminalFailure(
+            "abort",
+            (uploadResponse) => {
+              const abortError = new Error("upload-aborted");
+              abortError.name = "UploadAbortError";
+              abortError.uploadResponse = uploadResponse;
+              return abortError;
+            },
+            { consoleMessage: "R2 upload aborted" },
+          );
+        });
+
+        try {
+          xhr.send(file);
+          logResponseSnapshot("sent");
+        } catch (sendError) {
+          handleTerminalFailure(
+            "send",
+            () => {
+              const sendException = new Error("upload-send-failed");
+              sendException.name = "UploadSendError";
+              sendException.cause = sendError;
+              sendException.uploadResponse = {
+                url: resolvedUrl,
+                eventType: "send",
+              };
+              return sendException;
+            },
+            { consoleMessage: "R2 upload send failed" },
+          );
+        }
+      });
+    }
+    const uploadErrorPopover = createUploadErrorPopover();
+    const uploadErrorPopoverText = uploadErrorPopover
+      ? uploadErrorPopover.querySelector(".upload-error-popover__text")
+      : null;
+    let uploadErrorPopoverTimer = null;
+    let activeUploadErrorAnchor = null;
+    document.addEventListener("pointerdown", handleUploadErrorPopoverPointerDown);
+    window.addEventListener("scroll", hideUploadErrorPopover, true);
     const updateControlsOffset = () => {
       if (!controls) {
         return;
@@ -1650,6 +3205,7 @@
     const nicknameOverlay = document.getElementById("nickname-overlay");
     const nicknameInput = document.getElementById("nickname");
     const nicknameSubmit = document.getElementById("nickname-submit");
+    const nicknameHelper = document.getElementById("nickname-helper");
     const skipConfirmOverlay = document.getElementById("skip-confirm-overlay");
     const skipConfirmCancel = document.getElementById("skip-confirm-cancel");
     const skipConfirmConfirm = document.getElementById("skip-confirm-confirm");
@@ -1660,20 +3216,57 @@
     const callRequestCancelBtn = document.getElementById("call-request-cancel");
     const callRequestAcceptBtn = document.getElementById("call-request-accept");
     const callRequestRejectBtn = document.getElementById("call-request-reject");
+    const reportOverlay = document.getElementById("report-overlay");
+    const reportOverlayMessage = document.getElementById("report-overlay-message");
+    const reportConfirmBtn = document.getElementById("report-overlay-confirm");
+    const reportCancelBtn = document.getElementById("report-overlay-cancel");
     const MATCH_SEARCH_TEXT = "Yeni eşleşme aranıyor...";
     const DISCONNECT_SEARCH_MESSAGE =
       "Bağlantı sonlandı, yeni eşleşme aranıyor…";
     const WAITING_STATUS_TEXT =
       "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
+    const BLOCK_SEARCH_TEXT = "Kullanıcı engellendi, yeni eşleşme aranıyor...";
     const MATCH_SEARCH_COUNTDOWN_SECONDS = 5;
     const DISCONNECT_SEARCH_COUNTDOWN_SECONDS = 3;
     const SKIP_SEARCH_COUNTDOWN_SECONDS = 5;
     const CALL_COOLDOWN_SECONDS = 15;
     const CALL_REQUEST_TIMEOUT_SECONDS = 10;
     const SUPPORTS_NOTIFICATIONS = "Notification" in window;
+    const USER_TYPING_IDLE_MS = 3500;
+    const PARTNER_TYPING_TIMEOUT_MS = 4000;
+
+    const blockedUsers = new Set();
+    try {
+      const storedBlockedUsers = sessionStorage.getItem("blockedUsers");
+      if (storedBlockedUsers) {
+        const parsed = JSON.parse(storedBlockedUsers);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((value) => {
+            if (typeof value === "string" && value) {
+              blockedUsers.add(value);
+            }
+          });
+        }
+      }
+    } catch (error) {
+      blockedUsers.clear();
+    }
 
     let isMatched = false;
     let nickname = "";
+    let currentPartnerId = null;
+    let currentPartnerNickname = "";
+    let reportOverlayOpen = false;
+    let isAttachmentSheetOpen = false;
+    let lastFocusBeforeAttachment = null;
+    let partnerTypingTimer = null;
+    let lastTypingState = false;
+    let typingResetTimer = null;
+
+    window.addEventListener("resize", () => {
+      refreshHeaderNicknameDisplay();
+      hideUploadErrorPopover();
+    });
     let isCoolingDown = false;
     let cooldownTimer = null;
     let waitingStatusBubble = null;
@@ -1686,6 +3279,7 @@
     let audioContext = null;
     let searchCountdownTimer = null;
     let searchCountdownRemaining = 0;
+    let searchCountdownReason = null;
     let isSearchCountdownActive = false;
     let notificationsEnabled =
       SUPPORTS_NOTIFICATIONS && Notification.permission === "granted";
@@ -1695,6 +3289,17 @@
     let isCallCoolingDown = false;
     let callCooldownTimer = null;
     let callCooldownRemaining = 0;
+
+    function persistBlockedUsers() {
+      try {
+        sessionStorage.setItem(
+          "blockedUsers",
+          JSON.stringify(Array.from(blockedUsers))
+        );
+      } catch (error) {
+        // ignore storage errors
+      }
+    }
 
     function createWaitingMiniGame(container, startButton) {
       const GAME_DURATION_SECONDS = 60;
@@ -2147,6 +3752,7 @@
     function clearSearchCountdown() {
       stopSearchCountdownTimer();
       searchCountdownRemaining = 0;
+      searchCountdownReason = null;
       if (isSearchCountdownActive) {
         isSearchCountdownActive = false;
         updateControls();
@@ -2161,6 +3767,7 @@
         finalText = WAITING_STATUS_TEXT,
         countdownFormatter,
         onCountdownFinished,
+        reason = null,
       } = {}
     ) {
       clearSearchCountdown();
@@ -2177,6 +3784,7 @@
 
       isSearchCountdownActive = true;
       searchCountdownRemaining = seconds;
+      searchCountdownReason = reason;
       setWaitingStatusText(formatCountdown(searchCountdownRemaining));
       updateControls();
       updateMiniGameInvitationVisibility();
@@ -2194,11 +3802,13 @@
         stopSearchCountdownTimer();
         searchCountdownRemaining = 0;
         isSearchCountdownActive = false;
+        const finishedReason = searchCountdownReason;
+        searchCountdownReason = null;
         updateControls();
         updateMiniGameInvitationVisibility();
 
         if (typeof onCountdownFinished === "function") {
-          onCountdownFinished();
+          onCountdownFinished(finishedReason);
         }
 
         if (finalText) {
@@ -2342,11 +3952,7 @@
       }
 
       try {
-        const notification = new Notification(title, {
-          body,
-          icon: "/assets/logo.png",
-          badge: "/assets/favicon-96x96.png",
-        });
+        const notification = new Notification(title, { body });
         notification.onclick = () => {
           window.focus();
         };
@@ -2390,19 +3996,232 @@
       oscillator.stop(ctx.currentTime + duration + 0.02);
     }
 
+    const nicknameLetterPattern = (() => {
+      try {
+        return new RegExp("\\\\p{L}", "u");
+      } catch (_error) {
+        return /[A-Za-z\u00C0-\u024F]/u;
+      }
+    })();
+
     function sanitizeNickname(value) {
-      return value.replace(/\s+/g, " ").trim();
+      if (typeof value !== "string") {
+        return "";
+      }
+
+      const normalized =
+        typeof value.normalize === "function" ? value.normalize("NFKC") : value;
+
+      let filtered = "";
+      for (const char of normalized) {
+        nicknameLetterPattern.lastIndex = 0;
+        if (nicknameLetterPattern.test(char)) {
+          filtered += char;
+        }
+      }
+
+      return filtered.toLocaleUpperCase("tr-TR");
     }
+
+    function isNicknameValid(value) {
+      return /^[\p{L}]{1,12}$/u.test(value);
+    }
+
+    function normalizeNicknameInput(preserveCaret = false) {
+      if (!nicknameInput) {
+        return "";
+      }
+
+      const rawValue = nicknameInput.value ?? "";
+      const sanitized = sanitizeNickname(rawValue).slice(0, 12);
+
+      if (preserveCaret) {
+        const selectionStart = nicknameInput.selectionStart ?? rawValue.length;
+        const caretTarget = sanitizeNickname(rawValue.slice(0, selectionStart))
+          .slice(0, 12)
+          .length;
+        if (rawValue !== sanitized) {
+          nicknameInput.value = sanitized;
+        }
+        if (document.activeElement === nicknameInput) {
+          nicknameInput.setSelectionRange(caretTarget, caretTarget);
+        }
+      } else if (rawValue !== sanitized) {
+        nicknameInput.value = sanitized;
+      }
+
+      return sanitized;
+    }
+
+    function updateNicknameValidity(options = {}) {
+      if (!nicknameInput || !nicknameSubmit) {
+        return false;
+      }
+
+      const preserveCaret = Boolean(options.preserveCaret);
+      const sanitized = normalizeNicknameInput(preserveCaret);
+      const valid = isNicknameValid(sanitized);
+      nicknameSubmit.disabled = !valid;
+
+      if (nicknameHelper) {
+        if (valid) {
+          nicknameHelper.textContent = "";
+          nicknameHelper.hidden = true;
+        } else {
+          nicknameHelper.hidden = false;
+          nicknameHelper.textContent =
+            "Rumuzun 1-12 harften oluşmalı. Rakam veya sembol kullanma.";
+        }
+      }
+
+      return valid;
+    }
+
+    function updateHeaderNicknameDisplay(value) {
+      if (!headerNicknameEl) {
+        return;
+      }
+
+      const cleaned = sanitizeNickname(value ?? "").slice(0, 12);
+      const displayValue = cleaned || "Sen";
+      headerNicknameEl.textContent = displayValue;
+      headerNicknameEl.title = displayValue;
+
+      if (headerNicknameContainer) {
+        const computed = window.getComputedStyle(headerNicknameContainer);
+        const baseFontSizeValue =
+          computed.getPropertyValue("--nickname-font-size-base") ||
+          computed.fontSize;
+        const baseFontSize = parseFloat(baseFontSizeValue) || 15;
+        const minFontSize = Math.max(baseFontSize - 4, 12);
+        const length = Math.max(displayValue.length, 1);
+        const shrinkSteps = Math.max(length - 6, 0);
+        const dynamicFontSize = Math.max(
+          minFontSize,
+          Math.min(baseFontSize, baseFontSize - shrinkSteps * 0.6),
+        );
+
+        headerNicknameContainer.style.setProperty(
+          "--nickname-font-size",
+          `${dynamicFontSize}px`,
+        );
+
+        const baseGapValue =
+          computed.getPropertyValue("--nickname-gap") || computed.gap || "8px";
+        const baseGap = parseFloat(baseGapValue) || 8;
+        const minGap = Math.max(baseGap - 4, 4);
+        const dynamicGap = length >= 11 ? minGap : baseGap;
+
+        headerNicknameContainer.style.setProperty(
+          "--nickname-gap",
+          `${dynamicGap}px`,
+        );
+      }
+    }
+
+    function refreshHeaderNicknameDisplay() {
+      const sourceNickname =
+        isMatched && currentPartnerNickname
+          ? currentPartnerNickname
+          : nickname;
+      updateHeaderNicknameDisplay(sourceNickname);
+    }
+
+    function renderPartnerTypingIndicatorContent() {
+      if (!headerPartnerStatus) {
+        return;
+      }
+
+      headerPartnerStatus.innerHTML = "";
+      headerPartnerStatus.classList.add("app-header__status--dots");
+
+      const dotsWrapper = document.createElement("span");
+      dotsWrapper.className = "app-header__status-dots";
+      dotsWrapper.setAttribute("aria-hidden", "true");
+      for (let index = 0; index < 3; index += 1) {
+        const dot = document.createElement("span");
+        dot.className = "app-header__status-dot";
+        dotsWrapper.appendChild(dot);
+      }
+      headerPartnerStatus.appendChild(dotsWrapper);
+
+      const srText = document.createElement("span");
+      srText.className = "visually-hidden";
+      srText.textContent = "yazıyor...";
+      headerPartnerStatus.appendChild(srText);
+    }
+
+    function hidePartnerTypingIndicator() {
+      if (partnerTypingTimer) {
+        clearTimeout(partnerTypingTimer);
+        partnerTypingTimer = null;
+      }
+      if (!headerPartnerStatus) {
+        return;
+      }
+      headerPartnerStatus.innerHTML = "";
+      headerPartnerStatus.classList.remove("app-header__status--dots");
+      headerPartnerStatus.dataset.visible = "false";
+    }
+
+    function showPartnerTypingIndicator() {
+      if (!headerPartnerStatus) {
+        return;
+      }
+      renderPartnerTypingIndicatorContent();
+      headerPartnerStatus.dataset.visible = "true";
+      if (partnerTypingTimer) {
+        clearTimeout(partnerTypingTimer);
+      }
+      partnerTypingTimer = setTimeout(() => {
+        hidePartnerTypingIndicator();
+      }, PARTNER_TYPING_TIMEOUT_MS);
+    }
+
+    function handleViewportChangeForTypingIndicator() {
+      if (!headerPartnerStatus) {
+        return;
+      }
+      if (headerPartnerStatus.dataset.visible === "true") {
+        renderPartnerTypingIndicatorContent();
+      }
+    }
+
+    if (mobileViewportMatcher) {
+      if (typeof mobileViewportMatcher.addEventListener === "function") {
+        mobileViewportMatcher.addEventListener(
+          "change",
+          handleViewportChangeForTypingIndicator,
+        );
+      } else if (typeof mobileViewportMatcher.addListener === "function") {
+        mobileViewportMatcher.addListener(handleViewportChangeForTypingIndicator);
+      }
+    }
+
+    hidePartnerTypingIndicator();
+
+    const initialNicknameFromBody =
+      document.body && document.body.dataset
+        ? sanitizeNickname(document.body.dataset.nickname || "").slice(0, 12)
+        : "";
+    if (initialNicknameFromBody) {
+      nickname = initialNicknameFromBody;
+    }
+    refreshHeaderNicknameDisplay();
+    updateNicknameValidity();
 
     function showNicknameOverlay() {
       nicknameOverlay.hidden = false;
       nicknameOverlay.setAttribute("aria-hidden", "false");
+      document.body.classList.add("nickname-overlay-open");
+      updateNicknameValidity({ preserveCaret: true });
       requestAnimationFrame(() => nicknameInput.focus());
     }
 
     function hideNicknameOverlay() {
       nicknameOverlay.hidden = true;
       nicknameOverlay.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("nickname-overlay-open");
     }
 
     function clearCooldown() {
@@ -2414,7 +4233,7 @@
     }
 
     function updateCallButtonVisualState() {
-      if (!callBtn || !callBtnLabel) {
+      if (!callBtn) {
         return;
       }
       if (isCallCoolingDown) {
@@ -2422,14 +4241,20 @@
         if (callBtnIcon) {
           callBtnIcon.hidden = true;
         }
-        callBtnLabel.textContent = `${safeRemaining} sn`;
+        if (callBtnLabel) {
+          callBtnLabel.textContent = `${safeRemaining} sn`;
+        }
         callBtn.dataset.countdown = "true";
+        callBtn.setAttribute("aria-label", `Arama (Call) - ${safeRemaining} saniye`);
       } else {
         if (callBtnIcon) {
           callBtnIcon.hidden = false;
         }
-        callBtnLabel.textContent = "Ara";
+        if (callBtnLabel) {
+          callBtnLabel.textContent = "Ara";
+        }
         delete callBtn.dataset.countdown;
+        callBtn.setAttribute("aria-label", "Arama (Call)");
       }
     }
 
@@ -2484,13 +4309,63 @@
       const hasMessage = Boolean(msg.value.trim());
       msg.disabled = !isMatched;
       sendBtn.disabled = !isMatched || !hasMessage || isCoolingDown;
-      nextBtn.disabled = !isMatched || isSearchCountdownActive;
+      const isNextDisabled = !isMatched || isSearchCountdownActive;
+      if (nextBtn) {
+        nextBtn.disabled = isNextDisabled;
+      }
+
+      if (reportBtn) {
+        reportBtn.disabled = !isMatched || isSearchCountdownActive;
+      }
+
+      if (attachmentButton) {
+        attachmentButton.disabled = !isMatched;
+      }
+
+      const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
+      const hasActiveRequest = callRequestController?.isActive?.() ?? false;
+      const isCallDisabled =
+        !isMatched || isCallBusy || hasActiveRequest || isCallCoolingDown;
+
       if (callBtn) {
-        const isCallBusy = voiceCallManager?.isBusy?.() ?? false;
-        const hasActiveRequest = callRequestController?.isActive?.() ?? false;
-        callBtn.disabled =
-          !isMatched || isCallBusy || hasActiveRequest || isCallCoolingDown;
+        callBtn.disabled = isCallDisabled;
         updateCallButtonVisualState();
+      }
+    }
+
+    function setUserTypingState(nextState) {
+      const desiredState = Boolean(nextState) && isMatched;
+      if (!desiredState) {
+        if (typingResetTimer) {
+          clearTimeout(typingResetTimer);
+          typingResetTimer = null;
+        }
+      }
+
+      if (lastTypingState === desiredState) {
+        if (desiredState) {
+          if (typingResetTimer) {
+            clearTimeout(typingResetTimer);
+          }
+          typingResetTimer = setTimeout(() => {
+            setUserTypingState(false);
+          }, USER_TYPING_IDLE_MS);
+        }
+        return;
+      }
+
+      lastTypingState = desiredState;
+      if (socket.connected && isMatched) {
+        socket.emit("typing", { isTyping: desiredState });
+      }
+
+      if (desiredState) {
+        if (typingResetTimer) {
+          clearTimeout(typingResetTimer);
+        }
+        typingResetTimer = setTimeout(() => {
+          setUserTypingState(false);
+        }, USER_TYPING_IDLE_MS);
       }
     }
 
@@ -2498,13 +4373,624 @@
       isMatched = state;
       if (!state) {
         clearCooldown();
+        currentPartnerId = null;
+        currentPartnerNickname = "";
+        closeReportOverlay({ immediate: true });
+        closeAttachmentSheet({ immediate: true, restoreFocus: false });
+        setUserTypingState(false);
+        hidePartnerTypingIndicator();
+        closeImagePreview();
       } else {
         hideWaitingStatus();
+        closeReportOverlay({ immediate: true });
+        hidePartnerTypingIndicator();
+        closeImagePreview();
       }
-    voiceCallManager?.handleMatchStateChange?.(state);
-    callRequestController?.handleMatchStateChange?.(state);
-    updateControls();
-  }
+      voiceCallManager?.handleMatchStateChange?.(state);
+      callRequestController?.handleMatchStateChange?.(state);
+      updateControls();
+      hideUploadErrorPopover();
+      refreshHeaderNicknameDisplay();
+    }
+
+    function openAttachmentSheet() {
+      if (!attachmentSheet || !isMatched || isAttachmentSheetOpen) {
+        return;
+      }
+      isAttachmentSheetOpen = true;
+      attachmentSheet.dataset.open = "true";
+      attachmentSheet.setAttribute("aria-hidden", "false");
+      lastFocusBeforeAttachment =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const focusTarget =
+        (attachmentCameraBtn && !attachmentCameraBtn.disabled
+          ? attachmentCameraBtn
+          : attachmentPhotoBtn) || attachmentSheet.querySelector("button");
+      if (focusTarget && typeof focusTarget.focus === "function") {
+        window.requestAnimationFrame(() => {
+          focusTarget.focus({ preventScroll: true });
+        });
+      }
+    }
+
+    function closeAttachmentSheet(options = {}) {
+      if (!attachmentSheet) {
+        return;
+      }
+      const immediate = Boolean(options.immediate);
+      const restoreFocus = options.restoreFocus !== false;
+      attachmentSheet.removeAttribute("data-open");
+      attachmentSheet.setAttribute("aria-hidden", "true");
+      const previousFocus = lastFocusBeforeAttachment;
+      lastFocusBeforeAttachment = null;
+      isAttachmentSheetOpen = false;
+      if (restoreFocus && previousFocus && typeof previousFocus.focus === "function") {
+        const delay = immediate ? 0 : 220;
+        setTimeout(() => {
+          previousFocus.focus({ preventScroll: true });
+        }, delay);
+      }
+    }
+
+    function readImageDimensions(url) {
+      return new Promise((resolve) => {
+        if (!url) {
+          resolve(null);
+          return;
+        }
+        const img = new Image();
+        img.decoding = "async";
+        img.onload = () => {
+          resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        };
+        img.onerror = () => {
+          resolve(null);
+        };
+        img.src = url;
+      });
+    }
+
+    function getRetryButton(bubble) {
+      return bubble?.querySelector?.(".message__media-retry") || null;
+    }
+
+    function resetRetryButtonState(bubble, disabled) {
+      const retryBtn = getRetryButton(bubble);
+      if (retryBtn) {
+        retryBtn.disabled = Boolean(disabled);
+      }
+    }
+
+    function handleUploadErrorPopoverPointerDown(event) {
+      if (!uploadErrorPopover || uploadErrorPopover.hidden) {
+        return;
+      }
+      const target = event ? event.target : null;
+      if (!target) {
+        hideUploadErrorPopover();
+        return;
+      }
+      const anchorContainsTarget =
+        activeUploadErrorAnchor &&
+        typeof activeUploadErrorAnchor.contains === "function" &&
+        activeUploadErrorAnchor.contains(target);
+      if (
+        uploadErrorPopover === target ||
+        uploadErrorPopover.contains(target) ||
+        anchorContainsTarget
+      ) {
+        return;
+      }
+      hideUploadErrorPopover();
+    }
+
+    function createUploadErrorPopover() {
+      if (typeof document === "undefined" || !document.body) {
+        return null;
+      }
+      const existing = document.getElementById("upload-error-popover");
+      if (existing) {
+        existing.hidden = true;
+        existing.dataset.open = "false";
+        return existing;
+      }
+      const element = document.createElement("div");
+      element.id = "upload-error-popover";
+      element.className = "upload-error-popover";
+      element.setAttribute("role", "status");
+      element.setAttribute("aria-live", "polite");
+      element.hidden = true;
+      const textElement = document.createElement("span");
+      textElement.className = "upload-error-popover__text";
+      element.appendChild(textElement);
+      document.body.appendChild(element);
+      return element;
+    }
+
+    function showUploadErrorPopover(anchor, message) {
+      if (!uploadErrorPopover || !uploadErrorPopoverText || !anchor) {
+        return;
+      }
+      const textValue = message ? message.toString().trim() : "";
+      if (!textValue) {
+        hideUploadErrorPopover();
+        return;
+      }
+      if (!document.body.contains(uploadErrorPopover)) {
+        document.body.appendChild(uploadErrorPopover);
+      }
+      uploadErrorPopoverText.textContent = textValue;
+      uploadErrorPopover.hidden = false;
+      uploadErrorPopover.dataset.open = "false";
+      window.requestAnimationFrame(() => {
+        const anchorRect = anchor.getBoundingClientRect();
+        const popRect = uploadErrorPopover.getBoundingClientRect();
+        let top = anchorRect.top - popRect.height - 12;
+        if (top < 12) {
+          top = anchorRect.bottom + 12;
+        }
+        let left = anchorRect.left + anchorRect.width / 2 - popRect.width / 2;
+        const maxLeft = window.innerWidth - popRect.width - 12;
+        if (left < 12) {
+          left = 12;
+        } else if (left > maxLeft) {
+          left = maxLeft;
+        }
+        uploadErrorPopover.style.top = `${Math.round(top)}px`;
+        uploadErrorPopover.style.left = `${Math.round(left)}px`;
+        uploadErrorPopover.dataset.open = "true";
+      });
+      if (uploadErrorPopoverTimer) {
+        window.clearTimeout(uploadErrorPopoverTimer);
+      }
+      uploadErrorPopoverTimer = window.setTimeout(() => {
+        hideUploadErrorPopover();
+      }, 3800);
+      activeUploadErrorAnchor = anchor;
+    }
+
+    function hideUploadErrorPopover() {
+      if (!uploadErrorPopover) {
+        return;
+      }
+      if (uploadErrorPopoverTimer) {
+        window.clearTimeout(uploadErrorPopoverTimer);
+        uploadErrorPopoverTimer = null;
+      }
+      if (uploadErrorPopover.dataset.open === "true") {
+        uploadErrorPopover.dataset.open = "false";
+        const element = uploadErrorPopover;
+        window.setTimeout(() => {
+          if (element.dataset.open !== "true") {
+            element.hidden = true;
+            element.style.top = "";
+            element.style.left = "";
+          }
+        }, 180);
+      } else if (!uploadErrorPopover.hidden) {
+        uploadErrorPopover.hidden = true;
+        uploadErrorPopover.style.top = "";
+        uploadErrorPopover.style.left = "";
+      }
+      activeUploadErrorAnchor = null;
+    }
+
+    function describeImageUploadError(error) {
+      const fallbackOverlay = "Yükleme tamamlanamadı";
+      let rawMessage = "";
+      if (error && typeof error === "object" && typeof error.message === "string") {
+        rawMessage = error.message;
+      } else if (typeof error === "string") {
+        rawMessage = error;
+      }
+      const normalized = rawMessage.toLowerCase();
+
+      if (
+        error &&
+        typeof error === "object" &&
+        error.uploadResponse &&
+        typeof error.uploadResponse === "object"
+      ) {
+        const { status, statusText, responseText } = error.uploadResponse;
+        const numericStatus =
+          typeof status === "number" && Number.isFinite(status)
+            ? status
+            : Number.parseInt(status, 10);
+        const trimmedBody =
+          typeof responseText === "string" ? responseText.trim() : "";
+        const hasDetailedResponse =
+          Number.isFinite(numericStatus) ||
+          (typeof statusText === "string" && statusText.trim() !== "") ||
+          trimmedBody !== "";
+
+        if (hasDetailedResponse) {
+          const statusLabel = [
+            Number.isFinite(numericStatus) ? String(numericStatus) : "",
+            typeof statusText === "string" ? statusText.trim() : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          const overlayMessage = trimmedBody || statusLabel || fallbackOverlay;
+
+          const logFragments = [];
+          if (Number.isFinite(numericStatus)) {
+            logFragments.push(`status ${numericStatus}`);
+          }
+          if (statusText) {
+            logFragments.push(String(statusText));
+          }
+          if (trimmedBody && trimmedBody !== statusText) {
+            logFragments.push(`body: ${trimmedBody}`);
+          }
+
+          return {
+            overlayMessage,
+            logMessage:
+              logFragments.length > 0
+                ? `R2 upload failed (${logFragments.join(" | ")})`
+                : "R2 upload failed",
+            rawMessage,
+          };
+        }
+      }
+
+      if (rawMessage.indexOf("presign-") === 0) {
+        const statusCode = rawMessage.slice("presign-".length) || "unknown";
+        let overlayMessage = "Yükleme hazırlığı başarısız";
+        const leading = statusCode.charAt(0);
+        if (statusCode === "429") {
+          overlayMessage = IMAGE_UPLOAD_RATE_LIMIT_MESSAGE;
+        } else if (statusCode === "503") {
+          overlayMessage = "Yükleme servisi kullanılamıyor";
+        } else if (leading === "4") {
+          overlayMessage = "Sunucu dosyayı reddetti";
+        } else if (leading === "5") {
+          overlayMessage = "Yükleme servisi hata verdi";
+        }
+        return {
+          overlayMessage,
+          logMessage: `Presign request failed with status ${statusCode}`,
+          rawMessage,
+        };
+      }
+
+      if (rawMessage.indexOf("upload-") === 0) {
+        const statusCode = rawMessage.slice("upload-".length) || "unknown";
+        let overlayMessage = "Yükleme tamamlanamadı";
+        const leading = statusCode.charAt(0);
+        if (statusCode === "408" || statusCode === "504") {
+          overlayMessage = "Zaman aşımı";
+        } else if (leading === "4") {
+          overlayMessage = "Sunucu dosyayı reddetti";
+        }
+        return {
+          overlayMessage,
+          logMessage: `R2 upload failed with status ${statusCode}`,
+          rawMessage,
+        };
+      }
+
+      if (normalized === "invalid-presign") {
+        return {
+          overlayMessage: "Yükleme hazırlığı başarısız",
+          logMessage: "Received invalid presign payload",
+          rawMessage,
+        };
+      }
+
+      const isAbortError =
+        error &&
+        typeof error === "object" &&
+        ((error.name && error.name === "AbortError") ||
+          (error.cause && error.cause.name === "AbortError"));
+      if (isAbortError || normalized.indexOf("timeout") !== -1) {
+        const logMessage = rawMessage || "Upload timed out";
+        return {
+          overlayMessage: "Zaman aşımı",
+          logMessage,
+          rawMessage,
+        };
+      }
+
+      if (error && typeof error === "object" && error.name === "TypeError" && !rawMessage) {
+        return {
+          overlayMessage: "Ağ hatası",
+          logMessage: "Network error while uploading image",
+          rawMessage,
+        };
+      }
+
+      if (normalized.indexOf("network") !== -1) {
+        const logMessage = rawMessage || "Network error while uploading image";
+        return {
+          overlayMessage: "Ağ hatası",
+          logMessage,
+          rawMessage,
+        };
+      }
+
+      const logMessage = rawMessage || (error && typeof error === "object" && error.toString ? error.toString() : "Unknown error");
+      return {
+        overlayMessage: fallbackOverlay,
+        logMessage,
+        rawMessage,
+      };
+    }
+
+    async function performImageUpload(bubble) {
+      const uploadEntry = pendingImageUploads.get(bubble);
+      if (!uploadEntry) {
+        return;
+      }
+
+      const { file, dimensions, objectUrl, metadata } = uploadEntry;
+      const uploadMetadata = metadata || prepareUploadMetadata(file);
+      uploadEntry.metadata = uploadMetadata;
+      let userErrorMessage = IMAGE_UPLOAD_ERROR_MESSAGE;
+
+      resetRetryButtonState(bubble, true);
+      updateImageMessageState(bubble, "uploading");
+      updateImageUploadProgress(bubble, 0);
+
+      try {
+        if (!uploadEntry.loggedPreparing) {
+          logUploadStep("preparing", uploadMetadata.safeFileName);
+          uploadEntry.loggedPreparing = true;
+        }
+        logUploadStep("requesting", uploadMetadata.safeFileName);
+        const presignResponse = await fetch("/api/uploads/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentType: uploadMetadata.mimeType || file.type || "image/jpeg",
+            fileName: uploadMetadata.safeFileName,
+            nickname,
+            socketId: currentSocketId,
+            fileSize: uploadMetadata.size || file.size,
+            originalName: uploadMetadata.originalName,
+          }),
+        });
+
+        if (!presignResponse.ok) {
+          let errorBody = null;
+          try {
+            errorBody = await presignResponse.json();
+          } catch (parseError) {
+            errorBody = null;
+          }
+
+          if (presignResponse.status === 429 || errorBody?.error === "rate_limited") {
+            userErrorMessage = IMAGE_UPLOAD_RATE_LIMIT_MESSAGE;
+          } else if (presignResponse.status === 413 || errorBody?.error === "file_too_large") {
+            userErrorMessage = "Görsel 10 MB veya daha küçük olmalı.";
+          }
+
+          throw new Error(`presign-${presignResponse.status}`);
+        }
+
+        const presignData = await presignResponse.json();
+        if (!presignData?.uploadUrl || !presignData?.assetUrl || !presignData?.key) {
+          throw new Error("invalid-presign");
+        }
+
+        logUploadStep("uploading", uploadMetadata.safeFileName);
+        const uploadResult = await uploadFileToR2({
+          url: presignData.uploadUrl,
+          file,
+          contentType: presignData.contentType || uploadMetadata.mimeType || file.type,
+          onProgress: (progressValue) => {
+            updateImageUploadProgress(bubble, progressValue);
+          },
+        });
+
+        updateImageUploadProgress(bubble, 100);
+
+        if (uploadResult.status !== 200 && uploadResult.status !== 204) {
+          throw new Error(`upload-${uploadResult.status}`);
+        }
+
+        logUploadStep("uploaded", uploadMetadata.safeFileName);
+
+        updateImageMessageSource(bubble, presignData.assetUrl, dimensions || {});
+        updateImageMessageState(bubble, "sent");
+        bubble.dataset.imageUrl = presignData.assetUrl;
+
+        socket.emit("image-message", {
+          url: presignData.assetUrl,
+          key: presignData.key,
+          width: dimensions?.width,
+          height: dimensions?.height,
+          nickname,
+        });
+
+        if (objectUrl) {
+          try {
+            URL.revokeObjectURL(objectUrl);
+          } catch (revokeError) {
+            console.warn("Preview URL could not be revoked", revokeError);
+          }
+        }
+
+        pendingImageUploads.delete(bubble);
+        const retryButton = getRetryButton(bubble);
+        if (retryButton) {
+          retryButton.remove();
+        }
+      } catch (error) {
+        logUploadStep("error", uploadMetadata.safeFileName);
+        console.error("Image upload failed", {
+          message: error && typeof error === "object" ? error.message : String(error),
+          uploadResponse:
+            error && typeof error === "object" && "uploadResponse" in error
+              ? error.uploadResponse
+              : undefined,
+          stack: error && typeof error === "object" && error.stack ? error.stack : undefined,
+        });
+        const errorDetails = describeImageUploadError(error);
+        updateImageMessageState(bubble, "error", {
+          errorMessage: errorDetails.overlayMessage,
+          errorReason: errorDetails.logMessage,
+        });
+        uploadEntry.loggedPreparing = false;
+        const statusElement = bubble.querySelector(".message__media-status");
+        if (statusElement) {
+          showUploadErrorPopover(statusElement, errorDetails.overlayMessage);
+        }
+        console.error("Görsel yüklenemedi", errorDetails.logMessage, error);
+        appendMessage(userErrorMessage, "system");
+        resetRetryButtonState(bubble, false);
+      }
+    }
+
+    async function handleImageFileSelection(file) {
+      if (!file || !isMatched) {
+        return;
+      }
+
+      if (!/^image\//i.test(file.type || "")) {
+        appendMessage("Sadece görsel dosyaları gönderebilirsin.", "system");
+        return;
+      }
+
+      if (file.size > MAX_IMAGE_UPLOAD_SIZE_BYTES) {
+        appendMessage("Images must be 10 MB or smaller.", "system");
+        return;
+      }
+
+      setUserTypingState(false);
+
+      const objectUrl = URL.createObjectURL(file);
+      let dimensions = null;
+
+      try {
+        dimensions = await readImageDimensions(objectUrl);
+      } catch (error) {
+        dimensions = null;
+      }
+
+      const metadata = prepareUploadMetadata(file);
+      logUploadStep("preparing", metadata.safeFileName);
+
+      const bubble = appendImageMessage({
+        src: objectUrl,
+        type: "me",
+        prefixText: nickname || "Sen",
+        state: "uploading",
+        width: dimensions?.width,
+        height: dimensions?.height,
+        altText: "Gönderdiğin görsel",
+      });
+
+      pendingImageUploads.set(bubble, {
+        file,
+        dimensions,
+        objectUrl,
+        metadata,
+        loggedPreparing: true,
+      });
+      resetRetryButtonState(bubble, true);
+      await performImageUpload(bubble);
+    }
+
+    function retryImageUpload(bubble) {
+      if (!bubble || bubble.dataset.state === "uploading") {
+        return;
+      }
+
+      if (!pendingImageUploads.has(bubble)) {
+        return;
+      }
+
+      performImageUpload(bubble);
+    }
+
+    function triggerAttachmentInput(input) {
+      if (!input) {
+        return;
+      }
+      input.value = "";
+      input.click();
+    }
+
+    function resetReportOverlayButtons() {
+      if (reportConfirmBtn) {
+        reportConfirmBtn.disabled = false;
+      }
+      if (reportCancelBtn) {
+        reportCancelBtn.disabled = false;
+      }
+    }
+
+    function updateReportOverlayMessage() {
+      if (!reportOverlayMessage) {
+        return;
+      }
+      const displayName = currentPartnerNickname || "YABANCI";
+      reportOverlayMessage.textContent = "";
+      const firstLine = document.createTextNode(
+        `${displayName} adlı kişiyi raporlamak istediğine emin misin?`
+      );
+      const lineBreak = document.createElement("br");
+      const secondLine = document.createTextNode(
+        "Eğer evet dersen bir daha senin karşına çıkmayacak ve muhabbeti keseceksiniz."
+      );
+      reportOverlayMessage.append(firstLine, lineBreak, secondLine);
+    }
+
+    function openReportOverlay() {
+      if (!reportOverlay || reportOverlayOpen || !isMatched || !currentPartnerId) {
+        return;
+      }
+      updateReportOverlayMessage();
+      resetReportOverlayButtons();
+      reportOverlay.hidden = false;
+      reportOverlay.dataset.open = "false";
+      reportOverlayOpen = true;
+      requestAnimationFrame(() => {
+        if (reportOverlayOpen) {
+          reportOverlay.dataset.open = "true";
+        }
+      });
+      if (reportConfirmBtn) {
+        setTimeout(() => {
+          reportConfirmBtn.focus({ preventScroll: true });
+        }, 0);
+      }
+    }
+
+    function closeReportOverlay({ immediate = false } = {}) {
+      if (!reportOverlay) {
+        return;
+      }
+      const wasOpen = reportOverlayOpen;
+      reportOverlayOpen = false;
+      resetReportOverlayButtons();
+
+      if (immediate || !wasOpen) {
+        delete reportOverlay.dataset.open;
+        reportOverlay.hidden = true;
+        return;
+      }
+
+      reportOverlay.dataset.open = "false";
+      const handleTransitionEnd = (event) => {
+        if (event.target !== reportOverlay) {
+          return;
+        }
+        reportOverlay.removeEventListener("transitionend", handleTransitionEnd);
+        if (!reportOverlayOpen) {
+          reportOverlay.hidden = true;
+          delete reportOverlay.dataset.open;
+        }
+      };
+      reportOverlay.addEventListener("transitionend", handleTransitionEnd);
+      setTimeout(() => {
+        if (!reportOverlayOpen) {
+          reportOverlay.hidden = true;
+          delete reportOverlay.dataset.open;
+        }
+      }, 220);
+    }
 
     voiceCallManager = (() => {
       if (!voiceCallOverlay || !voiceCallStatus || !voiceCallMuteBtn || !voiceCallEndBtn) {
@@ -3402,20 +5888,9 @@
         updateControls();
       }
 
-      function handleRequestError(payload) {
+      function handleRequestError() {
         closeAndResetOverlay();
-        const reason =
-          payload && typeof payload === "object" && typeof payload.reason === "string"
-            ? payload.reason
-            : "unknown";
-        const messageByReason = {
-          "no-partner": "Arama başlatılamadı. Şu anda aktif bir eşleşme yok.",
-          busy: "Arama başlatılamadı. Karşı taraf şu anda meşgul.",
-          unavailable: "Arama başlatılamadı. Karşı taraf artık erişilemiyor.",
-          "rate-limited": "Çok sık arama deniyorsun. Biraz bekleyip tekrar dene.",
-          unknown: "Arama başlatılamadı. Lütfen tekrar deneyin.",
-        };
-        appendMessage(messageByReason[reason] || messageByReason.unknown, "system");
+        appendMessage("Arama başlatılamadı. Lütfen tekrar deneyin.", "system");
         updateControls();
       }
 
@@ -3496,6 +5971,182 @@
       return bubble;
     }
 
+    function createImageMessageElement(options) {
+      const {
+        src,
+        type,
+        prefixText,
+        state = "sent",
+        width,
+        height,
+        altText = "Gönderilen görsel",
+      } = options;
+
+      const bubble = document.createElement("div");
+      bubble.classList.add("message", `message--${type}`, "message--image");
+      bubble.dataset.state = state;
+
+      if (type === "stranger" || type === "me") {
+        const finalPrefix = prefixText ? `${prefixText}:` : "";
+        if (finalPrefix) {
+          const prefix = document.createElement("span");
+          prefix.className = "message__prefix";
+          prefix.textContent = finalPrefix;
+          bubble.appendChild(prefix);
+        }
+      }
+
+      const trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "message__media-trigger";
+      trigger.setAttribute("aria-label", "Görseli büyüt");
+
+      const image = document.createElement("img");
+      image.decoding = "async";
+      image.loading = "lazy";
+      image.alt = altText;
+      if (typeof width === "number" && typeof height === "number") {
+        image.width = width;
+        image.height = height;
+      }
+      image.src = src;
+      trigger.appendChild(image);
+
+      const status = document.createElement("span");
+      status.className = "message__media-status";
+      if (state === "error") {
+        status.textContent = "Gönderilemedi";
+      } else if (state === "uploading") {
+        status.textContent = "Yükleniyor...";
+      } else {
+        status.textContent = "";
+      }
+      status.addEventListener("click", (event) => {
+        if (!status.dataset.errorMessage) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        showUploadErrorPopover(status, status.dataset.errorMessage);
+      });
+      trigger.appendChild(status);
+
+      trigger.addEventListener("click", () => {
+        const targetUrl = bubble.dataset.imageUrl || src;
+        if (targetUrl) {
+          openImagePreview(targetUrl, { alt: image.alt });
+        }
+      });
+
+      bubble.dataset.imageUrl = src;
+      bubble.appendChild(trigger);
+
+      if (type === "me") {
+        const retryButton = document.createElement("button");
+        retryButton.type = "button";
+        retryButton.className = "message__media-retry";
+        retryButton.textContent = "Retry";
+        retryButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          retryImageUpload(bubble);
+        });
+        bubble.appendChild(retryButton);
+      }
+
+      return bubble;
+    }
+
+    function updateImageMessageState(bubble, state, options = {}) {
+      if (!bubble) {
+        return;
+      }
+      bubble.dataset.state = state;
+      const status = bubble.querySelector(".message__media-status");
+      if (!status) {
+        return;
+      }
+      if (state !== "error" && activeUploadErrorAnchor && bubble.contains(activeUploadErrorAnchor)) {
+        hideUploadErrorPopover();
+      }
+      if (state === "uploading") {
+        const currentProgress = Number.parseInt(status.dataset.progress || "0", 10);
+        const progressValue = Number.isFinite(currentProgress) ? currentProgress : 0;
+        status.dataset.progress = String(progressValue);
+        status.textContent = `Yükleniyor… %${Math.max(
+          0,
+          Math.min(100, Math.round(progressValue)),
+        )}`;
+        delete status.dataset.errorMessage;
+        delete status.dataset.errorReason;
+        status.removeAttribute("title");
+      } else if (state === "error") {
+        status.textContent = "Gönderilemedi";
+        delete status.dataset.progress;
+        const message = options && options.errorMessage ? options.errorMessage.toString().trim() : "";
+        if (message) {
+          status.dataset.errorMessage = message;
+          status.title = message;
+        } else {
+          delete status.dataset.errorMessage;
+          status.removeAttribute("title");
+        }
+        const reason = options && options.errorReason ? options.errorReason.toString() : "";
+        if (reason) {
+          status.dataset.errorReason = reason;
+        } else {
+          delete status.dataset.errorReason;
+        }
+      } else {
+        status.textContent = "";
+        delete status.dataset.errorMessage;
+        delete status.dataset.errorReason;
+        status.removeAttribute("title");
+        delete status.dataset.progress;
+      }
+    }
+
+    function updateImageMessageSource(bubble, src, options = {}) {
+      if (!bubble) {
+        return;
+      }
+      const trigger = bubble.querySelector(".message__media-trigger img");
+      if (trigger && src) {
+        trigger.src = src;
+        if (options.width && options.height) {
+          trigger.width = options.width;
+          trigger.height = options.height;
+        }
+      }
+      bubble.dataset.imageUrl = src;
+    }
+
+    function appendImageMessage(options) {
+      const bubble = createImageMessageElement(options);
+      log.appendChild(bubble);
+      scrollChatToBottom();
+      return bubble;
+    }
+
+    function openImagePreview(url, options = {}) {
+      if (!imagePreviewOverlay || !imagePreviewElement || !url) {
+        return;
+      }
+      imagePreviewElement.src = url;
+      imagePreviewElement.alt = options.alt || "Gönderilen görsel";
+      imagePreviewOverlay.hidden = false;
+      imagePreviewOverlay.dataset.open = "true";
+    }
+
+    function closeImagePreview() {
+      if (!imagePreviewOverlay || !imagePreviewElement) {
+        return;
+      }
+      imagePreviewOverlay.removeAttribute("data-open");
+      imagePreviewOverlay.hidden = true;
+      imagePreviewElement.src = "";
+    }
+
     function scrollChatToBottom() {
       log.scrollTop = log.scrollHeight;
 
@@ -3520,10 +6171,15 @@
     }
 
     function resetChat(statusText) {
+      hideUploadErrorPopover();
       log.replaceChildren();
       msg.value = "";
       clearCooldown();
       hideWaitingStatus();
+      setUserTypingState(false);
+      hidePartnerTypingIndicator();
+      closeAttachmentSheet({ immediate: true, restoreFocus: false });
+      closeImagePreview();
       updateControls();
       if (statusText) {
         appendMessage(statusText, "system");
@@ -3544,6 +6200,8 @@
       const finalText = options.finalText || WAITING_STATUS_TEXT;
       const onCountdownFinished = options.onCountdownFinished;
       const countdownFormatter = options.countdownFormatter;
+      const initialMessage = options.initialMessage;
+      const reason = options.reason || null;
 
       hideWaitingStatus();
       log.replaceChildren();
@@ -3551,16 +6209,36 @@
       clearCooldown();
       setMatchedState(false);
       updateControls();
+      if (initialMessage) {
+        appendMessage(initialMessage, "system");
+      }
       startSearchCountdown(countdownSeconds, {
         prefix: messagePrefix,
         finalText,
         countdownFormatter,
         onCountdownFinished,
+        reason,
       });
     }
 
     function showWaitingStatus(text) {
       setWaitingStatusText(text);
+    }
+
+    function beginReportCountdown(messageText) {
+      const sanitizedMessage = (messageText || BLOCK_SEARCH_TEXT).toString();
+      beginMatchSearch({
+        countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS,
+        messagePrefix: sanitizedMessage,
+        countdownFormatter: (remainingSeconds) =>
+          `${sanitizedMessage} ${Math.max(remainingSeconds, 0)}`,
+        reason: "report",
+        onCountdownFinished: () => {
+          if (nickname) {
+            socket.emit("join", getJoinPayload());
+          }
+        },
+      });
     }
 
     function hideWaitingStatus() {
@@ -3582,23 +6260,33 @@
       updateControls();
     }
 
+    function getJoinPayload() {
+      return {
+        nickname,
+        blockedUsers: Array.from(blockedUsers),
+      };
+    }
+
     function joinQueue() {
       if (!nickname || !socket.connected) {
         return;
       }
       beginMatchSearch({ countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS });
-      socket.emit("join");
+      socket.emit("join", getJoinPayload());
     }
 
     function handleNicknameSubmit() {
-      const cleaned = sanitizeNickname(nicknameInput.value).slice(0, 24);
-      if (!cleaned) {
+      const isValid = updateNicknameValidity();
+      const cleaned = sanitizeNickname(nicknameInput.value).slice(0, 12);
+      if (!isValid) {
         nicknameInput.focus();
         return;
       }
 
       nickname = cleaned;
       nicknameInput.value = cleaned;
+      updateNicknameValidity();
+      refreshHeaderNicknameDisplay();
       sessionStorage.setItem("nickname", nickname);
       hideNicknameOverlay();
       requestNotificationPermission();
@@ -3607,16 +6295,29 @@
 
     const storedNickname = sessionStorage.getItem("nickname");
     if (storedNickname) {
-      const cleanedStored = sanitizeNickname(storedNickname).slice(0, 24);
+      const cleanedStored = sanitizeNickname(storedNickname).slice(0, 12);
       if (cleanedStored) {
         nickname = cleanedStored;
         sessionStorage.setItem("nickname", nickname);
+        refreshHeaderNicknameDisplay();
         hideNicknameOverlay();
+        if (nicknameInput) {
+          nicknameInput.value = nickname;
+          updateNicknameValidity();
+        }
       } else {
         sessionStorage.removeItem("nickname");
+        nickname = "";
+        refreshHeaderNicknameDisplay();
+        nicknameInput.value = sanitizeNickname(storedNickname).slice(0, 12);
+        updateNicknameValidity({ preserveCaret: true });
         showNicknameOverlay();
       }
     } else {
+      nickname = "";
+      refreshHeaderNicknameDisplay();
+      nicknameInput.value = "";
+      updateNicknameValidity();
       showNicknameOverlay();
     }
 
@@ -3624,6 +6325,7 @@
     setupNotificationPermissionWatcher();
 
     socket.on("connect", () => {
+      currentSocketId = socket.id;
       setMatchedState(false);
       if (nickname) {
         joinQueue();
@@ -3633,11 +6335,23 @@
       }
     });
 
-    socket.on("matched", () => {
-      resetChat("✓ Bir yabancı ile eşleştiniz!");
+    socket.on("matched", (payload) => {
+      currentPartnerId =
+        payload && typeof payload === "object" && typeof payload.partnerId === "string"
+          ? payload.partnerId
+          : null;
+      const partnerNickname =
+        payload && typeof payload === "object"
+          ? sanitizeNickname(payload.partnerNickname).slice(0, 50)
+          : "";
+      const displayNickname = partnerNickname || "YABANCI";
+      currentPartnerNickname = displayNickname;
+      updateReportOverlayMessage();
+      const matchText = `${displayNickname} İLE EŞLEŞTİN`;
+      resetChat(`✓ ${matchText}`);
       setMatchedState(true);
       playMatchSound();
-      triggerChatNotification("Yeni eşleşme!", "Bir yabancı ile eşleştiniz.");
+      triggerChatNotification("Yeni eşleşme!", matchText);
       if (!isCoolingDown) {
         msg.focus();
       }
@@ -3667,7 +6381,8 @@
             }
           : { text: (payload ?? "").toString(), nickname: "" };
 
-      const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "Yabancı";
+      const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "YABANCI";
+      hidePartnerTypingIndicator();
       appendMessage(data.text, "stranger", senderName);
       if (data.text) {
         const previewText = data.text.length > 120 ? `${data.text.slice(0, 117)}...` : data.text;
@@ -3675,13 +6390,50 @@
       }
     });
 
-    socket.on("message:error", (payload) => {
-      const reason =
-        payload && typeof payload === "object" && typeof payload.reason === "string"
-          ? payload.reason
-          : "unknown";
-      if (reason === "rate-limited") {
-        appendMessage("Çok hızlı mesaj gönderiyorsun. Kısa bir süre bekleyip tekrar dene.", "system");
+    socket.on("image-message", (payload) => {
+      const data =
+        payload && typeof payload === "object"
+          ? {
+              url: typeof payload.url === "string" ? payload.url : "",
+              nickname: (payload.nickname ?? "").toString(),
+              width: Number(payload.width),
+              height: Number(payload.height),
+            }
+          : { url: "", nickname: "", width: null, height: null };
+
+      if (!data.url) {
+        return;
+      }
+
+      const senderName = sanitizeNickname(data.nickname).slice(0, 50) || "YABANCI";
+      hidePartnerTypingIndicator();
+      appendImageMessage({
+        src: data.url,
+        type: "stranger",
+        prefixText: senderName,
+        state: "sent",
+        width: Number.isFinite(data.width) && data.width > 0 ? Math.round(data.width) : undefined,
+        height:
+          Number.isFinite(data.height) && data.height > 0
+            ? Math.round(data.height)
+            : undefined,
+        altText: `${senderName} tarafından gönderilen görsel`,
+      });
+
+      triggerChatNotification("Yeni mesaj", `${senderName}: 📷 Fotoğraf gönderdi`);
+    });
+
+    socket.on("typing", (payload) => {
+      const isTyping =
+        payload && typeof payload === "object" ? Boolean(payload.isTyping) : Boolean(payload);
+      if (!isMatched) {
+        hidePartnerTypingIndicator();
+        return;
+      }
+      if (isTyping) {
+        showPartnerTypingIndicator();
+      } else {
+        hidePartnerTypingIndicator();
       }
     });
 
@@ -3704,8 +6456,8 @@
       callRequestController?.handleCancelled?.(payload);
     });
 
-    socket.on("voice-call:request:error", (payload) => {
-      callRequestController?.handleError?.(payload);
+    socket.on("voice-call:request:error", () => {
+      callRequestController?.handleError?.();
     });
 
     socket.on("voice-call:offer", (payload) => {
@@ -3728,7 +6480,28 @@
       voiceCallManager?.handlePeerEnded?.();
     });
 
+    socket.on("reported", (payload) => {
+      const message =
+        payload && typeof payload === "object" && typeof payload.message === "string"
+          ? payload.message
+          : BLOCK_SEARCH_TEXT;
+      if (searchCountdownReason !== "report") {
+        beginReportCountdown(message);
+      }
+    });
+
+    socket.on("report:error", () => {
+      closeReportOverlay({ immediate: true });
+      if (searchCountdownReason === "report" || isSearchCountdownActive) {
+        resetChat("Raporlama gerçekleştirilemedi. Lütfen tekrar dene.");
+      } else {
+        appendMessage("Raporlama gerçekleştirilemedi. Lütfen tekrar dene.", "system");
+        updateControls();
+      }
+    });
+
     socket.on("ended", () => {
+      hidePartnerTypingIndicator();
       beginMatchSearch({
         countdownSeconds: DISCONNECT_SEARCH_COUNTDOWN_SECONDS,
         messagePrefix: DISCONNECT_SEARCH_MESSAGE,
@@ -3743,26 +6516,223 @@
         },
         onCountdownFinished: () => {
           if (nickname) {
-            socket.emit("join");
+            socket.emit("join", getJoinPayload());
           }
         },
       });
     });
 
     socket.on("disconnect", () => {
+      currentSocketId = null;
       setMatchedState(false);
       voiceCallManager?.handleDisconnect?.();
       callRequestController?.handleDisconnect?.();
     });
 
+    if (typeof window !== "undefined") {
+      const clearMicOverlayFlagOnExit = () => {
+        clearMicPermissionOverlayFlag();
+      };
+      window.addEventListener("beforeunload", clearMicOverlayFlagOnExit);
+      window.addEventListener("pagehide", clearMicOverlayFlagOnExit);
+    }
+
+    if (micPermissionOverlayCloseBtn) {
+      micPermissionOverlayCloseBtn.addEventListener("click", () => {
+        hideMicPermissionOverlay({ restoreFocus: true });
+      });
+      micPermissionOverlayCloseBtn.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          hideMicPermissionOverlay({ restoreFocus: true });
+        }
+      });
+    }
+
+    if (micPermissionOverlay) {
+      micPermissionOverlay.addEventListener("click", (event) => {
+        if (event.target === micPermissionOverlay) {
+          hideMicPermissionOverlay({ restoreFocus: true });
+        }
+      });
+    }
+
     if (callBtn) {
-      callBtn.addEventListener("click", () => {
-        if (callBtn.disabled) {
+      callBtn.addEventListener("click", async () => {
+        if (callBtn.disabled || isMicPermissionRequestInFlight) {
           return;
+        }
+        isMicPermissionRequestInFlight = true;
+        try {
+          await ensureMicrophonePermission();
+        } catch (error) {
+          handleMicrophonePermissionError(error);
+          return;
+        } finally {
+          isMicPermissionRequestInFlight = false;
         }
         callRequestController?.startOutgoingRequest?.();
       });
     }
+
+    if (attachmentButton) {
+      attachmentButton.addEventListener("click", () => {
+        if (attachmentButton.disabled || !isMatched) {
+          return;
+        }
+        if (isAttachmentSheetOpen) {
+          closeAttachmentSheet();
+        } else {
+          openAttachmentSheet();
+        }
+      });
+    }
+
+    if (attachmentBackdrop) {
+      attachmentBackdrop.addEventListener("click", () => {
+        closeAttachmentSheet();
+      });
+    }
+
+    if (attachmentSheet) {
+      attachmentSheet.addEventListener("keydown", (event) => {
+        if (!isAttachmentSheetOpen) {
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeAttachmentSheet();
+          return;
+        }
+        if (event.key !== "Tab") {
+          return;
+        }
+        const focusable = Array.from(
+          attachmentSheet.querySelectorAll("button:not(:disabled)") || [],
+        );
+        if (!focusable.length) {
+          return;
+        }
+        const currentIndex = focusable.indexOf(document.activeElement);
+        let nextIndex = currentIndex;
+        if (event.shiftKey) {
+          nextIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
+        } else {
+          nextIndex = currentIndex === focusable.length - 1 ? 0 : currentIndex + 1;
+        }
+        event.preventDefault();
+        focusable[nextIndex]?.focus({ preventScroll: true });
+      });
+    }
+
+    if (attachmentCameraBtn) {
+      attachmentCameraBtn.addEventListener("click", () => {
+        if (!isMatched) {
+          return;
+        }
+        closeAttachmentSheet({ restoreFocus: false });
+        triggerAttachmentInput(cameraInput);
+      });
+    }
+
+    if (attachmentPhotoBtn) {
+      attachmentPhotoBtn.addEventListener("click", () => {
+        if (!isMatched) {
+          return;
+        }
+        closeAttachmentSheet({ restoreFocus: false });
+        triggerAttachmentInput(photoInput);
+      });
+    }
+
+    if (cameraInput) {
+      cameraInput.addEventListener("change", (event) => {
+        const file = event.target?.files?.[0];
+        if (file) {
+          handleImageFileSelection(file).catch((error) => {
+            console.error("Kamera görseli gönderilemedi", error);
+          });
+        }
+        cameraInput.value = "";
+      });
+    }
+
+    if (photoInput) {
+      photoInput.addEventListener("change", (event) => {
+        const file = event.target?.files?.[0];
+        if (file) {
+          handleImageFileSelection(file).catch((error) => {
+            console.error("Fotoğraf yüklenemedi", error);
+          });
+        }
+        photoInput.value = "";
+      });
+    }
+
+    if (imagePreviewOverlay) {
+      imagePreviewOverlay.addEventListener("click", (event) => {
+        event.preventDefault();
+        closeImagePreview();
+      });
+    }
+
+    if (reportBtn) {
+      reportBtn.addEventListener("click", () => {
+        if (reportBtn.disabled) {
+          return;
+        }
+        openReportOverlay();
+      });
+    }
+
+    if (reportCancelBtn) {
+      reportCancelBtn.addEventListener("click", () => {
+        closeReportOverlay();
+        reportBtn?.focus({ preventScroll: true });
+      });
+    }
+
+    if (reportConfirmBtn) {
+      reportConfirmBtn.addEventListener("click", () => {
+        if (!isMatched || !currentPartnerId) {
+          closeReportOverlay({ immediate: true });
+          return;
+        }
+        reportConfirmBtn.disabled = true;
+        if (reportCancelBtn) {
+          reportCancelBtn.disabled = true;
+        }
+        blockedUsers.add(currentPartnerId);
+        persistBlockedUsers();
+        beginReportCountdown(BLOCK_SEARCH_TEXT);
+        socket.emit("report", { partnerId: currentPartnerId });
+        closeReportOverlay();
+      });
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (imagePreviewOverlay && !imagePreviewOverlay.hidden) {
+        event.preventDefault();
+        closeImagePreview();
+        return;
+      }
+
+      if (isAttachmentSheetOpen) {
+        event.preventDefault();
+        closeAttachmentSheet();
+        return;
+      }
+
+      if (reportOverlayOpen) {
+        event.preventDefault();
+        closeReportOverlay();
+        reportBtn?.focus({ preventScroll: true });
+      }
+    });
 
     sendBtn.onclick = () => {
       if (!isMatched || !nickname || !msg.value.trim() || isCoolingDown) return;
@@ -3771,6 +6741,7 @@
       socket.emit("message", { text: messageText, nickname });
       appendMessage(messageText, "me", nickname);
       msg.value = "";
+      setUserTypingState(false);
       startCooldown();
       updateControls();
       msg.focus();
@@ -3792,7 +6763,11 @@
       socket.emit("next");
     };
 
-    msg.addEventListener("input", updateControls);
+    msg.addEventListener("input", () => {
+      updateControls();
+      const hasMessage = Boolean(msg.value.trim());
+      setUserTypingState(hasMessage);
+    });
     msg.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -3803,10 +6778,38 @@
     });
 
     nicknameSubmit.addEventListener("click", handleNicknameSubmit);
-    nicknameInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleNicknameSubmit();
+
+    nicknameInput.addEventListener("input", () => {
+      updateNicknameValidity({ preserveCaret: true });
+    });
+
+    nicknameInput.addEventListener("paste", (event) => {
+      event.preventDefault();
+      const pasteData =
+        (event.clipboardData || window.clipboardData)?.getData("text") ?? "";
+      const selectionStart = nicknameInput.selectionStart ?? nicknameInput.value.length;
+      const selectionEnd = nicknameInput.selectionEnd ?? selectionStart;
+      const rawValue = nicknameInput.value ?? "";
+      const before = rawValue.slice(0, selectionStart);
+      const after = rawValue.slice(selectionEnd);
+      nicknameInput.value = `${before}${sanitizeNickname(pasteData)}${after}`;
+      const caretTarget = (before + sanitizeNickname(pasteData)).length;
+      nicknameInput.setSelectionRange(caretTarget, caretTarget);
+      updateNicknameValidity({ preserveCaret: true });
+    });
+
+    nicknameInput.addEventListener("keydown", (event) => {
+      if (!event.altKey && !event.metaKey && !event.ctrlKey && /^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        updateNicknameValidity({ preserveCaret: true });
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (!nicknameSubmit.disabled) {
+          handleNicknameSubmit();
+        }
       }
     });
   </script>
@@ -3814,7 +6817,7 @@
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker
-          .register("/assets/sw.js", { scope: "/" })
+          .register("/sw.js", { scope: "/" })
           .catch((error) => {
             console.error("Service worker registration failed:", error);
           });

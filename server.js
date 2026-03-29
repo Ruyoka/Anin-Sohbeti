@@ -2,33 +2,26 @@ require("dotenv").config();
 
 const express = require("express");
 const http = require("http");
+const path = require("path");
+const crypto = require("crypto");
 const { Server } = require("socket.io");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const PORT = process.env.PORT || 6000;
 const WAITING_STATUS_TEXT =
   "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
-const CLIENT_ORIGIN = (process.env.CLIENT_ORIGIN || "*")
-  .split(",")
-  .map((value) => value.trim())
-  .filter(Boolean);
-const MESSAGE_RATE_LIMIT_MAX = Number(process.env.MESSAGE_RATE_LIMIT_MAX || 8);
+const POST_REPORT_REQUEUE_DELAY_MS = 5000;
+const MESSAGE_RATE_LIMIT_MAX = Number(process.env.MESSAGE_RATE_LIMIT_MAX || 3);
 const MESSAGE_RATE_LIMIT_WINDOW_MS = Number(process.env.MESSAGE_RATE_LIMIT_WINDOW_MS || 5000);
-const JOIN_RATE_LIMIT_MAX = Number(process.env.JOIN_RATE_LIMIT_MAX || 6);
-const JOIN_RATE_LIMIT_WINDOW_MS = Number(process.env.JOIN_RATE_LIMIT_WINDOW_MS || 15000);
-const CALL_RATE_LIMIT_MAX = Number(process.env.CALL_RATE_LIMIT_MAX || 12);
+const CALL_RATE_LIMIT_MAX = Number(process.env.CALL_RATE_LIMIT_MAX || 4);
 const CALL_RATE_LIMIT_WINDOW_MS = Number(process.env.CALL_RATE_LIMIT_WINDOW_MS || 10000);
 
 const app = express();
 app.disable("x-powered-by");
+app.use(express.json({ limit: "10mb" }));
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: CLIENT_ORIGIN.includes("*") ? "*" : CLIENT_ORIGIN,
-  },
-  allowRequest: (req, callback) => {
-    callback(null, isOriginAllowed(req.headers.origin));
-  },
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
 const CONTENT_SECURITY_POLICY = [
@@ -38,7 +31,7 @@ const CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'none'",
   "object-src 'none'",
   "manifest-src 'self'",
-  "img-src 'self' data:",
+  "img-src 'self' data: blob:",
   "font-src 'self' https://fonts.gstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "script-src 'self' 'unsafe-inline' https://cdn.socket.io https://www.googletagmanager.com",
@@ -46,6 +39,35 @@ const CONTENT_SECURITY_POLICY = [
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
 ].join("; ");
+
+const R2_BUCKET = process.env.R2_BUCKET;
+const R2_PUBLIC_URL = process.env.CUSTOM_DOMAIN || process.env.R2_PUBLIC_URL;
+const R2_REGION = process.env.R2_REGION || "auto";
+
+const hasR2Credentials =
+  Boolean(process.env.R2_ENDPOINT) &&
+  Boolean(process.env.R2_ACCESS_KEY) &&
+  Boolean(process.env.R2_SECRET_KEY) &&
+  Boolean(R2_BUCKET);
+
+const r2Client = hasR2Credentials
+  ? new S3Client({
+      region: R2_REGION,
+      endpoint: process.env.R2_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY,
+        secretAccessKey: process.env.R2_SECRET_KEY,
+      },
+      forcePathStyle: true,
+    })
+  : null;
+
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const UPLOAD_COOLDOWN_MS = 60 * 1000;
+const RATE_LIMIT_MESSAGE = "Çok seri gönderiyorsun azcık bekle";
+
+const lastSuccessfulUploadBySocket = new Map();
+const lastSuccessfulUploadByNickname = new Map();
 
 app.use((req, res, next) => {
   res.setHeader("Content-Security-Policy", CONTENT_SECURITY_POLICY);
@@ -56,39 +78,266 @@ app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader(
     "Permissions-Policy",
-    "camera=(), geolocation=(), gyroscope=(), magnetometer=(), payment=(), usb=()"
+    "camera=(), geolocation=(), gyroscope=(), magnetometer=(), payment=(), usb=()",
   );
   next();
 });
 
-app.use(
-  express.static("public", {
-    dotfiles: "deny",
-  })
-);
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
 });
 
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+  "image/avif",
+]);
+
+function normalizePublicUrl(base) {
+  if (!base) {
+    return null;
+  }
+  return base.endsWith("/") ? base.slice(0, -1) : base;
+}
+
+const normalizedPublicUrl = normalizePublicUrl(R2_PUBLIC_URL);
+
+function getRateLimitNickname(value) {
+  return sanitizeNickname(typeof value === "string" ? value : "").slice(0, 50);
+}
+
+function getLastSuccessfulUploadTimestamp({ socketId, nickname }) {
+  const socketTimestamp =
+    socketId && lastSuccessfulUploadBySocket.has(socketId)
+      ? lastSuccessfulUploadBySocket.get(socketId)
+      : 0;
+  const nicknameTimestamp =
+    nickname && lastSuccessfulUploadByNickname.has(nickname)
+      ? lastSuccessfulUploadByNickname.get(nickname)
+      : 0;
+
+  const safeSocketTimestamp =
+    typeof socketTimestamp === "number" && Number.isFinite(socketTimestamp)
+      ? socketTimestamp
+      : 0;
+  const safeNicknameTimestamp =
+    typeof nicknameTimestamp === "number" && Number.isFinite(nicknameTimestamp)
+      ? nicknameTimestamp
+      : 0;
+
+  return Math.max(safeSocketTimestamp, safeNicknameTimestamp, 0);
+}
+
+function getUploadCooldownRemaining({ socketId, nickname, now = Date.now() }) {
+  const lastTimestamp = getLastSuccessfulUploadTimestamp({ socketId, nickname });
+  if (!lastTimestamp) {
+    return 0;
+  }
+  const expiresAt = lastTimestamp + UPLOAD_COOLDOWN_MS;
+  return Math.max(0, expiresAt - now);
+}
+
+function isUploadRateLimited({ socketId, nickname, now = Date.now() }) {
+  return getUploadCooldownRemaining({ socketId, nickname, now }) > 0;
+}
+
+function markSuccessfulUpload({ socketId, nickname, timestamp = Date.now() }) {
+  if (socketId) {
+    lastSuccessfulUploadBySocket.set(socketId, timestamp);
+  }
+  if (nickname) {
+    lastSuccessfulUploadByNickname.set(nickname, timestamp);
+  }
+}
+
+function sendUploadRateLimitMessage({ socketId, nickname }) {
+  const payload = {
+    text: RATE_LIMIT_MESSAGE,
+    nickname: "Sistem",
+  };
+
+  const targets = new Set();
+  if (socketId && io.sockets.sockets.get(socketId)) {
+    targets.add(socketId);
+  }
+
+  if (nickname) {
+    for (const [id, storedNickname] of nicknames.entries()) {
+      if (storedNickname === nickname && io.sockets.sockets.get(id)) {
+        targets.add(id);
+      }
+    }
+  }
+
+  for (const target of targets) {
+    io.to(target).emit("message", payload);
+  }
+
+  return targets.size > 0;
+}
+
+function getExtensionFromMime(mime) {
+  switch (mime) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    case "image/gif":
+      return "gif";
+    case "image/heic":
+      return "heic";
+    case "image/heif":
+      return "heif";
+    case "image/avif":
+      return "avif";
+    default:
+      return "";
+  }
+}
+
+function getExtensionFromName(name) {
+  if (typeof name !== "string") {
+    return "";
+  }
+  const lastDot = name.lastIndexOf(".");
+  if (lastDot === -1) {
+    return "";
+  }
+  const ext = name.slice(lastDot + 1).toLowerCase();
+  if (!/^[a-z0-9]{1,6}$/.test(ext)) {
+    return "";
+  }
+  return ext;
+}
+
+function formatTimestampForKey(date = new Date()) {
+  const pad = (value) => value.toString().padStart(2, "0");
+  return (
+    date.getFullYear().toString() +
+    pad(date.getMonth() + 1) +
+    pad(date.getDate()) +
+    "_" +
+    pad(date.getHours()) +
+    pad(date.getMinutes()) +
+    pad(date.getSeconds())
+  );
+}
+
+function buildImageObjectKey({ nickname, extension }) {
+  const safeNickname = sanitizeNickname(nickname || "")
+    .toLocaleLowerCase("tr-TR")
+    .slice(0, 24) || "anonim";
+  const timestamp = formatTimestampForKey();
+  const randomId = crypto.randomBytes(3).toString("hex");
+  const suffix = extension ? `.${extension}` : "";
+  return `temp-images/user_${safeNickname}_${timestamp}_${randomId}${suffix}`;
+}
+
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get(["/privacy", "/privacy.html"], (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "privacy", "index.html"));
+});
+
+app.post("/api/uploads/presign", async (req, res) => {
+  try {
+    if (!r2Client || !normalizedPublicUrl) {
+      res.status(503).json({ error: "storage_not_configured" });
+      return;
+    }
+
+    const {
+      contentType,
+      fileName,
+      nickname: rawNickname,
+      fileSize,
+      socketId: rawSocketId,
+    } = req.body || {};
+    const socketId = typeof rawSocketId === "string" ? rawSocketId : "";
+    const sanitizedNickname = getRateLimitNickname(rawNickname);
+    const now = Date.now();
+
+    const cooldownRemaining = getUploadCooldownRemaining({
+      socketId,
+      nickname: sanitizedNickname,
+      now,
+    });
+
+    if (cooldownRemaining > 0) {
+      sendUploadRateLimitMessage({ socketId, nickname: sanitizedNickname });
+      res.status(429).json({
+        error: "rate_limited",
+        message: RATE_LIMIT_MESSAGE,
+        retryAfterSeconds: Math.ceil(cooldownRemaining / 1000),
+      });
+      return;
+    }
+    const mime = typeof contentType === "string" ? contentType.toLowerCase() : "";
+    const sizeValue = Number(fileSize);
+    const sizeInBytes =
+      Number.isFinite(sizeValue) && sizeValue > 0 ? Math.round(sizeValue) : NaN;
+
+    if (!ALLOWED_IMAGE_TYPES.has(mime)) {
+      res.status(400).json({ error: "unsupported_type" });
+      return;
+    }
+
+    if (!Number.isFinite(sizeInBytes)) {
+      res.status(400).json({ error: "invalid_size" });
+      return;
+    }
+
+    if (sizeInBytes > MAX_UPLOAD_SIZE_BYTES) {
+      res.status(413).json({ error: "file_too_large", limit: MAX_UPLOAD_SIZE_BYTES });
+      return;
+    }
+
+    const extensionFromMime = getExtensionFromMime(mime);
+    const fallbackExt = getExtensionFromName(typeof fileName === "string" ? fileName : "");
+    const extension = extensionFromMime || fallbackExt;
+
+    const key = buildImageObjectKey({ nickname: rawNickname, extension });
+
+    const command = new PutObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: key,
+      ContentType: mime,
+      ContentLength: sizeInBytes,
+    });
+
+    const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 60 });
+    const assetUrl = `${normalizedPublicUrl}/${key}`;
+
+    res.json({
+      uploadUrl,
+      key,
+      assetUrl,
+      contentType: mime,
+      maxSize: MAX_UPLOAD_SIZE_BYTES,
+    });
+  } catch (error) {
+    console.error("Failed to create presigned URL", error);
+    res.status(500).json({ error: "presign_failed" });
+  }
+});
+
 let queue = [];
 const partners = new Map();
+const nicknames = new Map();
 const waitTimers = new Map();
 const recentMatches = new Map();
+const blockedUsers = new Map();
 let scheduledTryMatchHandle = null;
 let scheduledTryMatchTime = 0;
 const callRequestsByCaller = new Map();
 const callRequestsByCallee = new Map();
 const eventRateLimits = new Map();
-
-function isOriginAllowed(origin) {
-  if (!origin) {
-    return true;
-  }
-  if (CLIENT_ORIGIN.includes("*")) {
-    return true;
-  }
-  return CLIENT_ORIGIN.includes(origin);
-}
 
 function getPairKey(firstId, secondId) {
   return [firstId, secondId].sort().join(":");
@@ -224,6 +473,35 @@ function clearCallRequestsForSocket(socketId, reason = "cancelled") {
   }
 }
 
+function getBlockedSet(socketId) {
+  let set = blockedUsers.get(socketId);
+  if (!set) {
+    set = new Set();
+    blockedUsers.set(socketId, set);
+  }
+  return set;
+}
+
+function addBlockedUser(reporterId, blockedId) {
+  if (!blockedId) {
+    return;
+  }
+  const blockedSet = getBlockedSet(reporterId);
+  blockedSet.add(blockedId);
+}
+
+function isPairBlocked(firstId, secondId) {
+  const firstBlocked = blockedUsers.get(firstId);
+  if (firstBlocked && firstBlocked.has(secondId)) {
+    return true;
+  }
+  const secondBlocked = blockedUsers.get(secondId);
+  if (secondBlocked && secondBlocked.has(firstId)) {
+    return true;
+  }
+  return false;
+}
+
 function notifyWaitingStatus(socketId, active) {
   const socketExists = io.sockets.sockets.get(socketId);
   if (!socketExists) {
@@ -273,6 +551,7 @@ function endCurrentChat(socketId, options = {}) {
   queue = queue.filter((id) => id !== partnerId);
   clearWaitTimer(partnerId);
   notifyWaitingStatus(partnerId, false);
+  io.to(partnerId).emit("typing", { isTyping: false });
 
   io.to(partnerId).emit("voice-call:peer-ended");
 
@@ -290,6 +569,33 @@ function enqueueSocketId(socketId) {
   notifyWaitingStatus(socketId, false);
   queue.push(socketId);
   startWaitTimer(socketId);
+}
+
+const nicknameLetterPattern = (() => {
+  try {
+    return new RegExp("\\\\p{L}", "u");
+  } catch (_error) {
+    return /[A-Za-z\u00C0-\u024F]/u;
+  }
+})();
+
+function sanitizeNickname(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const normalized =
+    typeof value.normalize === "function" ? value.normalize("NFKC") : value;
+
+  let filtered = "";
+  for (const char of normalized) {
+    nicknameLetterPattern.lastIndex = 0;
+    if (nicknameLetterPattern.test(char)) {
+      filtered += char;
+    }
+  }
+
+  return filtered;
 }
 
 function tryMatch() {
@@ -320,8 +626,16 @@ function tryMatch() {
     notifyWaitingStatus(first, false);
     notifyWaitingStatus(second, false);
     recordRecentMatch(first, second);
-    io.to(first).emit("matched");
-    io.to(second).emit("matched");
+    const firstNickname = nicknames.get(first) || "";
+    const secondNickname = nicknames.get(second) || "";
+    io.to(first).emit("matched", {
+      partnerNickname: secondNickname,
+      partnerId: second,
+    });
+    io.to(second).emit("matched", {
+      partnerNickname: firstNickname,
+      partnerId: first,
+    });
   }
 }
 
@@ -357,6 +671,10 @@ function findNextPair() {
         continue;
       }
 
+      if (isPairBlocked(first, second)) {
+        continue;
+      }
+
       queue.splice(j, 1);
       queue.splice(i, 1);
       return { first, second };
@@ -372,10 +690,22 @@ function findNextPair() {
 
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı:", socket.id);
+  blockedUsers.set(socket.id, new Set());
 
-  socket.on("join", () => {
-    if (isRateLimited(socket.id, "join", JOIN_RATE_LIMIT_MAX, JOIN_RATE_LIMIT_WINDOW_MS)) {
-      return;
+  socket.on("join", (payload) => {
+    const rawNickname =
+      payload && typeof payload === "object" && typeof payload.nickname === "string"
+        ? payload.nickname
+        : "";
+    const cleanedNickname = sanitizeNickname(rawNickname).slice(0, 12);
+    nicknames.set(socket.id, cleanedNickname);
+
+    if (payload && typeof payload === "object" && Array.isArray(payload.blockedUsers)) {
+      const blockedSet = getBlockedSet(socket.id);
+      payload.blockedUsers
+        .map((value) => value && value.toString())
+        .filter((value) => typeof value === "string" && value)
+        .forEach((value) => blockedSet.add(value));
     }
     if (partners.has(socket.id)) return;
     enqueueSocketId(socket.id);
@@ -383,21 +713,22 @@ io.on("connection", (socket) => {
   });
 
   socket.on("message", (msg) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
     if (
       isRateLimited(
         socket.id,
         "message",
         MESSAGE_RATE_LIMIT_MAX,
-        MESSAGE_RATE_LIMIT_WINDOW_MS
+        MESSAGE_RATE_LIMIT_WINDOW_MS,
       )
     ) {
       io.to(socket.id).emit("message:error", { reason: "rate-limited" });
       return;
     }
-    const partnerId = partners.get(socket.id);
-    if (!partnerId) return;
 
-    const payload =
+    const storedNickname = nicknames.get(socket.id) || "";
+    const incoming =
       msg && typeof msg === "object"
         ? {
             text: (msg.text || "").toString().slice(0, 2000),
@@ -405,7 +736,84 @@ io.on("connection", (socket) => {
           }
         : { text: (msg || "").toString().slice(0, 2000), nickname: "" };
 
-    io.to(partnerId).emit("message", payload);
+    const providedNickname = sanitizeNickname(incoming.nickname).slice(0, 50);
+    const effectiveNickname = providedNickname || storedNickname;
+    const cleanedNickname = sanitizeNickname(effectiveNickname).slice(0, 50);
+
+    io.to(partnerId).emit("message", {
+      text: incoming.text,
+      nickname: cleanedNickname,
+    });
+  });
+
+  socket.on("image-message", (payload) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+
+    const storedNickname = nicknames.get(socket.id) || "";
+    const providedNickname = sanitizeNickname((payload.nickname || "").toString()).slice(0, 50);
+    const effectiveNickname = providedNickname || storedNickname;
+    const cleanedNickname = sanitizeNickname(effectiveNickname).slice(0, 50);
+    const rateLimitCheckTime = Date.now();
+
+    if (
+      isUploadRateLimited({
+        socketId: socket.id,
+        nickname: cleanedNickname,
+        now: rateLimitCheckTime,
+      })
+    ) {
+      sendUploadRateLimitMessage({ socketId: socket.id, nickname: cleanedNickname });
+      return;
+    }
+
+    const assetUrl = typeof payload.url === "string" ? payload.url : "";
+    const objectKey = typeof payload.key === "string" ? payload.key : "";
+    const widthValue = Number(payload.width);
+    const heightValue = Number(payload.height);
+    const width = Number.isFinite(widthValue) && widthValue > 0 ? Math.round(widthValue) : undefined;
+    const height = Number.isFinite(heightValue) && heightValue > 0 ? Math.round(heightValue) : undefined;
+
+    if (!assetUrl || !objectKey) {
+      return;
+    }
+
+    if (!objectKey.startsWith("temp-images/")) {
+      return;
+    }
+
+    if (!normalizedPublicUrl || !assetUrl.startsWith(`${normalizedPublicUrl}/`)) {
+      return;
+    }
+
+    io.to(partnerId).emit("image-message", {
+      url: assetUrl,
+      key: objectKey,
+      width,
+      height,
+      nickname: cleanedNickname,
+    });
+
+    markSuccessfulUpload({
+      socketId: socket.id,
+      nickname: cleanedNickname,
+      timestamp: Date.now(),
+    });
+  });
+
+  socket.on("typing", (payload) => {
+    const partnerId = partners.get(socket.id);
+    if (!partnerId) return;
+
+    const isTyping =
+      payload && typeof payload === "object"
+        ? Boolean(payload.isTyping)
+        : Boolean(payload);
+
+    io.to(partnerId).emit("typing", { isTyping: Boolean(isTyping) });
   });
 
   socket.on("voice-call:request", () => {
@@ -414,7 +822,7 @@ io.on("connection", (socket) => {
         socket.id,
         "voice-call:request",
         CALL_RATE_LIMIT_MAX,
-        CALL_RATE_LIMIT_WINDOW_MS
+        CALL_RATE_LIMIT_WINDOW_MS,
       )
     ) {
       io.to(socket.id).emit("voice-call:request:error", { reason: "rate-limited" });
@@ -444,16 +852,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:cancel-request", () => {
-    if (
-      isRateLimited(
-        socket.id,
-        "voice-call:cancel-request",
-        CALL_RATE_LIMIT_MAX,
-        CALL_RATE_LIMIT_WINDOW_MS
-      )
-    ) {
-      return;
-    }
     const request = removeCallRequestByCaller(socket.id);
     if (!request) {
       return;
@@ -469,16 +867,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:request-response", (payload) => {
-    if (
-      isRateLimited(
-        socket.id,
-        "voice-call:request-response",
-        CALL_RATE_LIMIT_MAX,
-        CALL_RATE_LIMIT_WINDOW_MS
-      )
-    ) {
-      return;
-    }
     const request = removeCallRequestByCallee(socket.id);
     if (!request) {
       return;
@@ -506,11 +894,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:offer", (payload) => {
-    if (
-      isRateLimited(socket.id, "voice-call:offer", CALL_RATE_LIMIT_MAX, CALL_RATE_LIMIT_WINDOW_MS)
-    ) {
-      return;
-    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
@@ -523,16 +906,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:answer", (payload) => {
-    if (
-      isRateLimited(
-        socket.id,
-        "voice-call:answer",
-        CALL_RATE_LIMIT_MAX,
-        CALL_RATE_LIMIT_WINDOW_MS
-      )
-    ) {
-      return;
-    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
@@ -545,16 +918,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:candidate", (payload) => {
-    if (
-      isRateLimited(
-        socket.id,
-        "voice-call:candidate",
-        CALL_RATE_LIMIT_MAX * 4,
-        CALL_RATE_LIMIT_WINDOW_MS
-      )
-    ) {
-      return;
-    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
@@ -567,21 +930,39 @@ io.on("connection", (socket) => {
   });
 
   socket.on("voice-call:end", () => {
-    if (
-      isRateLimited(socket.id, "voice-call:end", CALL_RATE_LIMIT_MAX, CALL_RATE_LIMIT_WINDOW_MS)
-    ) {
-      return;
-    }
     const partnerId = partners.get(socket.id);
     if (!partnerId) return;
 
     io.to(partnerId).emit("voice-call:ended");
   });
 
-  socket.on("next", () => {
-    if (isRateLimited(socket.id, "next", JOIN_RATE_LIMIT_MAX, JOIN_RATE_LIMIT_WINDOW_MS)) {
+  socket.on("report", (payload) => {
+    const partnerId = partners.get(socket.id);
+    const reportedId =
+      payload && typeof payload === "object" && typeof payload.partnerId === "string"
+        ? payload.partnerId
+        : partnerId;
+
+    if (!partnerId || !reportedId || reportedId !== partnerId) {
+      socket.emit("report:error", { reason: "no-partner" });
       return;
     }
+
+    addBlockedUser(socket.id, reportedId);
+
+    endCurrentChat(socket.id);
+
+    socket.emit("reported", {
+      message: "Kullanıcı engellendi, yeni eşleşme aranıyor...",
+    });
+
+    setTimeout(() => {
+      enqueueSocketId(socket.id);
+      tryMatch();
+    }, POST_REPORT_REQUEUE_DELAY_MS);
+  });
+
+  socket.on("next", () => {
     endCurrentChat(socket.id);
     setTimeout(() => {
       enqueueSocketId(socket.id);
@@ -592,6 +973,22 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     eventRateLimits.delete(socket.id);
     endCurrentChat(socket.id);
+    const storedNickname = nicknames.get(socket.id) || "";
+    nicknames.delete(socket.id);
+    blockedUsers.delete(socket.id);
+    lastSuccessfulUploadBySocket.delete(socket.id);
+    if (storedNickname) {
+      let stillUsed = false;
+      for (const [id, nicknameValue] of nicknames.entries()) {
+        if (id !== socket.id && nicknameValue === storedNickname) {
+          stillUsed = true;
+          break;
+        }
+      }
+      if (!stillUsed) {
+        lastSuccessfulUploadByNickname.delete(storedNickname);
+      }
+    }
   });
 });
 
