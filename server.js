@@ -1,6 +1,11 @@
 require("dotenv").config();
 
 const express = require("express");
+const { setupAllProcessGuards } = require('./src/utils/process-guard');
+const {
+  createSocketConnectionLimiter,
+  createSocketEventRateManager,
+} = require('./src/middleware/socket-rate-limit');
 const http = require("http");
 const path = require("path");
 const crypto = require("crypto");
@@ -22,6 +27,16 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "10mb" }));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
+
+// Socket.IO IP bazli baglanti sinirlayici middleware
+io.use(createSocketConnectionLimiter(5, 20, 5 * 60 * 1000, 60 * 1000));
+
+// Socket event rate manager
+const socketEventRateManager = createSocketEventRateManager();
+socketEventRateManager.register('message', 3, 60000);     // 3/dk (zaten kendi rate limiti var, ek koruma)
+socketEventRateManager.register('voice-call:request', 4, 10000); // 4/10sn
+socketEventRateManager.register('join', 5, 60000);       // 5/dk
+io.socketEventRateManager = socketEventRateManager;
 
 const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
 const CONTENT_SECURITY_POLICY = [
@@ -82,6 +97,39 @@ app.use((req, res, next) => {
   );
   next();
 });
+
+// Global HTTP rate limiter (200 req/min/IP)
+const globalHttpRequestCounts = new Map();
+app.use((req, res, next) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const maxRequests = 200;
+
+  let entry = globalHttpRequestCounts.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    entry = { count: 1, resetAt: now + windowMs };
+    globalHttpRequestCounts.set(ip, entry);
+  } else {
+    entry.count++;
+    if (entry.count > maxRequests) {
+      console.warn('[HTTP-RATE-LIMIT] IP limiti asildi', { ip, count: entry.count, maxRequests, windowMs });
+      return res.status(429).json({ error: 'Cok fazla istek gonderiyorsunuz. Lutfen yavaslayin.' });
+    }
+  }
+
+  next();
+});
+
+// Periyodik temizlik (10 dk)
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of globalHttpRequestCounts.entries()) {
+    if (entry.resetAt <= now) {
+      globalHttpRequestCounts.delete(ip);
+    }
+  }
+}, 10 * 60 * 1000).unref();
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
@@ -991,6 +1039,39 @@ io.on("connection", (socket) => {
     }
   });
 });
+
+// DDoS korumasi: maksimum eszamanli baglanti limiti
+server.maxConnections = 256;
+
+// Connection timeout ayarlari
+server.keepAliveTimeout = 10000;     // 10 sn keep-alive (varsayilan 5 sn)
+server.headersTimeout = 15000;        // 15 sn header timeout
+server.timeout = 60000;              // 60 sn genel timeout
+
+// Connection overload handler - sunucu doluysa erken reddet
+let serverOverloaded = false;
+server.on('connection', (socket) => {
+  if (serverOverloaded) {
+    socket.destroy();
+    return;
+  }
+
+  if (server.connections && server.connections > 200) {
+    serverOverloaded = true;
+    console.warn('[SERVER] Sunucu baglanti limitine yaklasiyor', {
+      connections: server.connections,
+      maxConnections: server.maxConnections,
+    });
+
+    // 30 sn sonra tekrar kontrol et
+    setTimeout(() => {
+      serverOverloaded = false;
+    }, 30000);
+  }
+});
+
+// Process-level crash korumalari
+setupAllProcessGuards();
 
 server.listen(PORT, "0.0.0.0", () =>
   console.log(`Anın Sohbeti ${PORT} portunda çalışıyor.`)
