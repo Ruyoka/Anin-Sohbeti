@@ -621,7 +621,7 @@ function enqueueSocketId(socketId) {
 
 const nicknameLetterPattern = (() => {
   try {
-    return new RegExp("\\\\p{L}", "u");
+    return /[\p{L}]/u;
   } catch (_error) {
     return /[A-Za-z\u00C0-\u024F]/u;
   }
