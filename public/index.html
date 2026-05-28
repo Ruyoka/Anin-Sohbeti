@@ -6388,7 +6388,7 @@
         reason: "report",
         onCountdownFinished: () => {
           if (nickname) {
-            socket.emit("join", getJoinPayload());
+            joinQueue();
           }
         },
       });
@@ -6423,10 +6423,23 @@
 
     function joinQueue() {
       if (!nickname || !socket.connected) {
-        return;
+        return false;
       }
+
+      if (!isTurnstileSatisfied()) {
+        showNicknameOverlay();
+        if (!turnstileConfigLoaded) {
+          setTurnstileFeedback("Güvenlik doğrulaması hazırlanıyor. Lütfen bekleyin.");
+        } else if (turnstileEnabled) {
+          setTurnstileFeedback("Lütfen güvenlik doğrulamasını tamamlayın.");
+        }
+        updateNicknameValidity();
+        return false;
+      }
+
       beginMatchSearch({ countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS });
       socket.emit("join", getJoinPayload());
+      return true;
     }
 
     function handleNicknameSubmit() {
@@ -6460,7 +6473,7 @@
         nickname = cleanedStored;
         sessionStorage.setItem("nickname", nickname);
         refreshHeaderNicknameDisplay();
-        hideNicknameOverlay();
+        showNicknameOverlay();
         if (nicknameInput) {
           nicknameInput.value = nickname;
           updateNicknameValidity();
@@ -6690,7 +6703,7 @@
         },
         onCountdownFinished: () => {
           if (nickname) {
-            socket.emit("join", getJoinPayload());
+            joinQueue();
           }
         },
       });

@@ -60,8 +60,9 @@ const CONTENT_SECURITY_POLICY = [
   "img-src 'self' data: blob:",
   "font-src 'self' https://fonts.gstatic.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "script-src 'self' 'unsafe-inline' https://cdn.socket.io https://www.googletagmanager.com",
-  "connect-src 'self' ws: wss: https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com",
+  "script-src 'self' 'unsafe-inline' https://cdn.socket.io https://www.googletagmanager.com https://challenges.cloudflare.com",
+  "connect-src 'self' ws: wss: https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com https://challenges.cloudflare.com",
+  "frame-src https://challenges.cloudflare.com",
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
 ].join("; ");
