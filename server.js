@@ -24,9 +24,17 @@ const CALL_RATE_LIMIT_WINDOW_MS = Number(process.env.CALL_RATE_LIMIT_WINDOW_MS |
 
 const app = express();
 app.disable("x-powered-by");
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: '1mb' }));
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+  cors: { origin: '*' },
+  maxHttpBufferSize: 256 * 1024, // 256 KB maksimum paket
+  pingInterval: 25000,
+  pingTimeout: 20000,
+  allowEIO3: false,
+  connectTimeout: 30000,
+  transports: ['websocket', 'polling'],
+});
 
 // Socket.IO IP bazli baglanti sinirlayici middleware
 io.use(createSocketConnectionLimiter(5, 20, 5 * 60 * 1000, 60 * 1000));
@@ -386,6 +394,41 @@ let scheduledTryMatchTime = 0;
 const callRequestsByCaller = new Map();
 const callRequestsByCallee = new Map();
 const eventRateLimits = new Map();
+
+// Periyodik temizlik: eski event rate limit kayitlarini temizle (10 dk)
+setInterval(() => {
+  const now = Date.now();
+  for (const [socketId, buckets] of eventRateLimits.entries()) {
+    const socket = io.sockets?.sockets?.get(socketId);
+    if (!socket) {
+      // Baglantisi kopmus socket'in kayitlarini temizle
+      eventRateLimits.delete(socketId);
+      continue;
+    }
+    // Her bucket icindeki zamani gecmis kayitlari temizle
+    for (const [eventName, timestamps] of buckets.entries()) {
+      const filtered = timestamps.filter(ts => now - ts < 30000);
+      if (filtered.length === 0) {
+        buckets.delete(eventName);
+      } else {
+        buckets.set(eventName, filtered);
+      }
+    }
+    if (buckets.size === 0) {
+      eventRateLimits.delete(socketId);
+    }
+  }
+}, 10 * 60 * 1000).unref();
+
+// Periyodik temizlik: baglantisi kopmus bloke kullanicilari temizle (15 dk)
+setInterval(() => {
+  for (const [socketId, blockedSet] of blockedUsers.entries()) {
+    const socket = io.sockets?.sockets?.get(socketId);
+    if (!socket) {
+      blockedUsers.delete(socketId);
+    }
+  }
+}, 15 * 60 * 1000).unref();
 
 function getPairKey(firstId, secondId) {
   return [firstId, secondId].sort().join(":");
@@ -1044,8 +1087,9 @@ io.on("connection", (socket) => {
 server.maxConnections = 256;
 
 // Connection timeout ayarlari
-server.keepAliveTimeout = 10000;     // 10 sn keep-alive (varsayilan 5 sn)
+server.keepAliveTimeout = 10000;     // 10 sn keep-alive
 server.headersTimeout = 15000;        // 15 sn header timeout
+server.requestTimeout = 30000;        // 30 sn request timeout (Node 18+)
 server.timeout = 60000;              // 60 sn genel timeout
 
 // Connection overload handler - sunucu doluysa erken reddet

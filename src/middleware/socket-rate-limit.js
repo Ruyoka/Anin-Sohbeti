@@ -3,6 +3,19 @@
  * Aninsohbeti - console.log/console.error adapte edilmis surum (env modulu yok)
  */
 
+function startPeriodicMapCleanup(map, isStale, intervalMs = 5 * 60 * 1000) {
+  const interval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of map.entries()) {
+      if (isStale(key, value, now)) {
+        map.delete(key);
+      }
+    }
+  }, intervalMs);
+  interval.unref();
+  return interval;
+}
+
 /**
  * Socket baglantisindan istemci IP'sini al.
  * Proxy arkasindaysa X-Forwarded-For header'ini kullanir.
@@ -33,21 +46,17 @@ function createSocketConnectionLimiter(
   const ipConnections = new Map();   // ip -> { count, blockedUntil }
   const ipAttempts = new Map();      // ip -> { attempts, resetAt }
 
-  // Periyodik temizlik (30 dk)
-  const cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [ip, entry] of ipConnections.entries()) {
-      if (entry.count <= 0 && entry.blockedUntil <= now) {
-        ipConnections.delete(ip);
-      }
-    }
-    for (const [ip, entry] of ipAttempts.entries()) {
-      if (entry.resetAt <= now) {
-        ipAttempts.delete(ip);
-      }
-    }
-  }, 30 * 60 * 1000);
-  cleanupInterval.unref();
+  // Agresif periyodik temizlik (5 dk)
+  startPeriodicMapCleanup(
+    ipConnections,
+    (ip, entry, now) => entry.count <= 0 && entry.blockedUntil <= now,
+    5 * 60 * 1000
+  );
+  startPeriodicMapCleanup(
+    ipAttempts,
+    (ip, entry, now) => entry.resetAt <= now,
+    5 * 60 * 1000
+  );
 
   return (socket, next) => {
     const ip = getSocketClientIp(socket);
@@ -143,6 +152,13 @@ function createSocketConnectionLimiter(
 function createSocketEventRateLimiter(eventName, maxCalls = 10, windowMs = 1000) {
   const buckets = new Map(); // socketId -> { count, resetAt, lastWarnAt }
 
+  // Periyodik bucket temizligi (5 dk)
+  startPeriodicMapCleanup(
+    buckets,
+    (socketId, bucket, now) => bucket.resetAt <= now,
+    5 * 60 * 1000
+  );
+
   return function checkRate(socket) {
     const now = Date.now();
     const key = socket.id;
@@ -198,12 +214,6 @@ function createSocketEventRateManager() {
     if (!limiter) return true;
     return limiter(socket);
   }
-
-  // Periyodik temizlik (15 dk)
-  const cleanupInterval = setInterval(() => {
-    // Basit: limitelerin ic referanslari JS GC ile temizlenir
-  }, 15 * 60 * 1000);
-  cleanupInterval.unref();
 
   return { register, check };
 }
