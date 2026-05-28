@@ -187,32 +187,50 @@ function getClientIpFromSocket(socket) {
 async function verifyTurnstileToken(token, remoteIp = "") {
   const safeToken = typeof token === "string" ? token.trim() : "";
   if (!TURNSTILE_SECRET_KEY || !safeToken) {
-    return false;
+    return { ok: false, error: "missing_key_or_token" };
   }
 
   const body = new URLSearchParams({
     secret: TURNSTILE_SECRET_KEY,
     response: safeToken,
   });
-  if (remoteIp) {
-    body.set("remoteip", remoteIp);
-  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
 
   try {
     const response = await fetch(TURNSTILE_VERIFY_URL, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body,
-      signal: AbortSignal.timeout(5000),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      return false;
+      console.warn("[TURNSTILE] Cloudflare API HTTP hatasi", { status: response.status, statusText: response.statusText });
+      return { ok: false, error: "http_error" };
     }
+
     const result = await response.json();
-    return result && result.success === true;
+    const success = result && result.success === true;
+
+    if (!success) {
+      const errorCodes = Array.isArray(result?.["error-codes"]) ? result["error-codes"] : [];
+      console.warn("[TURNSTILE] dogrulama basarisiz", { errorCodes, siteKey: TURNSTILE_SITE_KEY.slice(0, 8) + "..." });
+      return { ok: false, error: "invalid_token", codes: errorCodes };
+    }
+
+    return { ok: true };
   } catch (error) {
-    console.warn("[TURNSTILE] verification failed", error?.message || error);
-    return false;
+    clearTimeout(timeoutId);
+    const isTimeout = error?.name === "AbortError";
+    console.warn("[TURNSTILE] istek hatasi", {
+      isTimeout,
+      message: error?.message || String(error),
+    });
+    // Network hatasi / timeout -> kullaniciyi bloklama, logla ve allow (degrade)
+    return { ok: true, degraded: true };
   }
 }
 
@@ -864,14 +882,29 @@ io.on("connection", (socket) => {
         payload && typeof payload === "object" && typeof payload.turnstileToken === "string"
           ? payload.turnstileToken
           : "";
-      const isVerified = await verifyTurnstileToken(token, getClientIpFromSocket(socket));
-      if (!isVerified) {
-        socket.emit("join:error", {
-          reason: "turnstile",
-          message: "Güvenlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
-        });
+      const verification = await verifyTurnstileToken(token, getClientIpFromSocket(socket));
+      if (!verification.ok) {
+        const codes = Array.isArray(verification.codes) ? verification.codes : [];
+        const messages = [];
+        if (codes.includes("timeout-or-duplicate")) {
+          messages.push("Dogrulama suresi doldu. Lutfen tekrar deneyin.");
+        } else if (codes.includes("invalid-input-response")) {
+          messages.push("Gecersiz dogrulama kodu. Lutfen sayfayi yenileyip tekrar deneyin.");
+        } else if (codes.includes("invalid-input-secret")) {
+          console.error("[TURNSTILE] GECERSIZ SECRET KEY - servis devre disi");
+          messages.push("Guvenlik dogrulamasi su anda yapilamiyor. Lutfen daha sonra tekrar deneyin.");
+        }
+        if (messages.length === 0) {
+          messages.push("Guvenlik dogrulamasi basarisiz oldu. Lutfen tekrar deneyin.");
+        }
+        socket.emit("join:error", { reason: "turnstile", message: messages.join(" ") });
         return;
       }
+
+      if (verification.degraded) {
+        console.warn("[TURNSTILE] degrade modda calisiyor (network hatasi)");
+      }
+
       socket.data.turnstileVerified = true;
     }
 
