@@ -965,6 +965,28 @@
       min-height: 18px;
     }
 
+    .nickname-form__turnstile {
+      display: flex;
+      justify-content: center;
+      min-height: 70px;
+    }
+
+    .nickname-form__turnstile[hidden] {
+      display: none;
+    }
+
+    .nickname-form__captcha-feedback {
+      margin: -2px 0 0;
+      font-size: 13px;
+      color: #b42318;
+      text-align: center;
+      min-height: 18px;
+    }
+
+    .nickname-form__captcha-feedback[hidden] {
+      display: none;
+    }
+
     .nickname-form button {
       background: var(--accent);
       color: #ffffff;
@@ -2242,6 +2264,14 @@
             autocapitalize="characters"
           >
           <p class="nickname-form__helper" id="nickname-helper" role="status" aria-live="polite"></p>
+          <div id="turnstile-container" class="nickname-form__turnstile" hidden></div>
+          <p
+            id="turnstile-feedback"
+            class="nickname-form__captcha-feedback"
+            role="alert"
+            aria-live="polite"
+            hidden
+          ></p>
           <button id="nickname-submit" type="button" disabled>Sohbete Başla</button>
         </div>
       </div>
@@ -3206,6 +3236,14 @@
     const nicknameInput = document.getElementById("nickname");
     const nicknameSubmit = document.getElementById("nickname-submit");
     const nicknameHelper = document.getElementById("nickname-helper");
+    const turnstileContainer = document.getElementById("turnstile-container");
+    const turnstileFeedback = document.getElementById("turnstile-feedback");
+    let turnstileConfigLoaded = false;
+    let turnstileEnabled = false;
+    let turnstileSiteKey = "";
+    let turnstileWidgetId = null;
+    let turnstileToken = "";
+    let turnstileScriptPromise = null;
     const skipConfirmOverlay = document.getElementById("skip-confirm-overlay");
     const skipConfirmCancel = document.getElementById("skip-confirm-cancel");
     const skipConfirmConfirm = document.getElementById("skip-confirm-confirm");
@@ -4061,7 +4099,7 @@
       const preserveCaret = Boolean(options.preserveCaret);
       const sanitized = normalizeNicknameInput(preserveCaret);
       const valid = isNicknameValid(sanitized);
-      nicknameSubmit.disabled = !valid;
+      nicknameSubmit.disabled = !valid || !isTurnstileSatisfied();
 
       if (nicknameHelper) {
         if (valid) {
@@ -4075,6 +4113,121 @@
       }
 
       return valid;
+    }
+
+
+    function isTurnstileSatisfied() {
+      return turnstileConfigLoaded && (!turnstileEnabled || Boolean(turnstileToken));
+    }
+
+    function setTurnstileFeedback(message) {
+      if (!turnstileFeedback) {
+        return;
+      }
+      const text = String(message || "").trim();
+      turnstileFeedback.textContent = text;
+      turnstileFeedback.hidden = !text;
+    }
+
+    function loadTurnstileScript() {
+      if (window.turnstile) {
+        return Promise.resolve(window.turnstile);
+      }
+      if (turnstileScriptPromise) {
+        return turnstileScriptPromise;
+      }
+      turnstileScriptPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-turnstile-loader="true"]');
+        if (existing) {
+          existing.addEventListener("load", () => resolve(window.turnstile), { once: true });
+          existing.addEventListener("error", reject, { once: true });
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        script.async = true;
+        script.defer = true;
+        script.setAttribute("data-turnstile-loader", "true");
+        script.addEventListener("load", () => resolve(window.turnstile), { once: true });
+        script.addEventListener("error", reject, { once: true });
+        document.head.appendChild(script);
+      });
+      return turnstileScriptPromise;
+    }
+
+    function resetTurnstile() {
+      turnstileToken = "";
+      if (window.turnstile && turnstileWidgetId !== null) {
+        try {
+          window.turnstile.reset(turnstileWidgetId);
+        } catch (_error) {
+          // Ignore widget reset errors.
+        }
+      }
+      updateNicknameValidity();
+    }
+
+    async function initializeTurnstile() {
+      if (!turnstileContainer) {
+        turnstileConfigLoaded = true;
+        updateNicknameValidity();
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/turnstile-config", { cache: "no-store" });
+        const config = response.ok ? await response.json() : null;
+        turnstileEnabled = Boolean(config && config.enabled && config.siteKey);
+        turnstileSiteKey = turnstileEnabled ? String(config.siteKey) : "";
+      } catch (_error) {
+        turnstileEnabled = true;
+        turnstileSiteKey = "";
+      }
+
+      turnstileConfigLoaded = true;
+
+      if (!turnstileEnabled) {
+        turnstileContainer.hidden = true;
+        setTurnstileFeedback("");
+        updateNicknameValidity();
+        return;
+      }
+
+      if (!turnstileSiteKey) {
+        turnstileContainer.hidden = true;
+        setTurnstileFeedback("Güvenlik doğrulaması şu anda yüklenemiyor.");
+        updateNicknameValidity();
+        return;
+      }
+
+      turnstileContainer.hidden = false;
+      try {
+        const turnstile = await loadTurnstileScript();
+        if (turnstileWidgetId === null) {
+          turnstileWidgetId = turnstile.render(turnstileContainer, {
+            sitekey: turnstileSiteKey,
+            theme: "light",
+            callback(token) {
+              turnstileToken = token || "";
+              setTurnstileFeedback("");
+              updateNicknameValidity();
+            },
+            "expired-callback"() {
+              turnstileToken = "";
+              setTurnstileFeedback("Doğrulama süresi doldu. Lütfen tekrar doğrulayın.");
+              updateNicknameValidity();
+            },
+            "error-callback"() {
+              turnstileToken = "";
+              setTurnstileFeedback("Doğrulama yüklenemedi. Lütfen tekrar deneyin.");
+              updateNicknameValidity();
+            },
+          });
+        }
+      } catch (_error) {
+        setTurnstileFeedback("Güvenlik doğrulaması yüklenemedi. Lütfen sayfayı yenileyin.");
+      }
+      updateNicknameValidity();
     }
 
     function updateHeaderNicknameDisplay(value) {
@@ -6264,6 +6417,7 @@
       return {
         nickname,
         blockedUsers: Array.from(blockedUsers),
+        turnstileToken,
       };
     }
 
@@ -6288,6 +6442,12 @@
       updateNicknameValidity();
       refreshHeaderNicknameDisplay();
       sessionStorage.setItem("nickname", nickname);
+      if (!isTurnstileSatisfied()) {
+        setTurnstileFeedback("Lütfen güvenlik doğrulamasını tamamlayın.");
+        updateNicknameValidity();
+        return;
+      }
+
       hideNicknameOverlay();
       requestNotificationPermission();
       joinQueue();
@@ -6323,6 +6483,7 @@
 
     updateControls();
     setupNotificationPermissionWatcher();
+    initializeTurnstile();
 
     socket.on("connect", () => {
       currentSocketId = socket.id;
@@ -6333,6 +6494,19 @@
         resetChat("Sohbete katılmak için bir rumuz seç.");
         showNicknameOverlay();
       }
+    });
+
+    socket.on("join:error", (payload) => {
+      const message =
+        payload && typeof payload === "object" && typeof payload.message === "string"
+          ? payload.message
+          : "Sohbete katılım başarısız oldu. Lütfen tekrar deneyin.";
+      resetChat(message);
+      if (payload && typeof payload === "object" && String(payload.reason || "").startsWith("turnstile")) {
+        resetTurnstile();
+      }
+      showNicknameOverlay();
+      setTurnstileFeedback(message);
     });
 
     socket.on("matched", (payload) => {

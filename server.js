@@ -14,6 +14,9 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const PORT = process.env.PORT || 6000;
+const TURNSTILE_SITE_KEY = (process.env.TURNSTILE_SITE_KEY || process.env.site_key || "").trim();
+const TURNSTILE_SECRET_KEY = (process.env.TURNSTILE_SECRET_KEY || process.env.secret_key || "").trim();
+const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const WAITING_STATUS_TEXT =
   "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
 const POST_REPORT_REQUEUE_DELAY_MS = 5000;
@@ -143,6 +146,13 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
 });
 
+app.get("/api/turnstile-config", (_req, res) => {
+  res.json({
+    enabled: Boolean(TURNSTILE_SITE_KEY && TURNSTILE_SECRET_KEY),
+    siteKey: TURNSTILE_SITE_KEY,
+  });
+});
+
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -161,6 +171,49 @@ function normalizePublicUrl(base) {
 }
 
 const normalizedPublicUrl = normalizePublicUrl(R2_PUBLIC_URL);
+
+function getClientIpFromSocket(socket) {
+  const trustProxy = process.env.TRUST_PROXY === "true" || process.env.TRUST_PROXY === "1";
+  if (trustProxy) {
+    const forwarded = socket.handshake?.headers?.["x-forwarded-for"];
+    if (typeof forwarded === "string" && forwarded.trim()) {
+      return forwarded.split(",")[0].trim();
+    }
+  }
+  return socket.handshake?.address || socket.conn?.remoteAddress || "";
+}
+
+async function verifyTurnstileToken(token, remoteIp = "") {
+  const safeToken = typeof token === "string" ? token.trim() : "";
+  if (!TURNSTILE_SECRET_KEY || !safeToken) {
+    return false;
+  }
+
+  const body = new URLSearchParams({
+    secret: TURNSTILE_SECRET_KEY,
+    response: safeToken,
+  });
+  if (remoteIp) {
+    body.set("remoteip", remoteIp);
+  }
+
+  try {
+    const response = await fetch(TURNSTILE_VERIFY_URL, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      return false;
+    }
+    const result = await response.json();
+    return result && result.success === true;
+  } catch (error) {
+    console.warn("[TURNSTILE] verification failed", error?.message || error);
+    return false;
+  }
+}
 
 function getRateLimitNickname(value) {
   return sanitizeNickname(typeof value === "string" ? value : "").slice(0, 50);
@@ -782,13 +835,45 @@ function findNextPair() {
 io.on("connection", (socket) => {
   console.log("Yeni kullanıcı:", socket.id);
   blockedUsers.set(socket.id, new Set());
+  socket.data = socket.data || {};
+  socket.data.turnstileVerified = false;
 
-  socket.on("join", (payload) => {
+  socket.on("join", async (payload) => {
     const rawNickname =
       payload && typeof payload === "object" && typeof payload.nickname === "string"
         ? payload.nickname
         : "";
     const cleanedNickname = sanitizeNickname(rawNickname).slice(0, 12);
+
+    if (!cleanedNickname) {
+      socket.emit("join:error", { reason: "nickname", message: "Geçerli bir rumuz gerekli." });
+      return;
+    }
+
+    if (!socket.data.turnstileVerified) {
+      if (!TURNSTILE_SITE_KEY || !TURNSTILE_SECRET_KEY) {
+        socket.emit("join:error", {
+          reason: "turnstile-config",
+          message: "Güvenlik doğrulaması şu anda yapılamıyor. Lütfen daha sonra tekrar deneyin.",
+        });
+        return;
+      }
+
+      const token =
+        payload && typeof payload === "object" && typeof payload.turnstileToken === "string"
+          ? payload.turnstileToken
+          : "";
+      const isVerified = await verifyTurnstileToken(token, getClientIpFromSocket(socket));
+      if (!isVerified) {
+        socket.emit("join:error", {
+          reason: "turnstile",
+          message: "Güvenlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
+        });
+        return;
+      }
+      socket.data.turnstileVerified = true;
+    }
+
     nicknames.set(socket.id, cleanedNickname);
 
     if (payload && typeof payload === "object" && Array.isArray(payload.blockedUsers)) {
