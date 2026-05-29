@@ -3244,6 +3244,7 @@
     let turnstileWidgetId = null;
     let turnstileToken = "";
     let turnstileScriptPromise = null;
+    let joining = false;
     const skipConfirmOverlay = document.getElementById("skip-confirm-overlay");
     const skipConfirmCancel = document.getElementById("skip-confirm-cancel");
     const skipConfirmConfirm = document.getElementById("skip-confirm-confirm");
@@ -6426,6 +6427,10 @@
         return false;
       }
 
+      if (joining) {
+        return false;
+      }
+
       if (!isTurnstileSatisfied()) {
         showNicknameOverlay();
         if (!turnstileConfigLoaded) {
@@ -6437,8 +6442,11 @@
         return false;
       }
 
+      joining = true;
       beginMatchSearch({ countdownSeconds: MATCH_SEARCH_COUNTDOWN_SECONDS });
       socket.emit("join", getJoinPayload());
+      // Clear token after emitting to prevent reuse on reconnect
+      turnstileToken = "";
       return true;
     }
 
@@ -6502,7 +6510,10 @@
       currentSocketId = socket.id;
       setMatchedState(false);
       if (nickname) {
-        joinQueue();
+        // On reconnect, require fresh turnstile verification
+        resetTurnstile();
+        showNicknameOverlay();
+        setTurnstileFeedback("Bağlantı yenilendi. Lütfen güvenlik doğrulamasını tekrar yapın.");
       } else {
         resetChat("Sohbete katılmak için bir rumuz seç.");
         showNicknameOverlay();
@@ -6510,6 +6521,7 @@
     });
 
     socket.on("join:error", (payload) => {
+      joining = false;
       const message =
         payload && typeof payload === "object" && typeof payload.message === "string"
           ? payload.message
@@ -6523,6 +6535,7 @@
     });
 
     socket.on("matched", (payload) => {
+      joining = false;
       currentPartnerId =
         payload && typeof payload === "object" && typeof payload.partnerId === "string"
           ? payload.partnerId
@@ -6688,6 +6701,7 @@
     });
 
     socket.on("ended", () => {
+      joining = false;
       hidePartnerTypingIndicator();
       beginMatchSearch({
         countdownSeconds: DISCONNECT_SEARCH_COUNTDOWN_SECONDS,
@@ -6710,6 +6724,7 @@
     });
 
     socket.on("disconnect", () => {
+      joining = false;
       currentSocketId = null;
       setMatchedState(false);
       voiceCallManager?.handleDisconnect?.();

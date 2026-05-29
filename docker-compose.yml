@@ -1,4 +1,3 @@
-version: "3"
 services:
   aninsohbeti:
     build: .
@@ -6,3 +5,9 @@ services:
     restart: always
     ports:
       - "6000:6000"
+    environment:
+      - PORT=6000
+      - NODE_ENV=production
+      - TRUST_PROXY=true
+      - TURNSTILE_SITE_KEY=0x4AAAAAAB4YbuB3ldcngp_X
+      - TURNSTILE_SECRET_KEY=0x4AAAAAAB4YbtDAfAznXoaN5MfiETToWBU
