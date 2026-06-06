@@ -120,8 +120,8 @@ async function connectClients(...sockets) {
 async function matchPair(first, second) {
   const firstMatched = waitForEvent(first, "matched");
   const secondMatched = waitForEvent(second, "matched");
-  first.emit("join");
-  second.emit("join");
+  first.emit("join", { nickname: "Testci1", honeypot: "" });
+  second.emit("join", { nickname: "Testci2", honeypot: "" });
   await Promise.all([firstMatched, secondMatched]);
 }
 

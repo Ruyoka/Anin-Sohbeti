@@ -2263,6 +2263,15 @@
             inputmode="latin"
             autocapitalize="characters"
           >
+          <input
+            id="website"
+            name="website"
+            type="text"
+            autocomplete="off"
+            tabindex="-1"
+            aria-hidden="true"
+            style="display:none"
+          >
           <p class="nickname-form__helper" id="nickname-helper" role="status" aria-live="polite"></p>
           <div id="turnstile-container" class="nickname-form__turnstile" hidden></div>
           <p
@@ -3235,6 +3244,7 @@
     const nicknameOverlay = document.getElementById("nickname-overlay");
     const nicknameInput = document.getElementById("nickname");
     const nicknameSubmit = document.getElementById("nickname-submit");
+    const honeypotInput = document.getElementById("website");
     const nicknameHelper = document.getElementById("nickname-helper");
     const turnstileContainer = document.getElementById("turnstile-container");
     const turnstileFeedback = document.getElementById("turnstile-feedback");
@@ -6419,6 +6429,7 @@
         nickname,
         blockedUsers: Array.from(blockedUsers),
         turnstileToken,
+        honeypot: honeypotInput?.value || '',
       };
     }
 

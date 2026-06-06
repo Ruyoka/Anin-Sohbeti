@@ -18,6 +18,7 @@ const PORT = process.env.PORT || 6000;
 const TURNSTILE_SITE_KEY = (process.env.TURNSTILE_SITE_KEY || process.env.site_key || "").trim();
 const TURNSTILE_SECRET_KEY = (process.env.TURNSTILE_SECRET_KEY || process.env.secret_key || "").trim();
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const CLIENT_ORIGIN = (process.env.CLIENT_ORIGIN || "").trim();
 const WAITING_STATUS_TEXT =
   "Şu anda herkes meşgul ya da eşleşecek kişi yok. Birisi ile eşleştiğinizde size bildirim göndereceğiz :)";
 const POST_REPORT_REQUEUE_DELAY_MS = 5000;
@@ -37,6 +38,16 @@ const BOT_DETECT_CONNECTION_BURST = 30;    // Ayni IP'den 30+ baglanti / 10sn = 
 const BOT_DETECT_BURST_WINDOW_MS = 10 * 1000;
 const BOT_BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 dk blok
 
+function logSecurityEvent(level, event, details = {}) {
+  const payload = {
+    timestamp: new Date().toISOString(),
+    event,
+    ...details,
+  };
+  const writer = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+  writer(`[${event}]`, payload);
+}
+
 const app = express();
 app.set('trust proxy', process.env.TRUST_PROXY === "true" || process.env.TRUST_PROXY === "1" ? 1 : 0);
 app.disable("x-powered-by");
@@ -51,7 +62,15 @@ server.requestTimeout = 30000;
 server.timeout = 60000;
 
 const io = new Server(server, {
-  cors: { origin: '*' },
+  cors: { origin: CLIENT_ORIGIN || '*' },
+  allowRequest: (req, callback) => {
+    if (!CLIENT_ORIGIN) {
+      callback(null, true);
+      return;
+    }
+    const origin = req.headers.origin || '';
+    callback(null, origin === CLIENT_ORIGIN);
+  },
   maxHttpBufferSize: 256 * 1024, // 256 KB maksimum paket
   pingInterval: 25000,
   pingTimeout: 20000,
@@ -104,7 +123,7 @@ function isIpBotBlocked(ip) {
 function blockIpForBot(ip) {
   const until = Date.now() + BOT_BLOCK_DURATION_MS;
   ipBotBlocked.set(ip, until);
-  console.warn('[BOT-DETECT] IP otomatik bot olarak isaretlendi ve bloklandi', { ip, blockedUntil: until });
+  logSecurityEvent('warn', 'BOT-DETECT', { ip, blockedUntil: until, reason: 'connection-burst' });
 }
 
 function trackIpConnection(ip) {
@@ -168,7 +187,7 @@ server.on('connection', (socket) => {
   }
   if (server._connections > 400) {
     serverOverloaded = true;
-    console.warn('[SERVER] Baglanti limitine yaklasiyor - gecici olarak yeni baglantilar reddediliyor', { connections: server._connections });
+    logSecurityEvent('warn', 'SERVER-OVERLOAD', { connections: server._connections });
     setTimeout(() => { serverOverloaded = false; }, 15000);
   }
 });
@@ -242,7 +261,7 @@ const globalHttpLimiter = rateLimit({
   legacyHeaders: false,
   validate: { keyGeneratorIpFallback: false },
   handler: (req, res) => {
-    console.warn('[HTTP-RATE-LIMIT] IP limiti asildi', { ip: req.ip });
+    logSecurityEvent('warn', 'HTTP-RATE-LIMIT', { ip: req.ip, method: req.method, path: req.originalUrl || req.path });
     res.status(429).json({ error: 'Cok fazla istek gonderiyorsunuz. Lutfen yavaslayin.' });
   },
 });
@@ -962,6 +981,13 @@ function tryMatch() {
     recordRecentMatch(first, second);
     const firstNickname = nicknames.get(first) || "";
     const secondNickname = nicknames.get(second) || "";
+    logSecurityEvent('info', 'CHAT-MATCH', {
+      room: 'random-pair',
+      participants: [
+        { socketId: first, nickname: firstNickname, ip: getClientIp(firstSocket) },
+        { socketId: second, nickname: secondNickname, ip: getClientIp(secondSocket) },
+      ],
+    });
     io.to(first).emit("matched", {
       partnerNickname: secondNickname,
       partnerId: second,
@@ -1024,11 +1050,11 @@ function findNextPair() {
 
 io.on("connection", (socket) => {
   const clientIp = getClientIp(socket);
-  console.log("Yeni kullanıcı:", socket.id, "IP:", clientIp);
+  logSecurityEvent('info', 'SOCKET-CONNECT', { socketId: socket.id, ip: clientIp });
 
   // Bot tespit: baglanti hizi kontrolu
   if (trackIpConnection(clientIp)) {
-    console.warn('[BOT-DETECT] Bot tespit edildi, baglanti reddediliyor', { socketId: socket.id, ip: clientIp });
+    logSecurityEvent('warn', 'BOT-DETECT', { socketId: socket.id, ip: clientIp, reason: 'connection-burst-rejected' });
     socket.emit("join:error", {
       reason: "security-block",
       message: "Guvenlik nedeniyle baglantiniz reddedildi. Lutfen daha sonra tekrar deneyin.",
@@ -1039,7 +1065,7 @@ io.on("connection", (socket) => {
 
   // IP bot blok kontrolu
   if (isIpBotBlocked(clientIp)) {
-    console.warn('[BOT-DETECT] Bloklanmis IP tekrar baglanmaya calisti', { socketId: socket.id, ip: clientIp });
+    logSecurityEvent('warn', 'BOT-DETECT', { socketId: socket.id, ip: clientIp, reason: 'blocked-ip-retry' });
     socket.emit("join:error", {
       reason: "security-block",
       message: "IP adresiniz gecici olarak engellendi. Lutfen 30 dakika sonra tekrar deneyin.",
@@ -1056,7 +1082,7 @@ io.on("connection", (socket) => {
   // Anti-spam: baglanti idle timeout - 2 dk icinde join yapmazsa at
   const idleTimer = setTimeout(() => {
     if (!partners.has(socket.id) && !nicknames.has(socket.id)) {
-      console.log('[IDLE] Join yapmayan bos socket atiliyor', { socketId: socket.id, ip: clientIp });
+      logSecurityEvent('info', 'SOCKET-IDLE-TIMEOUT', { socketId: socket.id, ip: clientIp });
       socket.emit("join:error", {
         reason: "idle-timeout",
         message: "Baglantiniz cok uzun sure bos kaldi. Lutfen tekrar baglanin.",
@@ -1076,7 +1102,7 @@ io.on("connection", (socket) => {
 
     // IP bazli global join rate limit
     if (!checkIpJoinRate(clientIp)) {
-      console.warn('[JOIN-RATE-LIMIT] IP join limiti asildi', { ip: clientIp, socketId: socket.id });
+      logSecurityEvent('warn', 'JOIN-RATE-LIMIT', { ip: clientIp, socketId: socket.id });
       socket.emit("join:error", { reason: "rate-limit", message: "Cok fazla katilma denemesi yaptiniz. Lutfen 1 dakika bekleyin." });
       return;
     }
@@ -1094,7 +1120,7 @@ io.on("connection", (socket) => {
 
     // Anti-bot: supheli rumuz tespiti
     if (isSuspiciousNickname(cleanedNickname)) {
-      console.warn('[BOT-DETECT] Supheli rumuz tespit edildi', { nickname: cleanedNickname, ip: clientIp, socketId: socket.id });
+      logSecurityEvent('warn', 'BOT-DETECT', { nickname: cleanedNickname, ip: clientIp, socketId: socket.id, reason: 'suspicious-nickname' });
       socket.emit("join:error", {
         reason: "invalid-nickname",
         message: "Bu rumuz kullanilamaz. Lutfen farkli bir rumuz secin.",
@@ -1112,7 +1138,7 @@ io.on("connection", (socket) => {
     if (!socket.data.turnstileVerified) {
       // Anti-bot: honeypot kontrolu - bot'larin doldurdugu gizli alan
       if (payload && typeof payload === "object" && payload.honeypot && typeof payload.honeypot === "string" && payload.honeypot.length > 0) {
-        console.warn('[BOT-DETECT] Honeypot tetiklendi (bot tespit)', { ip: clientIp, socketId: socket.id, nickname: cleanedNickname });
+        logSecurityEvent('warn', 'BOT-DETECT', { ip: clientIp, socketId: socket.id, nickname: cleanedNickname, reason: 'honeypot' });
         socket.emit("join:error", {
           reason: "security",
           message: "Guvenlik kontrolu basarisiz. Lutfen sayfayi yenileyip tekrar deneyin.",
@@ -1151,6 +1177,13 @@ io.on("connection", (socket) => {
     }
 
     nicknames.set(socket.id, cleanedNickname);
+    logSecurityEvent('info', 'CHAT-JOIN', {
+      socketId: socket.id,
+      ip: clientIp,
+      nickname: cleanedNickname,
+      room: 'random-queue',
+      queueSize: queue.length,
+    });
 
     if (payload && typeof payload === "object" && Array.isArray(payload.blockedUsers)) {
       const blockedSet = getBlockedSet(socket.id);
@@ -1424,8 +1457,16 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     eventRateLimits.delete(socket.id);
-    endCurrentChat(socket.id);
     const storedNickname = nicknames.get(socket.id) || "";
+    const partnerId = partners.get(socket.id) || null;
+    logSecurityEvent('info', 'CHAT-DISCONNECT', {
+      socketId: socket.id,
+      ip: clientIp,
+      nickname: storedNickname,
+      room: partnerId ? 'random-pair' : 'random-queue',
+      partnerId,
+    });
+    endCurrentChat(socket.id);
     nicknames.delete(socket.id);
     blockedUsers.delete(socket.id);
     lastSuccessfulUploadBySocket.delete(socket.id);
