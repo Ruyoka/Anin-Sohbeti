@@ -1104,13 +1104,12 @@ io.on("connection", (socket) => {
 
     if (!socket.data.turnstileVerified) {
       if (!TURNSTILE_SITE_KEY || !TURNSTILE_SECRET_KEY) {
-        socket.emit("join:error", {
-          reason: "turnstile-config",
-          message: "Güvenlik doğrulaması şu anda yapılamıyor. Lütfen daha sonra tekrar deneyin.",
-        });
-        return;
+        // Turnstile yapilandirilmamis -> dogrulamayi atla
+        socket.data.turnstileVerified = true;
       }
+    }
 
+    if (!socket.data.turnstileVerified) {
       // Anti-bot: honeypot kontrolu - bot'larin doldurdugu gizli alan
       if (payload && typeof payload === "object" && payload.honeypot && typeof payload.honeypot === "string" && payload.honeypot.length > 0) {
         console.warn('[BOT-DETECT] Honeypot tetiklendi (bot tespit)', { ip: clientIp, socketId: socket.id, nickname: cleanedNickname });
