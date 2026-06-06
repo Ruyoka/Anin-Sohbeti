@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const { setupAllProcessGuards } = require('./src/utils/process-guard');
 const {
   createSocketConnectionLimiter,
@@ -25,10 +26,30 @@ const MESSAGE_RATE_LIMIT_WINDOW_MS = Number(process.env.MESSAGE_RATE_LIMIT_WINDO
 const CALL_RATE_LIMIT_MAX = Number(process.env.CALL_RATE_LIMIT_MAX || 4);
 const CALL_RATE_LIMIT_WINDOW_MS = Number(process.env.CALL_RATE_LIMIT_WINDOW_MS || 10000);
 
+// Security: Anti-spam constants
+const MAX_QUEUE_SIZE = 500;               // Maksimum bekleme kuyrugu
+const SOCKET_IDLE_TIMEOUT_MS = 120 * 1000; // 2 dk icinde join yapmayan socket atilir
+const JOIN_RATE_LIMIT_PER_IP = 10;         // IP basina dakikada max join
+const JOIN_RATE_WINDOW_MS = 60 * 1000;     // 1 dakika
+const NICKNAME_MIN_LENGTH = 2;             // Minimum rumuz uzunlugu
+const NICKNAME_MAX_LENGTH = 12;            // Maximum rumuz uzunlugu (display)
+const BOT_DETECT_CONNECTION_BURST = 30;    // Ayni IP'den 30+ baglanti / 10sn = bot
+const BOT_DETECT_BURST_WINDOW_MS = 10 * 1000;
+const BOT_BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 dk blok
+
 const app = express();
+app.set('trust proxy', process.env.TRUST_PROXY === "true" || process.env.TRUST_PROXY === "1" ? 1 : 0);
 app.disable("x-powered-by");
 app.use(express.json({ limit: '1mb' }));
 const server = http.createServer(app);
+
+// DDoS: sunucu seviyesi baglanti limitleri
+server.maxConnections = 512;
+server.keepAliveTimeout = 10000;
+server.headersTimeout = 15000;
+server.requestTimeout = 30000;
+server.timeout = 60000;
+
 const io = new Server(server, {
   cors: { origin: '*' },
   maxHttpBufferSize: 256 * 1024, // 256 KB maksimum paket
@@ -39,15 +60,118 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'],
 });
 
-// Socket.IO IP bazli baglanti sinirlayici middleware
-io.use(createSocketConnectionLimiter(5, 20, 5 * 60 * 1000, 60 * 1000));
+// Socket.IO IP bazli baglanti sinirlayici middleware - SIKILASTIRILDI
+io.use(createSocketConnectionLimiter(3, 10, 10 * 60 * 1000, 60 * 1000));
 
-// Socket event rate manager
+// Socket event rate manager - EK EVENT'LER ILE GUCLENDIRILDI
 const socketEventRateManager = createSocketEventRateManager();
-socketEventRateManager.register('message', 3, 60000);     // 3/dk (zaten kendi rate limiti var, ek koruma)
+socketEventRateManager.register('message', 3, 60000);     // 3/dk
 socketEventRateManager.register('voice-call:request', 4, 10000); // 4/10sn
-socketEventRateManager.register('join', 5, 60000);       // 5/dk
+socketEventRateManager.register('join', 3, 30000);       // 3/30sn (sikilastirildi)
+// YENI: spam-olasilikli event limits
+socketEventRateManager.register('block-user', 10, 60000);
+socketEventRateManager.register('report', 5, 60000);
+socketEventRateManager.register('typing', 10, 30000);
 io.socketEventRateManager = socketEventRateManager;
+
+// IP bazli global join rate limiter (socket'ler arasi)
+const ipJoinCounts = new Map(); // ip -> { count, resetAt }
+const ipBotBlocked = new Map(); // ip -> blockedUntil
+const ipConnectionTimestamps = new Map(); // ip -> [timestamps...]
+
+function getClientIp(socket) {
+  const trustProxy = process.env.TRUST_PROXY === "true" || process.env.TRUST_PROXY === "1";
+  if (trustProxy) {
+    const forwarded = socket.handshake?.headers?.["x-forwarded-for"];
+    if (typeof forwarded === "string" && forwarded.trim()) {
+      return forwarded.split(",")[0].trim();
+    }
+  }
+  return socket.handshake?.address || socket.conn?.remoteAddress || "unknown";
+}
+
+function isIpBotBlocked(ip) {
+  const blockedUntil = ipBotBlocked.get(ip);
+  if (blockedUntil && blockedUntil > Date.now()) {
+    return true;
+  }
+  if (blockedUntil) {
+    ipBotBlocked.delete(ip);
+  }
+  return false;
+}
+
+function blockIpForBot(ip) {
+  const until = Date.now() + BOT_BLOCK_DURATION_MS;
+  ipBotBlocked.set(ip, until);
+  console.warn('[BOT-DETECT] IP otomatik bot olarak isaretlendi ve bloklandi', { ip, blockedUntil: until });
+}
+
+function trackIpConnection(ip) {
+  const now = Date.now();
+  let timestamps = ipConnectionTimestamps.get(ip);
+  if (!timestamps) {
+    timestamps = [];
+    ipConnectionTimestamps.set(ip, timestamps);
+  }
+  timestamps.push(now);
+  // Son 10sn'deki baglantilari filtrele
+  const cutoff = now - BOT_DETECT_BURST_WINDOW_MS;
+  while (timestamps.length > 0 && timestamps[0] < cutoff) {
+    timestamps.shift();
+  }
+  // Cok fazla baglanti varsa bot tespit et
+  if (timestamps.length > BOT_DETECT_CONNECTION_BURST) {
+    blockIpForBot(ip);
+    return true;
+  }
+  return false;
+}
+
+function checkIpJoinRate(ip) {
+  const now = Date.now();
+  let entry = ipJoinCounts.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    entry = { count: 1, resetAt: now + JOIN_RATE_WINDOW_MS };
+    ipJoinCounts.set(ip, entry);
+    return true;
+  }
+  entry.count++;
+  if (entry.count > JOIN_RATE_LIMIT_PER_IP) {
+    return false;
+  }
+  return true;
+}
+
+// Periyodik temizlik: IP join counts, timestamps (5 dk)
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of ipJoinCounts.entries()) {
+    if (entry.resetAt <= now) ipJoinCounts.delete(ip);
+  }
+  for (const [ip, timestamps] of ipConnectionTimestamps.entries()) {
+    const cutoff = now - BOT_DETECT_BURST_WINDOW_MS;
+    while (timestamps.length > 0 && timestamps[0] < cutoff) timestamps.shift();
+    if (timestamps.length === 0) ipConnectionTimestamps.delete(ip);
+  }
+  for (const [ip, blockedUntil] of ipBotBlocked.entries()) {
+    if (blockedUntil <= now) ipBotBlocked.delete(ip);
+  }
+}, 5 * 60 * 1000).unref();
+
+// Sunucu yuk kontrolu: asiri baglanti durumunda erken reddet
+let serverOverloaded = false;
+server.on('connection', (socket) => {
+  if (serverOverloaded) {
+    socket.destroy();
+    return;
+  }
+  if (server._connections > 400) {
+    serverOverloaded = true;
+    console.warn('[SERVER] Baglanti limitine yaklasiyor - gecici olarak yeni baglantilar reddediliyor', { connections: server._connections });
+    setTimeout(() => { serverOverloaded = false; }, 15000);
+  }
+});
 
 const RECENT_MATCH_COOLDOWN_MS = 60 * 1000;
 const CONTENT_SECURITY_POLICY = [
@@ -110,38 +234,42 @@ app.use((req, res, next) => {
   next();
 });
 
-// Global HTTP rate limiter (200 req/min/IP)
-const globalHttpRequestCounts = new Map();
-app.use((req, res, next) => {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
-  const now = Date.now();
-  const windowMs = 60 * 1000;
-  const maxRequests = 200;
-
-  let entry = globalHttpRequestCounts.get(ip);
-  if (!entry || entry.resetAt <= now) {
-    entry = { count: 1, resetAt: now + windowMs };
-    globalHttpRequestCounts.set(ip, entry);
-  } else {
-    entry.count++;
-    if (entry.count > maxRequests) {
-      console.warn('[HTTP-RATE-LIMIT] IP limiti asildi', { ip, count: entry.count, maxRequests, windowMs });
-      return res.status(429).json({ error: 'Cok fazla istek gonderiyorsunuz. Lutfen yavaslayin.' });
-    }
-  }
-
-  next();
+// HTTP rate limiter: express-rate-limit ile daha guclu koruma
+const globalHttpLimiter = rateLimit({
+  windowMs: 60 * 1000,        // 1 dakika
+  max: 200,                   // IP basina 200 istek
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
+  handler: (req, res) => {
+    console.warn('[HTTP-RATE-LIMIT] IP limiti asildi', { ip: req.ip });
+    res.status(429).json({ error: 'Cok fazla istek gonderiyorsunuz. Lutfen yavaslayin.' });
+  },
 });
+app.use(globalHttpLimiter);
 
-// Periyodik temizlik (10 dk)
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of globalHttpRequestCounts.entries()) {
-    if (entry.resetAt <= now) {
-      globalHttpRequestCounts.delete(ip);
-    }
-  }
-}, 10 * 60 * 1000).unref();
+// API route'lari icin daha sıkı rate limit (60 req/min)
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
+});
+app.use('/api', apiLimiter);
+
+// Upload presign endpoint icin ekstra siki rate limit (5 req/min)
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
+  handler: (req, res) => {
+    res.status(429).json({ error: 'rate_limited', message: 'Cok fazla yukleme denemesi yaptiniz. Lutfen bekleyin.' });
+  },
+});
+app.use('/api/uploads', uploadLimiter);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
@@ -173,7 +301,7 @@ function normalizePublicUrl(base) {
 
 const normalizedPublicUrl = normalizePublicUrl(R2_PUBLIC_URL);
 
-function getClientIpFromSocket(socket) {
+function getClientIpForUpload(socket) {
   const trustProxy = process.env.TRUST_PROXY === "true" || process.env.TRUST_PROXY === "1";
   if (trustProxy) {
     const forwarded = socket.handshake?.headers?.["x-forwarded-for"];
@@ -729,6 +857,19 @@ function enqueueSocketId(socketId) {
   if (partners.has(socketId)) return;
   if (queue.includes(socketId)) return;
 
+  // Anti-spam: Kuyruk limiti - cok fazlaysa reddet
+  if (queue.length >= MAX_QUEUE_SIZE) {
+    const socket = io.sockets.sockets.get(socketId);
+    if (socket) {
+      socket.emit("join:error", {
+        reason: "queue-full",
+        message: "Sunucu su anda cok yogun. Lutfen daha sonra tekrar deneyin.",
+      });
+    }
+    console.warn('[QUEUE] Queue limitine ulasildi, yeni kullanici reddedildi', { queueSize: queue.length, maxSize: MAX_QUEUE_SIZE });
+    return;
+  }
+
   notifyWaitingStatus(socketId, false);
   queue.push(socketId);
   startWaitTimer(socketId);
@@ -758,7 +899,37 @@ function sanitizeNickname(value) {
     }
   }
 
+  // Anti-bot: minimum uzunluk kontrolu
+  if (filtered.length < 2) {
+    return "";
+  }
+
   return filtered;
+}
+
+/**
+ * Bot tespit: supheli rumuz pattern'leri
+ * - Tamamen ayni karakter tekrari ("aaaa", "111")
+ * - Sadece sayi ve ozel karakter
+ * - Anlamsiz uzun rastgele diziler (hash-benzeri)
+ */
+function isSuspiciousNickname(nickname) {
+  if (!nickname || nickname.length < 3) return false;
+
+  // Tamamen ayni karakter: "aaaaa", "11111"
+  if (new Set(nickname).size === 1) return true;
+
+  // Sadece rakamlardan olusuyorsa ve kisa degilse
+  if (/^[0-9]{5,}$/.test(nickname)) return true;
+
+  // Rastgele gozuken uzun karakter dizileri (hash-benzeri): en az 8 karakter ve sadece hex
+  if (/^[0-9a-f]{12,}$/i.test(nickname)) return true;
+
+  // Cok fazla ardarda buyuk harf / kucuk harf degisimi (bot-generated)
+  const transitions = (nickname.match(/[A-Z][a-z]|[a-z][A-Z]/g) || []).length;
+  if (nickname.length >= 6 && transitions >= nickname.length * 0.5) return true;
+
+  return false;
 }
 
 function tryMatch() {
@@ -852,20 +1023,82 @@ function findNextPair() {
 }
 
 io.on("connection", (socket) => {
-  console.log("Yeni kullanıcı:", socket.id);
+  const clientIp = getClientIp(socket);
+  console.log("Yeni kullanıcı:", socket.id, "IP:", clientIp);
+
+  // Bot tespit: baglanti hizi kontrolu
+  if (trackIpConnection(clientIp)) {
+    console.warn('[BOT-DETECT] Bot tespit edildi, baglanti reddediliyor', { socketId: socket.id, ip: clientIp });
+    socket.emit("join:error", {
+      reason: "security-block",
+      message: "Guvenlik nedeniyle baglantiniz reddedildi. Lutfen daha sonra tekrar deneyin.",
+    });
+    socket.disconnect(true);
+    return;
+  }
+
+  // IP bot blok kontrolu
+  if (isIpBotBlocked(clientIp)) {
+    console.warn('[BOT-DETECT] Bloklanmis IP tekrar baglanmaya calisti', { socketId: socket.id, ip: clientIp });
+    socket.emit("join:error", {
+      reason: "security-block",
+      message: "IP adresiniz gecici olarak engellendi. Lutfen 30 dakika sonra tekrar deneyin.",
+    });
+    socket.disconnect(true);
+    return;
+  }
+
   blockedUsers.set(socket.id, new Set());
   socket.data = socket.data || {};
   socket.data.turnstileVerified = false;
+  socket.data.connectedAt = Date.now();
+
+  // Anti-spam: baglanti idle timeout - 2 dk icinde join yapmazsa at
+  const idleTimer = setTimeout(() => {
+    if (!partners.has(socket.id) && !nicknames.has(socket.id)) {
+      console.log('[IDLE] Join yapmayan bos socket atiliyor', { socketId: socket.id, ip: clientIp });
+      socket.emit("join:error", {
+        reason: "idle-timeout",
+        message: "Baglantiniz cok uzun sure bos kaldi. Lutfen tekrar baglanin.",
+      });
+      socket.disconnect(true);
+    }
+  }, SOCKET_IDLE_TIMEOUT_MS);
+
+  // Temizlik: socket disconnect oldugunda idle timer'i temizle
+  const originalDisconnect = socket.disconnect.bind(socket);
+  socket.on('disconnect', () => {
+    clearTimeout(idleTimer);
+  });
 
   socket.on("join", async (payload) => {
+    clearTimeout(idleTimer); // Join yapti, timer'i temizle
+
+    // IP bazli global join rate limit
+    if (!checkIpJoinRate(clientIp)) {
+      console.warn('[JOIN-RATE-LIMIT] IP join limiti asildi', { ip: clientIp, socketId: socket.id });
+      socket.emit("join:error", { reason: "rate-limit", message: "Cok fazla katilma denemesi yaptiniz. Lutfen 1 dakika bekleyin." });
+      return;
+    }
     const rawNickname =
       payload && typeof payload === "object" && typeof payload.nickname === "string"
         ? payload.nickname
         : "";
-    const cleanedNickname = sanitizeNickname(rawNickname).slice(0, 12);
+    const cleanedNickname = sanitizeNickname(rawNickname).slice(0, NICKNAME_MAX_LENGTH);
 
-    if (!cleanedNickname) {
-      socket.emit("join:error", { reason: "nickname", message: "Geçerli bir rumuz gerekli." });
+    // Anti-bot: minimum rumuz uzunlugu kontrolu
+    if (!cleanedNickname || cleanedNickname.length < NICKNAME_MIN_LENGTH) {
+      socket.emit("join:error", { reason: "nickname", message: `Rumuz en az ${NICKNAME_MIN_LENGTH} karakter olmalidir.` });
+      return;
+    }
+
+    // Anti-bot: supheli rumuz tespiti
+    if (isSuspiciousNickname(cleanedNickname)) {
+      console.warn('[BOT-DETECT] Supheli rumuz tespit edildi', { nickname: cleanedNickname, ip: clientIp, socketId: socket.id });
+      socket.emit("join:error", {
+        reason: "invalid-nickname",
+        message: "Bu rumuz kullanilamaz. Lutfen farkli bir rumuz secin.",
+      });
       return;
     }
 
@@ -878,11 +1111,21 @@ io.on("connection", (socket) => {
         return;
       }
 
+      // Anti-bot: honeypot kontrolu - bot'larin doldurdugu gizli alan
+      if (payload && typeof payload === "object" && payload.honeypot && typeof payload.honeypot === "string" && payload.honeypot.length > 0) {
+        console.warn('[BOT-DETECT] Honeypot tetiklendi (bot tespit)', { ip: clientIp, socketId: socket.id, nickname: cleanedNickname });
+        socket.emit("join:error", {
+          reason: "security",
+          message: "Guvenlik kontrolu basarisiz. Lutfen sayfayi yenileyip tekrar deneyin.",
+        });
+        return;
+      }
+
       const token =
         payload && typeof payload === "object" && typeof payload.turnstileToken === "string"
           ? payload.turnstileToken
           : "";
-      const verification = await verifyTurnstileToken(token, getClientIpFromSocket(socket));
+      const verification = await verifyTurnstileToken(token, getClientIpForUpload(socket));
       if (!verification.ok) {
         const codes = Array.isArray(verification.codes) ? verification.codes : [];
         const messages = [];
@@ -1200,37 +1443,6 @@ io.on("connection", (socket) => {
       }
     }
   });
-});
-
-// DDoS korumasi: maksimum eszamanli baglanti limiti
-server.maxConnections = 256;
-
-// Connection timeout ayarlari
-server.keepAliveTimeout = 10000;     // 10 sn keep-alive
-server.headersTimeout = 15000;        // 15 sn header timeout
-server.requestTimeout = 30000;        // 30 sn request timeout (Node 18+)
-server.timeout = 60000;              // 60 sn genel timeout
-
-// Connection overload handler - sunucu doluysa erken reddet
-let serverOverloaded = false;
-server.on('connection', (socket) => {
-  if (serverOverloaded) {
-    socket.destroy();
-    return;
-  }
-
-  if (server.connections && server.connections > 200) {
-    serverOverloaded = true;
-    console.warn('[SERVER] Sunucu baglanti limitine yaklasiyor', {
-      connections: server.connections,
-      maxConnections: server.maxConnections,
-    });
-
-    // 30 sn sonra tekrar kontrol et
-    setTimeout(() => {
-      serverOverloaded = false;
-    }, 30000);
-  }
 });
 
 // Process-level crash korumalari
